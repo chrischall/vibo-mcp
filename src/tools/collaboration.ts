@@ -9,12 +9,13 @@ export function registerCollaborationTools(server: McpServer): void {
   server.registerTool(
     'vibo_list_event_users',
     {
-      description: 'List the hosts and guests on an event.',
+      description:
+        "List the hosts and guests on an event. With no usersType, returns both groups merged ({hosts, guests, hostsCount, guestsCount}) and `limit`/`skip` apply per group; with usersType, returns that one group's page.",
       annotations: toolAnnotations({ title: 'List Vibo event users', readOnly: true }),
       inputSchema: {
         eventId: z.string().describe('Event id.'),
         usersType: z.enum(['host', 'guest']).optional().describe('Filter to only hosts or only guests.'),
-        limit: limitSchema,
+        limit: limitSchema.describe('Max items to return (default 20). Applies per group when usersType is omitted.'),
         skip: skipSchema,
       },
     },
