@@ -6,9 +6,9 @@
 // signed-in web.vibodj.com tab via the fetchproxy browser bridge, then operates
 // from Node thereafter (the bridge touches only the one-time handshake).
 //
-// The Vibo web app stores its tokens as plain localStorage keys `token`
-// (access) and `refreshToken` on the web.vibodj.com origin (verified from the
-// web bundle). We snapshot those two keys and return them; the caller verifies
+// The Vibo web app stores its tokens as plain localStorage keys `x-token`
+// (access) and `x-refresh-token` on the web.vibodj.com origin (verified live
+// against a signed-in tab). We snapshot those two keys and return them; the caller verifies
 // them (GET_ME) and only then persists via session-store. The client then uses
 // them like any other token pair (with refresh-on-expiry).
 //
@@ -60,7 +60,7 @@ export async function captureViboSession(deps: CaptureDeps = {}): Promise<ViboSe
       version: VERSION,
       domains: ['vibodj.com'],
       storageSubdomain: 'web', // tokens live on web.vibodj.com
-      declare: { cookies: [], localStorage: ['token', 'refreshToken'], sessionStorage: [], captureHeaders: [] },
+      declare: { cookies: [], localStorage: ['x-token', 'x-refresh-token'], sessionStorage: [], captureHeaders: [] },
       onPairCode: (code: string) => process.stderr.write(`[vibo-mcp] fetchproxy pair code: ${code}\n`),
       onWaiting: (hint: string) => process.stderr.write(`[vibo-mcp] ${hint}\n`),
     });
@@ -72,8 +72,8 @@ export async function captureViboSession(deps: CaptureDeps = {}): Promise<ViboSe
     });
   }
 
-  const accessToken = session.localStorage?.token;
-  const refreshToken = session.localStorage?.refreshToken ?? null;
+  const accessToken = session.localStorage?.['x-token'];
+  const refreshToken = session.localStorage?.['x-refresh-token'] ?? null;
   if (!accessToken) {
     throw new McpToolError('No Vibo token found in the signed-in browser tab.', {
       hint: 'Make sure you are signed into https://web.vibodj.com in the browser with the fetchproxy extension, then retry.',
