@@ -15,6 +15,7 @@ import { registerImportTools } from './tools/imports.js';
 import { registerCollaborationTools } from './tools/collaboration.js';
 import { registerSectionEditTools } from './tools/section-edit.js';
 import { registerUploadTools } from './tools/uploads.js';
+import { registerSessionTools } from './tools/session.js';
 
 // The ViboClient is a module-level singleton (constructed in client.ts and
 // imported by each tool module) that defers its config error to the first
@@ -41,5 +42,6 @@ await runMcp({
     registerCollaborationTools,
     registerSectionEditTools,
     registerUploadTools,
+    registerSessionTools,
   ],
 });

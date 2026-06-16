@@ -7,6 +7,7 @@ import {
   SessionNotAuthenticatedError,
   truncateErrorMessage,
 } from '@chrischall/mcp-utils';
+import { loadSession, saveSession } from './session-store.js';
 
 // Load .env for local dev; silently skip if dotenv is unavailable (e.g. the
 // mcpb bundle, which externalizes dotenv). `override: false` means a
@@ -74,7 +75,8 @@ export class ViboClient {
   private readonly apiUrl: string;
   private readonly email: string | null;
   private readonly password: string | null;
-  private readonly configError: McpToolError | null;
+  // Not readonly: cleared by setTokens() after a browser capture seeds a session.
+  private configError: McpToolError | null;
 
   private accessToken: string | null;
   private refreshTokenValue: string | null;
@@ -97,20 +99,49 @@ export class ViboClient {
     this.accessToken = accessToken ?? null;
     this.refreshTokenValue = refreshToken ?? null;
 
+    // Fall back to a previously browser-captured session (SSO accounts) when no
+    // env token was supplied. Env always wins.
+    if (!this.accessToken) {
+      const saved = loadSession();
+      if (saved) {
+        this.accessToken = saved.accessToken;
+        this.refreshTokenValue = saved.refreshToken;
+      }
+    }
+
     const haveLogin = Boolean(email && password);
-    const haveToken = Boolean(accessToken);
+    const haveToken = Boolean(this.accessToken);
     if (!haveLogin && !haveToken) {
       this.configError = new McpToolError(
         'Vibo credentials are not configured.',
         {
           hint:
-            'Set VIBO_EMAIL and VIBO_PASSWORD (recommended), or paste a captured ' +
-            'VIBO_ACCESS_TOKEN (+ VIBO_REFRESH_TOKEN) if your account uses Apple/Google/Facebook sign-in.',
+            'Set VIBO_EMAIL and VIBO_PASSWORD (recommended); paste a captured ' +
+            'VIBO_ACCESS_TOKEN (+ VIBO_REFRESH_TOKEN); or run vibo_capture_session to grab the ' +
+            'token from your signed-in web.vibodj.com browser tab (Apple/Google/Facebook accounts).',
         },
       );
     } else {
       this.configError = null;
     }
+  }
+
+  /**
+   * Adopt a browser-captured token pair (from vibo_capture_session): use it for
+   * subsequent calls in this process, persist it, and clear the config error so
+   * an account that started with no credentials becomes usable.
+   */
+  setTokens(accessToken: string, refreshToken: string | null): void {
+    this.accessToken = accessToken;
+    this.refreshTokenValue = refreshToken;
+    this.configError = null;
+    saveSession({ accessToken, refreshToken });
+  }
+
+  /** True when operating purely from a token (no email/password) — refreshed
+   *  tokens should be persisted so they survive a restart. */
+  private get tokenOnlyMode(): boolean {
+    return !this.email || !this.password;
   }
 
   /** Run a GraphQL operation, transparently authenticating + retrying once on token expiry. */
@@ -264,6 +295,11 @@ export class ViboClient {
             if (data.refreshToken?.accessToken) {
               this.accessToken = data.refreshToken.accessToken;
               this.refreshTokenValue = data.refreshToken.refreshToken;
+              // Persist the rotated pair so a captured/pasted session survives
+              // a restart (no email/password to re-login with).
+              if (this.tokenOnlyMode) {
+                saveSession({ accessToken: this.accessToken, refreshToken: this.refreshTokenValue });
+              }
               return this.accessToken;
             }
           }
