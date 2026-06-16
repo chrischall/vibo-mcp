@@ -50,16 +50,18 @@ export function registerQuestionTools(server: McpServer): void {
       },
     },
     async ({ eventId, sectionId, questionId, text, selectedOptions, link, otherOptionTitle, confirm }) => {
+      // Require at least one PRIMARY answer field. otherOptionTitle is only a
+      // modifier for selectedOptions — on its own it is not a valid answer.
+      if (text === undefined && selectedOptions === undefined && link === undefined) {
+        throw new McpToolError('Provide an answer: text, selectedOptions, or link.', {
+          hint: "Match the question's type — text → `text`, radio/checkbox/select → `selectedOptions`, link → `link`.",
+        });
+      }
       const answer: Record<string, unknown> = {};
       if (text !== undefined) answer.text = text;
       if (selectedOptions !== undefined) answer.selectedOptions = selectedOptions;
       if (link !== undefined) answer.link = link;
       if (otherOptionTitle !== undefined) answer.otherOptionTitle = otherOptionTitle;
-      if (Object.keys(answer).length === 0) {
-        throw new McpToolError('Provide an answer: text, selectedOptions, or link.', {
-          hint: "Match the question's type — text → `text`, radio/checkbox/select → `selectedOptions`, link → `link`.",
-        });
-      }
       const payload = { answer };
       if (!confirm) return previewResult('answerEventSectionQuestionV2', { eventId, sectionId, questionId, payload });
       const data = await client.gql<{ answerEventSectionQuestionV2: unknown }>(ANSWER_SECTION_QUESTION, {
