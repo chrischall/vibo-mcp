@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { textResult, toolAnnotations } from '@chrischall/mcp-utils';
 import { client } from '../client.js';
 import { captureViboSession } from '../auth.js';
+import { saveSession } from '../session-store.js';
 import { GET_ME } from '../gql.js';
 
 export function registerSessionTools(server: McpServer): void {
@@ -15,8 +16,10 @@ export function registerSessionTools(server: McpServer): void {
     async () => {
       const { accessToken, refreshToken } = await captureViboSession();
       client.setTokens(accessToken, refreshToken);
-      // Confirm the captured token actually authenticates.
+      // Confirm the captured token actually authenticates BEFORE persisting it,
+      // so a stale snapshot never lands in session.json.
       const data = await client.gql<{ me: { _id: string; email?: string } }>(GET_ME);
+      saveSession({ accessToken, refreshToken });
       return textResult({
         captured: true,
         hasRefreshToken: Boolean(refreshToken),

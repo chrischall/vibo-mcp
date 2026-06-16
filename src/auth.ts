@@ -8,8 +8,9 @@
 //
 // The Vibo web app stores its tokens as plain localStorage keys `token`
 // (access) and `refreshToken` on the web.vibodj.com origin (verified from the
-// web bundle). We snapshot those two keys, persist them via session-store, and
-// the client uses them like any other token pair (with refresh-on-expiry).
+// web bundle). We snapshot those two keys and return them; the caller verifies
+// them (GET_ME) and only then persists via session-store. The client then uses
+// them like any other token pair (with refresh-on-expiry).
 //
 // `@fetchproxy/bootstrap` is imported lazily so the default credential paths
 // never load it — the .mcpb bundle externalizes it, and an eager import would
@@ -17,7 +18,7 @@
 
 import { McpToolError } from '@chrischall/mcp-utils';
 import { VERSION } from './version.js';
-import { saveSession, type ViboSession } from './session-store.js';
+import type { ViboSession } from './session-store.js';
 
 const SERVER_NAME = 'vibo-mcp';
 
@@ -34,7 +35,8 @@ export interface CaptureDeps {
 
 /**
  * Capture the signed-in user's Vibo token pair from their browser via the
- * fetchproxy bridge and persist it. Preconditions: the fetchproxy browser
+ * fetchproxy bridge and return it (the caller persists after verifying).
+ * Preconditions: the fetchproxy browser
  * extension is installed and the user is signed into https://web.vibodj.com.
  */
 export async function captureViboSession(deps: CaptureDeps = {}): Promise<ViboSession> {
@@ -78,7 +80,8 @@ export async function captureViboSession(deps: CaptureDeps = {}): Promise<ViboSe
     });
   }
 
-  const captured: ViboSession = { accessToken, refreshToken };
-  saveSession(captured);
-  return captured;
+  // Return the captured pair WITHOUT persisting — the caller verifies it
+  // (GET_ME) before writing it to disk, so a stale snapshot never lands in
+  // session.json.
+  return { accessToken, refreshToken };
 }
