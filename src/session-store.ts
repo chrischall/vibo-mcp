@@ -1,6 +1,6 @@
 import { homedir } from 'os';
 import { dirname, join } from 'path';
-import { mkdirSync, readFileSync, writeFileSync, existsSync, rmSync } from 'fs';
+import { mkdirSync, readFileSync, writeFileSync, existsSync, rmSync, chmodSync } from 'fs';
 import { readEnvVar } from '@chrischall/mcp-utils';
 
 // Where a browser-captured token pair is persisted so it survives MCP restarts.
@@ -38,6 +38,9 @@ export function saveSession(session: ViboSession): void {
     JSON.stringify({ accessToken: session.accessToken, refreshToken: session.refreshToken ?? null }, null, 2),
     { mode: 0o600 },
   );
+  // `mode` in writeFileSync only applies when the file is *created*; enforce
+  // 0600 on overwrite too (a pre-existing file keeps its old, possibly looser perms).
+  chmodSync(file, 0o600);
 }
 
 /** Remove any persisted session. */

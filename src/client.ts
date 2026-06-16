@@ -129,15 +129,15 @@ export class ViboClient {
   }
 
   /**
-   * Adopt a browser-captured token pair (from vibo_capture_session): use it for
-   * subsequent calls in this process, persist it, and clear the config error so
-   * an account that started with no credentials becomes usable.
+   * Adopt a browser-captured token pair (from vibo_capture_session) for
+   * subsequent calls in this process and clear the config error so an account
+   * that started with no credentials becomes usable. Does NOT persist — the
+   * caller persists only after verifying the token authenticates (GET_ME).
    */
   setTokens(accessToken: string, refreshToken: string | null): void {
     this.accessToken = accessToken;
     this.refreshTokenValue = refreshToken;
     this.configError = null;
-    saveSession({ accessToken, refreshToken });
   }
 
   /** True when operating purely from a token (no email/password) — refreshed

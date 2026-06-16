@@ -168,7 +168,7 @@ describe('ViboClient auth lifecycle', () => {
     expect(calls.every((c) => c.token !== 'STALE')).toBe(true);
   });
 
-  it('setTokens adopts a captured pair, clears the config error, and persists it', async () => {
+  it('setTokens adopts a captured pair and clears the config error (no persist)', async () => {
     const calls = installFetch(({ token }) =>
       token === 'CAP' ? { data: { me: { _id: 'u2' } } } : { errors: [{ code: 'UNAUTHORIZED' }] },
     );
@@ -180,9 +180,9 @@ describe('ViboClient auth lifecycle', () => {
     const data = await client.gql<{ me: { _id: string } }>(GET_ME);
     expect(data.me._id).toBe('u2');
 
-    // setTokens persisted the pair, so a fresh client picks it up with no creds.
-    const fresh = await new ViboClient().gql<{ me: { _id: string } }>(GET_ME);
-    expect(fresh.me._id).toBe('u2');
+    // setTokens does NOT persist (the session tool persists after GET_ME), so a
+    // fresh client with no creds still has nothing to load.
+    await expect(new ViboClient().gql(GET_ME)).rejects.toThrow(/credentials are not configured/i);
   });
 
   it('only logs in once under concurrent calls (single-flight)', async () => {
