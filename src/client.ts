@@ -129,6 +129,93 @@ export class ViboClient {
     return this.unwrap(res.status, res.body);
   }
 
+  /**
+   * Run a GraphQL operation that uploads one or more files (the `Upload` scalar),
+   * using the graphql-multipart-request spec. `fileMap` maps a dotted variable
+   * path (e.g. "variables.photo" or "variables.payload.answer.images.0") to a
+   * local file path; `variables` must carry `null` at each of those positions.
+   * Same auth + single-retry-on-expiry behavior as `gql`.
+   */
+  async gqlUpload<T>(
+    query: string,
+    variables: Record<string, unknown>,
+    fileMap: Record<string, string>,
+  ): Promise<T> {
+    if (this.configError) throw this.configError;
+
+    const token = await this.ensureAccessToken();
+    let res = await this.postMultipart<T>(query, variables, fileMap, token);
+
+    if (this.isAuthError(res.status, res.body.errors)) {
+      const fresh = await this.reauthenticate();
+      res = await this.postMultipart<T>(query, variables, fileMap, fresh);
+    }
+
+    return this.unwrap(res.status, res.body);
+  }
+
+  private async postMultipart<T>(
+    query: string,
+    variables: Record<string, unknown>,
+    fileMap: Record<string, string>,
+    token: string | null,
+  ): Promise<{ status: number; body: GraphQLResponse<T> }> {
+    const { openAsBlob } = await import('node:fs');
+    const { basename } = await import('node:path');
+
+    const form = new FormData();
+    form.append('operations', JSON.stringify({ query, variables }));
+
+    // map: { "0": ["variables.photo"], "1": ["variables.payload.answer.images.0"] }
+    const paths = Object.keys(fileMap);
+    const map: Record<string, string[]> = {};
+    paths.forEach((varPath, i) => {
+      map[String(i)] = [varPath];
+    });
+    form.append('map', JSON.stringify(map));
+
+    for (let i = 0; i < paths.length; i++) {
+      const filePath = fileMap[paths[i]];
+      let blob: Blob;
+      try {
+        blob = await openAsBlob(filePath);
+      } catch (err) {
+        throw new McpToolError(`Could not read file for upload: ${filePath}`, {
+          hint: 'Provide an absolute path to a readable local file.',
+          cause: err,
+        });
+      }
+      form.append(String(i), blob, basename(filePath));
+    }
+
+    const headers: Record<string, string> = { 'apollo-require-preflight': 'true' };
+    if (token) headers['x-token'] = token;
+
+    let response: Response;
+    try {
+      response = await fetch(this.apiUrl, {
+        method: 'POST',
+        headers, // NB: no content-type — fetch sets the multipart boundary
+        body: form,
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+    } catch (err) {
+      const reason = err instanceof Error && err.name === 'TimeoutError' ? 'timed out' : 'failed';
+      throw new McpToolError(`Upload to ${SERVICE} ${reason}.`, {
+        hint: 'The Vibo API may be unreachable — check your connection and retry.',
+        cause: err,
+      });
+    }
+
+    let body: GraphQLResponse<T>;
+    try {
+      body = (await response.json()) as GraphQLResponse<T>;
+    } catch {
+      body = {};
+    }
+    return { status: response.status, body };
+  }
+
   /** Returns the current access token, performing a first login if we only have email/password. */
   private async ensureAccessToken(): Promise<string> {
     if (this.accessToken) return this.accessToken;

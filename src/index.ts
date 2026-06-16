@@ -8,6 +8,13 @@ import { registerSongTools } from './tools/songs.js';
 import { registerPlaylistTools } from './tools/playlists.js';
 import { registerNotificationTools } from './tools/notifications.js';
 import { registerQuestionTools } from './tools/questions.js';
+import { registerSongManagementTools } from './tools/song-management.js';
+import { registerCommentTools } from './tools/comments.js';
+import { registerIdeasTools } from './tools/ideas.js';
+import { registerImportTools } from './tools/imports.js';
+import { registerCollaborationTools } from './tools/collaboration.js';
+import { registerSectionEditTools } from './tools/section-edit.js';
+import { registerUploadTools } from './tools/uploads.js';
 
 // The ViboClient is a module-level singleton (constructed in client.ts and
 // imported by each tool module) that defers its config error to the first
@@ -27,5 +34,12 @@ await runMcp({
     registerPlaylistTools,
     registerNotificationTools,
     registerQuestionTools,
+    registerSongManagementTools,
+    registerCommentTools,
+    registerIdeasTools,
+    registerImportTools,
+    registerCollaborationTools,
+    registerSectionEditTools,
+    registerUploadTools,
   ],
 });

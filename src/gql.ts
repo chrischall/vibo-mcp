@@ -239,3 +239,152 @@ export const ANSWER_SECTION_QUESTION = `
     }
   }
 `;
+
+// ============================================================================
+// v2 / v3 operations (song management, comments, song ideas, playlist import,
+// collaboration, section editing, uploads). Shapes pinned via authenticated
+// introspection — see docs/VIBO-API.md.
+// ============================================================================
+
+// ---- Song management -------------------------------------------------------
+
+export const REMOVE_SECTION_SONGS = `
+  mutation removeSectionSongsV2($eventId: ID!, $sectionId: ID!, $songIds: [ID!]!) {
+    removeSectionSongsV2(eventId: $eventId, sectionId: $sectionId, songIds: $songIds) {
+      success sectionsWithSongs sectionsWithSongsTotal sectionsWithSongsProgress totalProgress songsInfo
+    }
+  }
+`;
+
+export const UPDATE_SECTION_SONGS = `
+  mutation updateSectionSongs($eventId: ID!, $sectionId: ID!, $songIds: [ID!]!, $payload: UpdateSectionSongInput) {
+    updateSectionSongs(eventId: $eventId, sectionId: $sectionId, songIds: $songIds, payload: $payload) {
+      _id isMustPlay isFlagged comment
+    }
+  }
+`;
+
+export const MOVE_SECTION_SONGS = `
+  mutation moveSectionSongsV2($eventId: ID!, $sourceSectionId: ID!, $targetSectionId: ID!, $songIds: [ID!]!) {
+    moveSectionSongsV2(eventId: $eventId, sourceSectionId: $sourceSectionId, targetSectionId: $targetSectionId, songIds: $songIds) {
+      success sectionsWithSongs sectionsWithSongsTotal sectionsWithSongsProgress songsInfo
+    }
+  }
+`;
+
+export const REORDER_SONGS = `
+  mutation reorderSongsBatch($eventId: ID!, $sectionId: ID!, $sourceSongIds: [ID!]!, $targetSongId: ID) {
+    reorderSongsBatch(eventId: $eventId, sectionId: $sectionId, sourceSongIds: $sourceSongIds, targetSongId: $targetSongId)
+  }
+`;
+
+// ---- Comments --------------------------------------------------------------
+
+export const CREATE_SONG_COMMENT = `
+  mutation createSongComment($eventId: ID!, $sectionId: ID!, $songId: ID!, $payload: CreateCommentInput!) {
+    createSongComment(eventId: $eventId, sectionId: $sectionId, songId: $songId, payload: $payload) {
+      _id message date
+    }
+  }
+`;
+
+export const DELETE_SONG_COMMENT = `
+  mutation deleteSongComment($eventId: ID!, $sectionId: ID!, $songId: ID!, $commentId: ID!) {
+    deleteSongComment(eventId: $eventId, sectionId: $sectionId, songId: $songId, commentId: $commentId)
+  }
+`;
+
+export const CREATE_SECTION_COMMENT = `
+  mutation createSectionComment($eventId: ID!, $sectionId: ID!, $payload: CreateCommentInput!) {
+    createSectionComment(eventId: $eventId, sectionId: $sectionId, payload: $payload) {
+      _id message date
+    }
+  }
+`;
+
+export const DELETE_SECTION_COMMENT = `
+  mutation deleteSectionComment($eventId: ID!, $sectionId: ID!, $commentId: ID!) {
+    deleteSectionComment(eventId: $eventId, sectionId: $sectionId, commentId: $commentId)
+  }
+`;
+
+// ---- Song ideas (the DJ's per-section suggestions) -------------------------
+
+export const LIST_SECTION_SONG_IDEAS = `
+  query getEventSectionSongIdeas($eventId: ID!, $sectionId: ID!, $pagination: PaginationInput) {
+    getEventSectionSongIdeas(eventId: $eventId, sectionId: $sectionId, pagination: $pagination) {
+      songIdeas { _id title description songsCount icon isPublic isOwner }
+      totalCount
+    }
+  }
+`;
+
+export const LIST_SONG_IDEAS_SONGS = `
+  query getEventSectionSongIdeasSongs($eventId: ID!, $sectionId: ID!, $songIdeasId: ID!, $pagination: PaginationInput) {
+    getEventSectionSongIdeasSongs(eventId: $eventId, sectionId: $sectionId, songIdeasId: $songIdeasId, pagination: $pagination) {
+      songs {
+        viboSongId songUrl title artist isInSection isDontPlay isAddedByMe
+        ${THUMBS}
+        ${SONG_LINKS}
+      }
+      totalCount
+    }
+  }
+`;
+
+// ---- Playlist import -------------------------------------------------------
+
+export const IMPORT_PLAYLIST_TO_SECTION = `
+  mutation importPlaylistToSectionWeb($eventId: ID!, $sectionId: ID!, $playlistId: ID, $source: MusicImportSource!, $tracksToAdd: [ID]!, $tracksToIgnore: [ID]!) {
+    importPlaylistToSectionWeb(eventId: $eventId, sectionId: $sectionId, playlistId: $playlistId, source: $source, tracksToAdd: $tracksToAdd, tracksToIgnore: $tracksToIgnore) {
+      totalCount addedCount existingCount dontPlayCount ignoredCount songsInfo sectionsWithSongs sectionsWithSongsTotal
+    }
+  }
+`;
+
+// ---- Collaboration ---------------------------------------------------------
+
+export const LIST_EVENT_USERS = `
+  query eventUsers($eventId: ID!, $usersType: EventUserType, $pagination: PaginationInput) {
+    eventUsers(eventId: $eventId, usersType: $usersType, pagination: $pagination) {
+      users { _id firstName lastName email role imageUrl }
+      totalCount
+    }
+  }
+`;
+
+export const INVITE_USERS = `
+  mutation inviteUserViaEmail($eventId: ID!, $type: EventUserType!, $text: String!, $emails: [String!]!) {
+    inviteUserViaEmail(eventId: $eventId, type: $type, text: $text, emails: $emails)
+  }
+`;
+
+export const CHANGE_USER_ROLE = `
+  mutation changeUserTypeInEvent($eventId: ID!, $userId: ID!, $type: EventUserType!) {
+    changeUserTypeInEvent(eventId: $eventId, userId: $userId, type: $type)
+  }
+`;
+
+export const REMOVE_USER = `
+  mutation removeUserFromEvent($eventId: ID!, $userId: ID!) {
+    removeUserFromEvent(eventId: $eventId, userId: $userId)
+  }
+`;
+
+// ---- Section editing -------------------------------------------------------
+
+export const UPDATE_SECTION = `
+  mutation updateSection($eventId: ID!, $sectionId: ID!, $payload: UpdateSectionInput!) {
+    updateSection(eventId: $eventId, sectionId: $sectionId, payload: $payload) {
+      _id name time note description
+    }
+  }
+`;
+
+// ---- Uploads (multipart; see client.gqlUpload) -----------------------------
+
+export const UPLOAD_USER_PHOTO = `
+  mutation uploadUserPhoto($photo: Upload!) {
+    uploadUserPhoto(photo: $photo) { url mimetype filename }
+  }
+`;

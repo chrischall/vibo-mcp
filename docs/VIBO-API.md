@@ -67,11 +67,11 @@ Writes (confirm-gated): `addSongToSection`, `toggleLike`, `joinEventViaDeepLink`
 `answerEventSectionQuestionV2`, `exportEventToSpotify`,
 `exportEventToAppleMusic`, `markAsRead`.
 
-All 21 operation documents in `src/gql.ts` were validated against the live
-schema. The read path was verified authenticated end-to-end against a real
-account, plus a reversible `toggleLike` write (persisted + restored). The
-remaining write mutations are live-validated + unit-tested but not yet
-round-tripped (they mutate real event data).
+All operation documents in `src/gql.ts` were validated against the live schema.
+The read path was verified authenticated end-to-end against a real account, plus
+a reversible `toggleLike` write (persisted + restored). The remaining write
+mutations are live-validated + unit-tested but not yet round-tripped (they mutate
+real event data). See the v2/v3 + Uploads sections below for the added operations.
 
 ### Section questions (V2)
 
@@ -95,3 +95,44 @@ round-tripped (they mutate real event data).
   them under obfuscated localStorage keys; the exact keys need live verification
   before coding. Until then, paste tokens via `VIBO_ACCESS_TOKEN` /
   `VIBO_REFRESH_TOKEN`.
+
+## v2 / v3 operations (added)
+
+All shapes pinned via authenticated introspection; every document live-validated.
+
+**Song management:** `removeSectionSongsV2(eventId, sectionId, songIds:[ID!]!)`,
+`updateSectionSongs(..., payload: UpdateSectionSongInput{isMustPlay, isFlagged, comment})`,
+`moveSectionSongsV2`, `reorderSongsBatch(..., sourceSongIds, targetSongId)`.
+
+**Comments:** `createSongComment` / `createSectionComment(payload: CreateCommentInput{message})`,
+`deleteSongComment` / `deleteSectionComment`.
+
+**Song ideas (DJ suggestions):** `getEventSectionSongIdeas → SongIdeasResponse{songIdeas:[SongIdeasPreview], totalCount}`;
+`getEventSectionSongIdeasSongs(songIdeasId) → {songs:[SearchedSong], totalCount}`. Promote a suggested
+song to the playlist with the existing `addSongToSection`.
+
+**Playlist import:** `importPlaylistToSectionWeb(eventId, sectionId, playlistId, source: MusicImportSource!, tracksToAdd:[ID]!, tracksToIgnore:[ID]!)`.
+
+**Collaboration:** `eventUsers(eventId, usersType, pagination) → {users:[User], totalCount}` — **returns empty
+unless `usersType` is set**, so the tool queries host+guest and merges. `inviteUserViaEmail(eventId, type, text, emails)`,
+`changeUserTypeInEvent`, `removeUserFromEvent` (all return Boolean).
+
+**Section editing:** `updateSection(eventId, sectionId, payload: UpdateSectionInput{name,time,note,description,...})`
+— subject to per-section host-edit permissions.
+
+**Dropped (DJ-only / not host-usable):** `generatePlaylist` (requires a `computerId` scanner),
+prep-mode, templates/favorites, child-DJ/scanner management.
+
+## Uploads (the `Upload` scalar)
+
+Vibo's `Upload` scalar uses the **graphql-multipart-request spec**. `client.gqlUpload(query, variables, fileMap)`
+builds the multipart body: `operations` (JSON `{query, variables}` with `null` at each upload slot), `map`
+(`{ "0": ["variables.photo"], ... }`), then file parts streamed via `fs.openAsBlob`. Sends `x-token` +
+`apollo-require-preflight: true`; no `content-type` (fetch sets the boundary). Same single-retry-on-expiry as `gql`.
+
+- `uploadUserPhoto(photo: Upload!) → {url, mimetype, filename}` → `vibo_set_profile_photo`.
+- `answerEventSectionQuestionV2` `payload.answer.images:[Upload!]` / `files:[Upload!]` → `vibo_answer_question`
+  routes through `gqlUpload` when `imagePaths`/`filePaths` are given.
+
+> Live status: all read paths + a reversible `toggleLike` verified end-to-end against a real account. The
+> write mutations (incl. uploads) are live-validated + unit-tested but not yet round-tripped (they mutate real data).

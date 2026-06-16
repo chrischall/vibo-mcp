@@ -6,13 +6,20 @@ import { registerSongTools } from '../src/tools/songs.js';
 import { registerPlaylistTools } from '../src/tools/playlists.js';
 import { registerNotificationTools } from '../src/tools/notifications.js';
 import { registerQuestionTools } from '../src/tools/questions.js';
+import { registerSongManagementTools } from '../src/tools/song-management.js';
+import { registerCommentTools } from '../src/tools/comments.js';
+import { registerIdeasTools } from '../src/tools/ideas.js';
+import { registerImportTools } from '../src/tools/imports.js';
+import { registerCollaborationTools } from '../src/tools/collaboration.js';
+import { registerSectionEditTools } from '../src/tools/section-edit.js';
+import { registerUploadTools } from '../src/tools/uploads.js';
 import { createTestHarness } from './helpers.js';
 
 describe('tool registry', () => {
   let harness: Awaited<ReturnType<typeof createTestHarness>>;
   afterAll(async () => { if (harness) await harness.close(); });
 
-  it('registers exactly the expected 21 tools', async () => {
+  it('registers exactly the expected 38 tools', async () => {
     harness = await createTestHarness((server) => {
       registerProfileTools(server);
       registerEventTools(server);
@@ -21,6 +28,13 @@ describe('tool registry', () => {
       registerPlaylistTools(server);
       registerNotificationTools(server);
       registerQuestionTools(server);
+      registerSongManagementTools(server);
+      registerCommentTools(server);
+      registerIdeasTools(server);
+      registerImportTools(server);
+      registerCollaborationTools(server);
+      registerSectionEditTools(server);
+      registerUploadTools(server);
     });
 
     const names = (await harness.listTools()).map((t) => t.name).sort();
@@ -46,6 +60,30 @@ describe('tool registry', () => {
       'vibo_answer_question',
       'vibo_search_songs',
       'vibo_toggle_song_like',
+      // v2 — song management
+      'vibo_remove_song_from_section',
+      'vibo_update_song',
+      'vibo_move_song',
+      'vibo_reorder_songs',
+      // v2 — comments
+      'vibo_comment_on_song',
+      'vibo_delete_song_comment',
+      'vibo_comment_on_section',
+      'vibo_delete_section_comment',
+      // v2 — song ideas
+      'vibo_list_section_song_ideas',
+      'vibo_list_song_ideas_songs',
+      // v2 — playlist import
+      'vibo_import_playlist_to_section',
+      // v3 — collaboration
+      'vibo_list_event_users',
+      'vibo_invite_users',
+      'vibo_change_user_role',
+      'vibo_remove_user',
+      // v3 — section editing
+      'vibo_update_section',
+      // uploads
+      'vibo_set_profile_photo',
     ].sort();
 
     expect(names).toEqual(expected);
@@ -65,6 +103,20 @@ describe('tool registry', () => {
       'vibo_export_event_to_spotify',
       'vibo_export_event_to_apple_music',
       'vibo_answer_question',
+      'vibo_remove_song_from_section',
+      'vibo_update_song',
+      'vibo_move_song',
+      'vibo_reorder_songs',
+      'vibo_comment_on_song',
+      'vibo_delete_song_comment',
+      'vibo_comment_on_section',
+      'vibo_delete_section_comment',
+      'vibo_import_playlist_to_section',
+      'vibo_invite_users',
+      'vibo_change_user_role',
+      'vibo_remove_user',
+      'vibo_update_section',
+      'vibo_set_profile_photo',
     ]);
     for (const t of tools) {
       const readOnly = t.annotations?.readOnlyHint;
