@@ -3,7 +3,7 @@
   "manifest_version": "0.3",
   "name": "vibo-mcp",
   "display_name": "Vibo",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Plan your event music in Vibo (vibodj.com) — browse your events, timeline sections, song requests and playlists, add and like songs, and export to Spotify/Apple Music via natural language.",
   "author": {
     "name": "Chris Chall",
@@ -157,23 +157,74 @@
       "name": "vibo_answer_question",
       "description": "Answer a section planning question (text, options, link, or files)"
     },
-    { "name": "vibo_remove_song_from_section", "description": "Remove songs from a section" },
-    { "name": "vibo_update_song", "description": "Set must-play / do-not-play / comment on songs" },
-    { "name": "vibo_move_song", "description": "Move songs between sections" },
-    { "name": "vibo_reorder_songs", "description": "Reorder songs within a section" },
-    { "name": "vibo_comment_on_song", "description": "Comment on a song for the DJ" },
-    { "name": "vibo_delete_song_comment", "description": "Delete a song comment" },
-    { "name": "vibo_comment_on_section", "description": "Comment on a timeline section" },
-    { "name": "vibo_delete_section_comment", "description": "Delete a section comment" },
-    { "name": "vibo_list_section_song_ideas", "description": "List the DJ's suggested song-idea collections for a section" },
-    { "name": "vibo_list_song_ideas_songs", "description": "List the suggested songs inside a song-idea collection" },
-    { "name": "vibo_import_playlist_to_section", "description": "Import tracks from a connected playlist into a section" },
-    { "name": "vibo_list_event_users", "description": "List the hosts and guests on an event" },
-    { "name": "vibo_invite_users", "description": "Invite people to an event by email" },
-    { "name": "vibo_change_user_role", "description": "Change a member between host and guest" },
-    { "name": "vibo_remove_user", "description": "Remove a member from an event" },
-    { "name": "vibo_update_section", "description": "Edit a section's name, time, note, or description" },
-    { "name": "vibo_set_profile_photo", "description": "Set your Vibo profile photo from a local image" }
+    {
+      "name": "vibo_remove_song_from_section",
+      "description": "Remove songs from a section"
+    },
+    {
+      "name": "vibo_update_song",
+      "description": "Set must-play / do-not-play / comment on songs"
+    },
+    {
+      "name": "vibo_move_song",
+      "description": "Move songs between sections"
+    },
+    {
+      "name": "vibo_reorder_songs",
+      "description": "Reorder songs within a section"
+    },
+    {
+      "name": "vibo_comment_on_song",
+      "description": "Comment on a song for the DJ"
+    },
+    {
+      "name": "vibo_delete_song_comment",
+      "description": "Delete a song comment"
+    },
+    {
+      "name": "vibo_comment_on_section",
+      "description": "Comment on a timeline section"
+    },
+    {
+      "name": "vibo_delete_section_comment",
+      "description": "Delete a section comment"
+    },
+    {
+      "name": "vibo_list_section_song_ideas",
+      "description": "List the DJ's suggested song-idea collections for a section"
+    },
+    {
+      "name": "vibo_list_song_ideas_songs",
+      "description": "List the suggested songs inside a song-idea collection"
+    },
+    {
+      "name": "vibo_import_playlist_to_section",
+      "description": "Import tracks from a connected playlist into a section"
+    },
+    {
+      "name": "vibo_list_event_users",
+      "description": "List the hosts and guests on an event"
+    },
+    {
+      "name": "vibo_invite_users",
+      "description": "Invite people to an event by email"
+    },
+    {
+      "name": "vibo_change_user_role",
+      "description": "Change a member between host and guest"
+    },
+    {
+      "name": "vibo_remove_user",
+      "description": "Remove a member from an event"
+    },
+    {
+      "name": "vibo_update_section",
+      "description": "Edit a section's name, time, note, or description"
+    },
+    {
+      "name": "vibo_set_profile_photo",
+      "description": "Set your Vibo profile photo from a local image"
+    }
   ],
   "compatibility": {
     "platforms": [

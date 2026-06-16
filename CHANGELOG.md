@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/chrischall/vibo-mcp/compare/v1.1.0...v1.2.0) (2026-06-16)
+
+
+### Features
+
+* v2/v3 tools — song management, comments, song ideas, imports, collaboration, section edits, uploads ([#5](https://github.com/chrischall/vibo-mcp/issues/5)) ([44a0e82](https://github.com/chrischall/vibo-mcp/commit/44a0e82fc9d4ef16de4794a785d4438535de5b42))
+
 ## [1.1.0](https://github.com/chrischall/vibo-mcp/compare/v1.0.0...v1.1.0) (2026-06-16)
 
 
