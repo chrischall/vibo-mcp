@@ -1,7 +1,7 @@
 {
   "name": "vibo-mcp",
   "displayName": "Vibo",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MCP server for Vibo (vibodj.com) — plan event music, song requests, and playlists via natural language",
   "author": {
     "name": "Chris Hall",
@@ -10,7 +10,14 @@
   "homepage": "https://github.com/chrischall/vibo-mcp",
   "repository": "https://github.com/chrischall/vibo-mcp",
   "license": "MIT",
-  "keywords": ["vibo", "vibodj", "wedding", "dj", "music", "mcp"],
+  "keywords": [
+    "vibo",
+    "vibodj",
+    "wedding",
+    "dj",
+    "music",
+    "mcp"
+  ],
   "skills": "./SKILL.md",
   "mcp": "./.mcp.json"
 }
