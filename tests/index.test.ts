@@ -5,13 +5,14 @@ import { registerSectionTools } from '../src/tools/sections.js';
 import { registerSongTools } from '../src/tools/songs.js';
 import { registerPlaylistTools } from '../src/tools/playlists.js';
 import { registerNotificationTools } from '../src/tools/notifications.js';
+import { registerQuestionTools } from '../src/tools/questions.js';
 import { createTestHarness } from './helpers.js';
 
 describe('tool registry', () => {
   let harness: Awaited<ReturnType<typeof createTestHarness>>;
   afterAll(async () => { if (harness) await harness.close(); });
 
-  it('registers exactly the expected 19 tools', async () => {
+  it('registers exactly the expected 21 tools', async () => {
     harness = await createTestHarness((server) => {
       registerProfileTools(server);
       registerEventTools(server);
@@ -19,6 +20,7 @@ describe('tool registry', () => {
       registerSongTools(server);
       registerPlaylistTools(server);
       registerNotificationTools(server);
+      registerQuestionTools(server);
     });
 
     const names = (await harness.listTools()).map((t) => t.name).sort();
@@ -38,8 +40,10 @@ describe('tool registry', () => {
       'vibo_leave_event',
       'vibo_list_events',
       'vibo_list_notifications',
+      'vibo_list_section_questions',
       'vibo_list_sections',
       'vibo_mark_notifications_read',
+      'vibo_answer_question',
       'vibo_search_songs',
       'vibo_toggle_song_like',
     ].sort();
@@ -60,6 +64,7 @@ describe('tool registry', () => {
       'vibo_mark_notifications_read',
       'vibo_export_event_to_spotify',
       'vibo_export_event_to_apple_music',
+      'vibo_answer_question',
     ]);
     for (const t of tools) {
       const readOnly = t.annotations?.readOnlyHint;

@@ -52,6 +52,7 @@ config error only appears on the first tool call.
 - `vibo_get_event` — full details for one event.
 - `vibo_list_sections` — an event's timeline (Ceremony, First Dance, Dinner, …).
 - `vibo_get_section_songs` — songs requested in a section, with likes/flags/comments.
+- `vibo_list_section_questions` — the DJ's planning questions for a section (type, options, current answer).
 - `vibo_search_songs` — find songs to add (Vibo catalog or connected Spotify).
 - `vibo_get_playlists` / `vibo_get_playlist_songs` — your connected-service playlists.
 - `vibo_list_notifications` / `vibo_get_notifications_count`.
@@ -66,6 +67,7 @@ you get a dry-run preview of exactly what would be sent.
 - `vibo_join_event` — join via a share link/hash (e.g. a `vibodj.app.link/...` URL).
 - `vibo_leave_event`.
 - `vibo_create_event_contact` — add a host/guest contact.
+- `vibo_answer_question` — answer a section planning question (text / option ids / link).
 - `vibo_mark_notifications_read`.
 - `vibo_export_event_to_spotify` / `vibo_export_event_to_apple_music`.
 

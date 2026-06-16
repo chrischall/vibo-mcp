@@ -81,7 +81,9 @@
     { "name": "vibo_export_event_to_apple_music", "description": "Export an event's songs to an Apple Music playlist" },
     { "name": "vibo_list_notifications", "description": "List your Vibo notifications" },
     { "name": "vibo_get_notifications_count", "description": "Count unread notifications" },
-    { "name": "vibo_mark_notifications_read", "description": "Mark notifications as read" }
+    { "name": "vibo_mark_notifications_read", "description": "Mark notifications as read" },
+    { "name": "vibo_list_section_questions", "description": "List the DJ's planning questions for a section" },
+    { "name": "vibo_answer_question", "description": "Answer a section planning question" }
   ],
   "compatibility": {
     "platforms": ["darwin", "win32", "linux"],
