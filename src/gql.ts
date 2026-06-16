@@ -210,3 +210,32 @@ export const MARK_AS_READ = `
     markAsRead(notificationIds: $notificationIds, readAll: $readAll)
   }
 `;
+
+// ---- Section questions (the DJ's planning questions) ------------------------
+
+export const LIST_SECTION_QUESTIONS = `
+  query getEventSectionQuestionsV2($eventId: ID!, $sectionId: ID!) {
+    getEventSectionQuestionsV2(eventId: $eventId, sectionId: $sectionId) {
+      progress
+      questions {
+        _id
+        isAnswered
+        settings { type hasOther optionImagesEnabled notifyMe }
+        question {
+          title
+          options { _id title isOther }
+        }
+        answer { text selectedOptions link }
+      }
+    }
+  }
+`;
+
+export const ANSWER_SECTION_QUESTION = `
+  mutation answerEventSectionQuestionV2($eventId: ID!, $sectionId: ID!, $questionId: ID!, $payload: AnswerQuestionV2Input!) {
+    answerEventSectionQuestionV2(eventId: $eventId, sectionId: $sectionId, questionId: $questionId, payload: $payload) {
+      progress
+      question { _id isAnswered answer { text selectedOptions link } }
+    }
+  }
+`;

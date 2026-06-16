@@ -1,8 +1,8 @@
 # vibo-mcp
 
 MCP server for [Vibo](https://vibodj.com). Wraps the Vibo consumer GraphQL API
-(`https://api.vibodj.com/v2/graphql`) and exposes 19 host/couple tools to Claude
-over stdio (11 reads + 8 confirm-gated writes). Built on `@chrischall/mcp-utils`
+(`https://api.vibodj.com/v2/graphql`) and exposes 21 host/couple tools to Claude
+over stdio (12 reads + 9 confirm-gated writes). Built on `@chrischall/mcp-utils`
 (`runMcp`, `textResult`, `toolAnnotations`, `schemaConfirm`, error classes).
 
 ## Commands
@@ -39,6 +39,7 @@ src/
     songs.ts          # get_section_songs, search_songs, add_song_to_section, toggle_song_like
     playlists.ts      # get_playlists, get_playlist_songs, export_event_to_{spotify,apple_music}
     notifications.ts  # list_notifications, get_notifications_count, mark_notifications_read
+    questions.ts      # list_section_questions, answer_question
     shared.ts         # pagination + confirm-preview helpers
 ```
 
@@ -72,21 +73,22 @@ variables. See `docs/VIBO-API.md` for the pinned input shapes.
 
 ## Verification status
 
-- All 19 GraphQL documents were validated **live** against the production schema
+- All 21 GraphQL documents were validated **live** against the production schema
   (each parses + resolves to an auth error, not a field-validation error) and
   every input type was confirmed via introspection.
 - The real auth-error shape (`{ code: "UNAUTHORIZED", message: "Not authorized.
   Try to log in" }` — top-level `code`) is what `isAuthError` matches.
-- **Not yet done:** an authenticated end-to-end round-trip (sign in → read →
-  write). Gated on real credentials. When credentials are available, verify a
-  read (`vibo_get_me`) and a write (`vibo_add_song_to_section`, re-reading the
-  section to confirm) before trusting the write path.
+- **Verified authenticated end-to-end** against a real account: the full read
+  path (profile, events, sections, section songs/questions, search) and a
+  reversible write (`toggleLike` → persisted via re-read → restored).
+- **Not yet live-round-tripped:** the remaining write mutations
+  (`addSongToSection`, `answerEventSectionQuestionV2`, exports, contact, etc.) —
+  they share the proven `client.gql` auth path and their documents are
+  live-validated + unit-tested, but mutate real event data so weren't exercised.
+  Verify with a re-read before trusting each in earnest.
 
 ## Deferred follow-ups
 
-- **Section questions** (read `getEventSectionQuestionsV` + write
-  `answerEventSectionQuestionV`): complex typed QuestionV2 shape not exposed via
-  standard introspection — needs a live capture before coding.
 - **Browser-tab token auto-capture** via the fetchproxy bridge: the web app
   stores `x-token`/`x-refresh-token` under obfuscated localStorage keys; verify
   the keys against a live session before building. Until then, paste tokens.

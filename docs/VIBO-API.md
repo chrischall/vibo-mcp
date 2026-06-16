@@ -59,24 +59,37 @@ mutation refreshToken($refreshToken: String!) {
 ## Operations wrapped (host/couple surface)
 
 Reads: `getMe`, `upcomingEvents`, `historyEvents`, `event`, `sections`,
-`getSectionSongs`, `getSongs` (search), `getPlaylists`, `getPlaylistSongs`,
-`getNotifications`, `getNotificationsCount`.
+`getSectionSongs`, `getSongs` (search), `getEventSectionQuestionsV2`,
+`getPlaylists`, `getPlaylistSongs`, `getNotifications`, `getNotificationsCount`.
 
 Writes (confirm-gated): `addSongToSection`, `toggleLike`, `joinEventViaDeepLink`
-/ `joinEventByHash`, `leaveEvent`, `createEventContact`, `exportEventToSpotify`,
+/ `joinEventByHash`, `leaveEvent`, `createEventContact`,
+`answerEventSectionQuestionV2`, `exportEventToSpotify`,
 `exportEventToAppleMusic`, `markAsRead`.
 
-All 19 operation documents in `src/gql.ts` were validated against the live
-schema (each parses + resolves to an auth error rather than a field-validation
-error). **An authenticated round-trip has NOT yet been run** — it is gated on
-real credentials (`VIBO_EMAIL`/`VIBO_PASSWORD` or a captured token).
+All 21 operation documents in `src/gql.ts` were validated against the live
+schema. The read path was verified authenticated end-to-end against a real
+account, plus a reversible `toggleLike` write (persisted + restored). The
+remaining write mutations are live-validated + unit-tested but not yet
+round-tripped (they mutate real event data).
+
+### Section questions (V2)
+
+- Read: `getEventSectionQuestionsV2(eventId, sectionId)` →
+  `QuestionsV2Response { questions: [QuestionV2!]!, progress }`. Each
+  `QuestionV2` has `settings.type` ∈ `text | checkbox | radio | select | pairs |
+  header`, `question.options { _id title isOther }`, and `answer { text,
+  selectedOptions: [String!]!, link: [String!]! }`.
+- Write: `answerEventSectionQuestionV2(eventId, sectionId, questionId, payload:
+  AnswerQuestionV2Input!)` where `payload = { answer: { text?, selectedOptions?:
+  [String!] (option _ids), link?: [String!], otherOptionTitle? } }`. The
+  non-null list fields default to empty, so only the relevant field need be sent.
+  Returns `QuestionV2Response { progress, question {...} }`. (`images`/`files`
+  Upload answers and `phoneNumber`/`location`/`contact` structured answers are
+  not wrapped yet.)
 
 ## Deferred to a follow-up
 
-- **Section questions** (`getEventSectionQuestionsV` read +
-  `answerEventSectionQuestionV` write): a complex typed (QuestionV2) shape whose
-  root fields aren't exposed via standard introspection. Not coded against a
-  guess — needs a live capture of a real answer payload.
 - **Browser-tab token auto-capture**: capturing `x-token`/`x-refresh-token` from
   a signed-in `web.vibodj.com` tab via the fetchproxy bridge. The web app stores
   them under obfuscated localStorage keys; the exact keys need live verification
