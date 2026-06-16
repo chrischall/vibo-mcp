@@ -29,6 +29,34 @@ describe('question tools', () => {
     expect(gql).not.toHaveBeenCalled();
   });
 
+  it('vibo_answer_question rejects an otherOptionTitle-only submission (no primary field)', async () => {
+    const res = await harness.callTool('vibo_answer_question', {
+      eventId: 'e1',
+      sectionId: 's1',
+      questionId: 'q1',
+      otherOptionTitle: 'Something else',
+    });
+    expect(res.isError).toBeTruthy();
+    expect(gql).not.toHaveBeenCalled();
+  });
+
+  it('vibo_answer_question sends a link answer with confirm', async () => {
+    gql.mockResolvedValue({ answerEventSectionQuestionV2: { progress: 0.25 } });
+    await harness.callTool('vibo_answer_question', {
+      eventId: 'e1',
+      sectionId: 's1',
+      questionId: 'q3',
+      link: ['https://youtu.be/abc'],
+      confirm: true,
+    });
+    expect(gql).toHaveBeenCalledWith(ANSWER_SECTION_QUESTION, {
+      eventId: 'e1',
+      sectionId: 's1',
+      questionId: 'q3',
+      payload: { answer: { link: ['https://youtu.be/abc'] } },
+    });
+  });
+
   it('vibo_answer_question previews a text answer without confirm', async () => {
     const res = await harness.callTool('vibo_answer_question', {
       eventId: 'e1',
