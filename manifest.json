@@ -4,7 +4,7 @@
   "name": "vibo-mcp",
   "display_name": "Vibo",
   "version": "1.2.0",
-  "description": "Plan your event music in Vibo (vibodj.com) — browse your events, timeline sections, song requests and playlists, add and like songs, and export to Spotify/Apple Music via natural language.",
+  "description": "Plan and manage your event music in Vibo (vibodj.com) — events, timeline, song requests, the DJ's song ideas and planning questions, must-play/do-not-play, comments, guests, and exports to Spotify/Apple Music, via natural language.",
   "author": {
     "name": "Chris Chall",
     "email": "chris.c.hall@gmail.com",
@@ -224,6 +224,10 @@
     {
       "name": "vibo_set_profile_photo",
       "description": "Set your Vibo profile photo from a local image"
+    },
+    {
+      "name": "vibo_capture_session",
+      "description": "Capture your Vibo login from a signed-in browser tab (SSO accounts)"
     }
   ],
   "compatibility": {

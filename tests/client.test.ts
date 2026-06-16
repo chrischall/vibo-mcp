@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { ViboClient } from '../src/client.js';
 import { GET_ME } from '../src/gql.js';
 
@@ -24,16 +27,24 @@ function installFetch(router: (call: Call) => RouterResult): Call[] {
   return calls;
 }
 
-const ENV_KEYS = ['VIBO_EMAIL', 'VIBO_PASSWORD', 'VIBO_ACCESS_TOKEN', 'VIBO_REFRESH_TOKEN', 'VIBO_API_URL'];
+const ENV_KEYS = ['VIBO_EMAIL', 'VIBO_PASSWORD', 'VIBO_ACCESS_TOKEN', 'VIBO_REFRESH_TOKEN', 'VIBO_API_URL', 'VIBO_SESSION_FILE'];
 function clearEnv() {
   for (const k of ENV_KEYS) delete process.env[k];
 }
 
 const isOp = (q: string, name: string) => q.includes(name);
 
-beforeEach(clearEnv);
+// Point the session store at a fresh empty dir each test so the client never
+// picks up a real ~/.vibo-mcp/session.json.
+let sessionDir: string;
+beforeEach(() => {
+  clearEnv();
+  sessionDir = mkdtempSync(join(tmpdir(), 'vibo-client-'));
+  process.env.VIBO_SESSION_FILE = join(sessionDir, 'session.json');
+});
 afterEach(() => {
   vi.restoreAllMocks();
+  rmSync(sessionDir, { recursive: true, force: true });
   clearEnv();
 });
 
@@ -124,6 +135,54 @@ describe('ViboClient auth lifecycle', () => {
     const client = new ViboClient();
     await expect(client.gql(GET_ME)).rejects.toThrow(/Section is locked/);
     expect(calls).toHaveLength(1); // no retry on a non-auth error
+  });
+
+  it('loads a persisted browser-captured session when no env credentials', async () => {
+    writeFileSync(process.env.VIBO_SESSION_FILE as string, JSON.stringify({ accessToken: 'SAVED', refreshToken: 'SR' }));
+    const calls = installFetch(({ token }) =>
+      token === 'SAVED' ? { data: { me: { _id: 'u1' } } } : { errors: [{ code: 'UNAUTHORIZED' }] },
+    );
+    const client = new ViboClient();
+    const data = await client.gql<{ me: { _id: string } }>(GET_ME);
+    expect(data.me._id).toBe('u1');
+    // used the saved token directly — no signIn needed
+    expect(calls).toHaveLength(1);
+    expect(calls[0].token).toBe('SAVED');
+  });
+
+  it('ignores a saved session when email/password are set (preferred path wins)', async () => {
+    // A stale capture exists on disk...
+    writeFileSync(process.env.VIBO_SESSION_FILE as string, JSON.stringify({ accessToken: 'STALE', refreshToken: 'SR' }));
+    process.env.VIBO_EMAIL = 'a@b.com';
+    process.env.VIBO_PASSWORD = 'pw';
+    const calls = installFetch(({ query, token }) => {
+      if (isOp(query, 'mutation signIn')) return { data: { signIn: { accessToken: 'FRESH', refreshToken: 'FR' } } };
+      if (token === 'FRESH') return { data: { me: { _id: 'u1' } } };
+      return { errors: [{ code: 'UNAUTHORIZED' }] };
+    });
+    const client = new ViboClient();
+    const data = await client.gql<{ me: { _id: string } }>(GET_ME);
+    expect(data.me._id).toBe('u1');
+    // logged in fresh; never sent the STALE saved token
+    expect(calls.some((c) => isOp(c.query, 'mutation signIn'))).toBe(true);
+    expect(calls.every((c) => c.token !== 'STALE')).toBe(true);
+  });
+
+  it('setTokens adopts a captured pair, clears the config error, and persists it', async () => {
+    const calls = installFetch(({ token }) =>
+      token === 'CAP' ? { data: { me: { _id: 'u2' } } } : { errors: [{ code: 'UNAUTHORIZED' }] },
+    );
+    const client = new ViboClient(); // no creds → config error
+    await expect(client.gql(GET_ME)).rejects.toThrow(/credentials are not configured/i);
+    expect(calls).toHaveLength(0);
+
+    client.setTokens('CAP', 'CR');
+    const data = await client.gql<{ me: { _id: string } }>(GET_ME);
+    expect(data.me._id).toBe('u2');
+
+    // setTokens persisted the pair, so a fresh client picks it up with no creds.
+    const fresh = await new ViboClient().gql<{ me: { _id: string } }>(GET_ME);
+    expect(fresh.me._id).toBe('u2');
   });
 
   it('only logs in once under concurrent calls (single-flight)', async () => {

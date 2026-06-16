@@ -1,8 +1,8 @@
 # vibo-mcp
 
 MCP server for [Vibo](https://vibodj.com). Wraps the Vibo consumer GraphQL API
-(`https://api.vibodj.com/v2/graphql`) and exposes 38 host/couple tools to Claude
-over stdio (15 reads + 23 confirm-gated writes). Built on `@chrischall/mcp-utils`
+(`https://api.vibodj.com/v2/graphql`) and exposes 39 host/couple tools to Claude
+over stdio (15 reads + 24 writes/actions, confirm-gated where they mutate). Built on `@chrischall/mcp-utils`
 (`runMcp`, `textResult`, `toolAnnotations`, `schemaConfirm`, error classes).
 
 ## Commands
@@ -31,7 +31,10 @@ src/
   index.ts        # entry — runMcp({ name, version, banner, tools })
   client.ts       # ViboClient — GraphQL POST w/ x-token, deferred config error,
                   #   single-flight login + refresh-on-expiry + replay-once;
-                  #   gqlUpload() for multipart (Upload scalar) file uploads
+                  #   gqlUpload() for multipart (Upload scalar); setTokens() for
+                  #   adopting a browser-captured session
+  auth.ts         # captureViboSession() — fetchproxy browser-bridge token capture (SSO)
+  session-store.ts# persist {accessToken,refreshToken} to ~/.vibo-mcp/session.json (0600)
   gql.ts          # all GraphQL operation documents (selections from introspection)
   tools/
     profile.ts          # vibo_get_me, vibo_healthcheck
@@ -48,6 +51,7 @@ src/
     collaboration.ts    # list_event_users, invite_users, change_user_role, remove_user
     section-edit.ts     # update_section
     uploads.ts          # set_profile_photo
+    session.ts          # capture_session (SSO browser token capture)
     shared.ts           # pagination + confirm-preview helpers
 ```
 
@@ -61,9 +65,19 @@ operation docs from `gql.ts`.
 - **GraphQL, custom headers.** Vibo authenticates with `x-token` (not
   `Authorization: Bearer`), so `client.ts` is a hand-written GraphQL `fetch`
   client, not `createApiClient`.
-- **Two credential paths:** `VIBO_EMAIL`+`VIBO_PASSWORD` (server-side `signIn`,
-  preferred) or a captured `VIBO_ACCESS_TOKEN` (+`VIBO_REFRESH_TOKEN`) for SSO
-  accounts. `VIBO_API_URL` overrides the endpoint.
+- **Three credential paths:** (1) `VIBO_EMAIL`+`VIBO_PASSWORD` (server-side
+  `signIn`, preferred); (2) a pasted `VIBO_ACCESS_TOKEN` (+`VIBO_REFRESH_TOKEN`);
+  (3) **browser capture** via `vibo_capture_session` — for Apple/Google/Facebook
+  SSO accounts, grabs the `token`/`refreshToken` localStorage keys from a
+  signed-in `web.vibodj.com` tab through the fetchproxy bridge (`src/auth.ts`)
+  and persists them to `~/.vibo-mcp/session.json` (`src/session-store.ts`), which
+  the constructor loads only when **no env token AND no email/password** are set
+  (so the preferred password path always wins over a possibly-stale saved
+  session). `VIBO_API_URL` overrides the
+  endpoint. Refreshed tokens are re-persisted in token-only mode so they survive
+  restarts. `@fetchproxy/bootstrap` is **lazy-imported** (the .mcpb externalizes
+  it; an eager import would crash boot) — capture works on the npm/`npx` install,
+  not the bundled .mcpb.
 - **Deferred-config-error pattern:** the constructor never throws; with no
   credentials it stores a `configError` and the server still boots + answers
   `tools/list`. The error surfaces on the first tool call.
@@ -81,27 +95,25 @@ variables. See `docs/VIBO-API.md` for the pinned input shapes.
 
 ## Verification status
 
-- All 38 tools' GraphQL documents were validated **live** against the production
-  schema (each parses + resolves to an auth error, not a field-validation error)
-  and every input type was confirmed via introspection.
+- All GraphQL documents were validated **live** against the production schema
+  (each parses + resolves to an auth error, not a field-validation error) and
+  every input type was confirmed via introspection.
 - The real auth-error shape (`{ code: "UNAUTHORIZED", message: "Not authorized.
   Try to log in" }` — top-level `code`) is what `isAuthError` matches.
 - **Verified authenticated end-to-end** against a real account: the read path
-  (profile, events, sections, section songs/questions, search, **song ideas**,
-  **event users**) and a reversible write (`toggleLike` → persisted → restored).
-- **Not yet live-round-tripped:** the write mutations (add/remove/update/move
-  songs, comments, imports, invites, section edits, exports, contact, **uploads**)
-  — they share the proven `client.gql`/`gqlUpload` auth path and their documents
-  are live-validated + unit-tested, but mutate real event data so weren't
-  exercised. Verify with a re-read before trusting each in earnest. `eventUsers`
-  returns nothing unless `usersType` is set, so `vibo_list_event_users` queries
-  host+guest and merges when no filter is given.
-
-## Deferred follow-ups
-
-- **Browser-tab token auto-capture** via the fetchproxy bridge: the web app
-  stores `x-token`/`x-refresh-token` under obfuscated localStorage keys; verify
-  the keys against a live session before building. Until then, paste tokens.
+  (profile, events, sections, section songs/questions, search, song ideas, event
+  users) and reversible writes (`toggleLike`, `update_song` must-play,
+  `comment_on_song` create+delete, `update_section` note — each persisted via
+  re-read then restored), plus the multipart upload transport (server parsed the
+  upload, rejecting only bogus content).
+- **Not yet live-round-tripped:** `move_song`, `reorder_songs`,
+  `import_playlist_to_section`, invite/role/remove user, a valid-image upload
+  success, and the **SSO browser capture** (`vibo_capture_session` — needs the
+  fetchproxy extension + a signed-in tab; localStorage keys verified from the web
+  bundle, capture logic unit-tested with an injected bootstrap). They share the
+  proven auth path; verify with a re-read before trusting each in earnest.
+- `eventUsers` returns nothing unless `usersType` is set, so
+  `vibo_list_event_users` queries host+guest and merges when no filter is given.
 
 ## Environment
 
@@ -142,4 +154,15 @@ squash-merges once `ci / ci` is green. Open a PR only when complete in one push
   field-validation error).
 - **Auth error code is top-level** (`code`, value `UNAUTHORIZED`), not under
   `extensions` — `isAuthError` checks both plus a message fallback.
+- **Write-verification re-reads can be cached.** Re-reading a resource
+  immediately after mutating it can return a *stale* body — observed live: a
+  `update_section` note read back the old value right after the write, even
+  though it had applied. (Same class as the MusicBrainz fleet repo's cached
+  `/ws/2` re-reads.) When confirming a write by re-read, expect possible
+  staleness; re-fetch after a beat, and don't conclude the write failed from a
+  single immediate read. (Read tools themselves are unaffected.)
+- **`@fetchproxy/bootstrap` is lazy + externalized.** Only `src/auth.ts` uses it,
+  via `await import(...)` inside `captureViboSession`; the bundle script marks it
+  `--external`. So the .mcpb boots fine but `vibo_capture_session` only works on
+  the npm/`npx` install (node_modules present). Never add a top-level import of it.
 - **stdio transport**: logs go to **stderr** only — stdout is JSON-RPC.

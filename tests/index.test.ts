@@ -13,13 +13,14 @@ import { registerImportTools } from '../src/tools/imports.js';
 import { registerCollaborationTools } from '../src/tools/collaboration.js';
 import { registerSectionEditTools } from '../src/tools/section-edit.js';
 import { registerUploadTools } from '../src/tools/uploads.js';
+import { registerSessionTools } from '../src/tools/session.js';
 import { createTestHarness } from './helpers.js';
 
 describe('tool registry', () => {
   let harness: Awaited<ReturnType<typeof createTestHarness>>;
   afterAll(async () => { if (harness) await harness.close(); });
 
-  it('registers exactly the expected 38 tools', async () => {
+  it('registers exactly the expected 39 tools', async () => {
     harness = await createTestHarness((server) => {
       registerProfileTools(server);
       registerEventTools(server);
@@ -35,6 +36,7 @@ describe('tool registry', () => {
       registerCollaborationTools(server);
       registerSectionEditTools(server);
       registerUploadTools(server);
+      registerSessionTools(server);
     });
 
     const names = (await harness.listTools()).map((t) => t.name).sort();
@@ -84,6 +86,8 @@ describe('tool registry', () => {
       'vibo_update_section',
       // uploads
       'vibo_set_profile_photo',
+      // SSO session capture
+      'vibo_capture_session',
     ].sort();
 
     expect(names).toEqual(expected);
@@ -117,6 +121,7 @@ describe('tool registry', () => {
       'vibo_remove_user',
       'vibo_update_section',
       'vibo_set_profile_photo',
+      'vibo_capture_session',
     ]);
     for (const t of tools) {
       const readOnly = t.annotations?.readOnlyHint;

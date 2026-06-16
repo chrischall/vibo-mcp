@@ -88,13 +88,21 @@ real event data). See the v2/v3 + Uploads sections below for the added operation
   Upload answers and `phoneNumber`/`location`/`contact` structured answers are
   not wrapped yet.)
 
-## Deferred to a follow-up
+## SSO browser token capture (implemented)
 
-- **Browser-tab token auto-capture**: capturing `x-token`/`x-refresh-token` from
-  a signed-in `web.vibodj.com` tab via the fetchproxy bridge. The web app stores
-  them under obfuscated localStorage keys; the exact keys need live verification
-  before coding. Until then, paste tokens via `VIBO_ACCESS_TOKEN` /
-  `VIBO_REFRESH_TOKEN`.
+Apple/Google/Facebook accounts have no password. `vibo_capture_session` (→
+`src/auth.ts`) uses `@fetchproxy/bootstrap` to read the Vibo web app's token
+**localStorage keys directly** — `token` (access) and `refreshToken`, on the
+`web.vibodj.com` origin (verified from the web bundle: `get token(){return
+localStorage.getItem(c.d)}` / `refreshToken → c.c`, the only quoted keys being
+`"token"`/`"refreshToken"`). Config:
+`bootstrap({ domains:['vibodj.com'], storageSubdomain:'web', declare:{ localStorage:['token','refreshToken'] } })`
+→ `session.localStorage.token` / `.refreshToken`. Persisted to
+`~/.vibo-mcp/session.json` (0600) via `src/session-store.ts`; the client loads it
+when no env token is present, and re-persists rotated tokens in token-only mode.
+The bridge touches only the one-time capture; all real calls use plain node
+`fetch` with `x-token`. (Lazy-imported + esbuild-`--external`, so the .mcpb boots
+but capture requires the npm install.)
 
 ## v2 / v3 operations (added)
 
