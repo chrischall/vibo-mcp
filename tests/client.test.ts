@@ -150,6 +150,24 @@ describe('ViboClient auth lifecycle', () => {
     expect(calls[0].token).toBe('SAVED');
   });
 
+  it('ignores a saved session when email/password are set (preferred path wins)', async () => {
+    // A stale capture exists on disk...
+    writeFileSync(process.env.VIBO_SESSION_FILE as string, JSON.stringify({ accessToken: 'STALE', refreshToken: 'SR' }));
+    process.env.VIBO_EMAIL = 'a@b.com';
+    process.env.VIBO_PASSWORD = 'pw';
+    const calls = installFetch(({ query, token }) => {
+      if (isOp(query, 'mutation signIn')) return { data: { signIn: { accessToken: 'FRESH', refreshToken: 'FR' } } };
+      if (token === 'FRESH') return { data: { me: { _id: 'u1' } } };
+      return { errors: [{ code: 'UNAUTHORIZED' }] };
+    });
+    const client = new ViboClient();
+    const data = await client.gql<{ me: { _id: string } }>(GET_ME);
+    expect(data.me._id).toBe('u1');
+    // logged in fresh; never sent the STALE saved token
+    expect(calls.some((c) => isOp(c.query, 'mutation signIn'))).toBe(true);
+    expect(calls.every((c) => c.token !== 'STALE')).toBe(true);
+  });
+
   it('setTokens adopts a captured pair, clears the config error, and persists it', async () => {
     const calls = installFetch(({ token }) =>
       token === 'CAP' ? { data: { me: { _id: 'u2' } } } : { errors: [{ code: 'UNAUTHORIZED' }] },

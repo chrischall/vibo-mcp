@@ -99,17 +99,19 @@ export class ViboClient {
     this.accessToken = accessToken ?? null;
     this.refreshTokenValue = refreshToken ?? null;
 
-    // Fall back to a previously browser-captured session (SSO accounts) when no
-    // env token was supplied. Env always wins.
-    if (!this.accessToken) {
+    const haveLogin = Boolean(email && password);
+
+    // Fall back to a previously browser-captured session (SSO accounts) ONLY
+    // when there's no env token AND no email/password. Email/password is the
+    // documented preferred path and must win over a (possibly stale) saved
+    // session — otherwise an old session.json would silently shadow it.
+    if (!this.accessToken && !haveLogin) {
       const saved = loadSession();
       if (saved) {
         this.accessToken = saved.accessToken;
         this.refreshTokenValue = saved.refreshToken;
       }
     }
-
-    const haveLogin = Boolean(email && password);
     const haveToken = Boolean(this.accessToken);
     if (!haveLogin && !haveToken) {
       this.configError = new McpToolError(

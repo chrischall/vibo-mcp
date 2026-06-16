@@ -71,7 +71,9 @@ operation docs from `gql.ts`.
   SSO accounts, grabs the `token`/`refreshToken` localStorage keys from a
   signed-in `web.vibodj.com` tab through the fetchproxy bridge (`src/auth.ts`)
   and persists them to `~/.vibo-mcp/session.json` (`src/session-store.ts`), which
-  the constructor loads when no env token is set. `VIBO_API_URL` overrides the
+  the constructor loads only when **no env token AND no email/password** are set
+  (so the preferred password path always wins over a possibly-stale saved
+  session). `VIBO_API_URL` overrides the
   endpoint. Refreshed tokens are re-persisted in token-only mode so they survive
   restarts. `@fetchproxy/bootstrap` is **lazy-imported** (the .mcpb externalizes
   it; an eager import would crash boot) — capture works on the npm/`npx` install,
