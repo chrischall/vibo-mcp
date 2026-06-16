@@ -38,22 +38,22 @@ describe('session-store', () => {
 
 describe('captureViboSession', () => {
   it('reads token + refreshToken from the bridge and returns them WITHOUT persisting', async () => {
-    const bootstrap = vi.fn().mockResolvedValue({ localStorage: { token: 'AT', refreshToken: 'RT' } });
+    const bootstrap = vi.fn().mockResolvedValue({ localStorage: { 'x-token': 'AT', 'x-refresh-token': 'RT' } });
     const result = await captureViboSession({ bootstrap });
 
     expect(result).toEqual({ accessToken: 'AT', refreshToken: 'RT' });
     // Capture does NOT persist — the caller persists only after verifying.
     expect(loadSession()).toBeNull();
 
-    // declared the right localStorage keys + web subdomain
+    // declared the right localStorage keys (live-verified) + web subdomain
     const opts = bootstrap.mock.calls[0][0];
     expect(opts.domains).toEqual(['vibodj.com']);
     expect(opts.storageSubdomain).toBe('web');
-    expect(opts.declare.localStorage).toEqual(['token', 'refreshToken']);
+    expect(opts.declare.localStorage).toEqual(['x-token', 'x-refresh-token']);
   });
 
   it('treats a missing refreshToken as null', async () => {
-    const bootstrap = vi.fn().mockResolvedValue({ localStorage: { token: 'AT' } });
+    const bootstrap = vi.fn().mockResolvedValue({ localStorage: { 'x-token': 'AT' } });
     const result = await captureViboSession({ bootstrap });
     expect(result).toEqual({ accessToken: 'AT', refreshToken: null });
   });

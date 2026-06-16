@@ -92,17 +92,19 @@ real event data). See the v2/v3 + Uploads sections below for the added operation
 
 Apple/Google/Facebook accounts have no password. `vibo_capture_session` (→
 `src/auth.ts`) uses `@fetchproxy/bootstrap` to read the Vibo web app's token
-**localStorage keys directly** — `token` (access) and `refreshToken`, on the
-`web.vibodj.com` origin (verified from the web bundle: `get token(){return
-localStorage.getItem(c.d)}` / `refreshToken → c.c`, the only quoted keys being
-`"token"`/`"refreshToken"`). Config:
-`bootstrap({ domains:['vibodj.com'], storageSubdomain:'web', declare:{ localStorage:['token','refreshToken'] } })`
-→ `session.localStorage.token` / `.refreshToken`. Persisted to
-`~/.vibo-mcp/session.json` (0600) via `src/session-store.ts`; the client loads it
-when no env token is present, and re-persists rotated tokens in token-only mode.
-The bridge touches only the one-time capture; all real calls use plain node
-`fetch` with `x-token`. (Lazy-imported + esbuild-`--external`, so the .mcpb boots
-but capture requires the npm install.)
+**localStorage keys directly** — **`x-token`** (access) and **`x-refresh-token`**
+(both ~348-char JWTs), on the `web.vibodj.com` origin. **Keys verified LIVE
+against a signed-in tab** — the obfuscated web bundle (`c.d`/`c.c`) misleadingly
+suggested `token`/`refreshToken`; the real keys match the header names. Config:
+`bootstrap({ domains:['vibodj.com'], storageSubdomain:'web', declare:{ localStorage:['x-token','x-refresh-token'] } })`
+→ `session.localStorage['x-token']` / `['x-refresh-token']`. Persisted to
+`~/.vibo-mcp/session.json` (0600) via `src/session-store.ts` only after a GET_ME
+verify; the client loads it when no env token / email-password is present, and
+re-persists rotated tokens in token-only mode. The bridge touches only the
+one-time capture; all real calls use plain node `fetch` with `x-token`.
+(Lazy-imported + esbuild-`--external`, so the .mcpb boots but capture requires
+the npm install.) **Verified end-to-end live**: captured both tokens from a
+signed-in tab and confirmed `GET_ME`.
 
 ## v2 / v3 operations (added)
 

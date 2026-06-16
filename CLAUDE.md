@@ -68,7 +68,7 @@ operation docs from `gql.ts`.
 - **Three credential paths:** (1) `VIBO_EMAIL`+`VIBO_PASSWORD` (server-side
   `signIn`, preferred); (2) a pasted `VIBO_ACCESS_TOKEN` (+`VIBO_REFRESH_TOKEN`);
   (3) **browser capture** via `vibo_capture_session` — for Apple/Google/Facebook
-  SSO accounts, grabs the `token`/`refreshToken` localStorage keys from a
+  SSO accounts, grabs the `x-token`/`x-refresh-token` localStorage keys from a
   signed-in `web.vibodj.com` tab through the fetchproxy bridge (`src/auth.ts`)
   and persists them to `~/.vibo-mcp/session.json` (`src/session-store.ts`), which
   the constructor loads only when **no env token AND no email/password** are set
@@ -106,12 +106,16 @@ variables. See `docs/VIBO-API.md` for the pinned input shapes.
   `comment_on_song` create+delete, `update_section` note — each persisted via
   re-read then restored), plus the multipart upload transport (server parsed the
   upload, rejecting only bogus content).
+- **SSO browser capture verified live**: `vibo_capture_session` captured both
+  tokens (`x-token`/`x-refresh-token`) from a signed-in `web.vibodj.com` tab via
+  the fetchproxy bridge and `GET_ME` confirmed the account. The localStorage keys
+  were **wrong in the first SSO ship** (the obfuscated bundle suggested
+  `token`/`refreshToken`; the real keys are `x-token`/`x-refresh-token`, found by
+  reading the live tab) — fixed here.
 - **Not yet live-round-tripped:** `move_song`, `reorder_songs`,
   `import_playlist_to_section`, invite/role/remove user, a valid-image upload
-  success, and the **SSO browser capture** (`vibo_capture_session` — needs the
-  fetchproxy extension + a signed-in tab; localStorage keys verified from the web
-  bundle, capture logic unit-tested with an injected bootstrap). They share the
-  proven auth path; verify with a re-read before trusting each in earnest.
+  success. They share the proven auth path; verify with a re-read before trusting
+  each in earnest.
 - `eventUsers` returns nothing unless `usersType` is set, so
   `vibo_list_event_users` queries host+guest and merges when no filter is given.
 
