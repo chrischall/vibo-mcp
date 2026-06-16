@@ -1,0 +1,50 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.chrischall/vibo-mcp",
+  "description": "Vibo (vibodj.com) MCP — plan event music: events, timeline, song requests, playlist export",
+  "repository": {
+    "url": "https://github.com/chrischall/vibo-mcp",
+    "source": "github"
+  },
+  "version": "1.0.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "vibo-mcp",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "VIBO_EMAIL",
+          "description": "Vibo account email (or use VIBO_ACCESS_TOKEN for SSO accounts)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "VIBO_PASSWORD",
+          "description": "Vibo account password",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true
+        },
+        {
+          "name": "VIBO_ACCESS_TOKEN",
+          "description": "Captured x-token from a signed-in web.vibodj.com session (SSO alternative)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true
+        },
+        {
+          "name": "VIBO_REFRESH_TOKEN",
+          "description": "Matching x-refresh-token so the session can renew",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

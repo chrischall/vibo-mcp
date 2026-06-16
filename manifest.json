@@ -1,0 +1,92 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/dxt/main/dist/mcpb-manifest.schema.json",
+  "manifest_version": "0.3",
+  "name": "vibo-mcp",
+  "display_name": "Vibo",
+  "version": "1.0.0",
+  "description": "Plan your event music in Vibo (vibodj.com) — browse your events, timeline sections, song requests and playlists, add and like songs, and export to Spotify/Apple Music via natural language.",
+  "author": {
+    "name": "Chris Chall",
+    "email": "chris.c.hall@gmail.com",
+    "url": "https://github.com/chrischall"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chrischall/vibo-mcp"
+  },
+  "homepage": "https://github.com/chrischall/vibo-mcp",
+  "support": "https://github.com/chrischall/vibo-mcp/issues",
+  "license": "MIT",
+  "keywords": ["vibo", "vibodj", "wedding", "dj", "event-planning", "playlist", "music"],
+  "server": {
+    "type": "node",
+    "entry_point": "dist/bundle.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/bundle.js"],
+      "env": {
+        "VIBO_EMAIL": "${user_config.vibo_email}",
+        "VIBO_PASSWORD": "${user_config.vibo_password}",
+        "VIBO_ACCESS_TOKEN": "${user_config.vibo_access_token}",
+        "VIBO_REFRESH_TOKEN": "${user_config.vibo_refresh_token}"
+      }
+    }
+  },
+  "user_config": {
+    "vibo_email": {
+      "type": "string",
+      "title": "Vibo Email",
+      "description": "Your Vibo (vibodj.com) account email. Leave blank if you sign in with Apple/Google/Facebook and use a captured access token instead.",
+      "required": false,
+      "sensitive": false
+    },
+    "vibo_password": {
+      "type": "string",
+      "title": "Vibo Password",
+      "description": "Your Vibo account password (used for server-side sign-in).",
+      "required": false,
+      "sensitive": true
+    },
+    "vibo_access_token": {
+      "type": "string",
+      "title": "Vibo Access Token (alternative)",
+      "description": "A captured x-token from a signed-in web.vibodj.com session. Use this instead of email/password if your account only signs in via Apple/Google/Facebook.",
+      "required": false,
+      "sensitive": true
+    },
+    "vibo_refresh_token": {
+      "type": "string",
+      "title": "Vibo Refresh Token (alternative)",
+      "description": "The matching x-refresh-token, so the session can renew when the access token expires.",
+      "required": false,
+      "sensitive": true
+    }
+  },
+  "tools": [
+    { "name": "vibo_get_me", "description": "Get your Vibo profile" },
+    { "name": "vibo_healthcheck", "description": "Verify connectivity and authentication" },
+    { "name": "vibo_list_events", "description": "List your upcoming or past events" },
+    { "name": "vibo_get_event", "description": "Get full details for one event" },
+    { "name": "vibo_join_event", "description": "Join an event via share link or hash" },
+    { "name": "vibo_leave_event", "description": "Leave an event" },
+    { "name": "vibo_create_event_contact", "description": "Add a host/guest contact to an event" },
+    { "name": "vibo_list_sections", "description": "List an event's timeline sections" },
+    { "name": "vibo_get_section_songs", "description": "List the songs requested in a section" },
+    { "name": "vibo_search_songs", "description": "Search for songs to add to a section" },
+    { "name": "vibo_add_song_to_section", "description": "Add a song to a section" },
+    { "name": "vibo_toggle_song_like", "description": "Like or unlike a song" },
+    { "name": "vibo_get_playlists", "description": "List your connected Spotify/Apple Music playlists" },
+    { "name": "vibo_get_playlist_songs", "description": "List tracks in a connected playlist" },
+    { "name": "vibo_export_event_to_spotify", "description": "Export an event's songs to a Spotify playlist" },
+    { "name": "vibo_export_event_to_apple_music", "description": "Export an event's songs to an Apple Music playlist" },
+    { "name": "vibo_list_notifications", "description": "List your Vibo notifications" },
+    { "name": "vibo_get_notifications_count", "description": "Count unread notifications" },
+    { "name": "vibo_mark_notifications_read", "description": "Mark notifications as read" }
+  ],
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {
+      "node": ">=20.0.0"
+    }
+  }
+}

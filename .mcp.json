@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "vibo": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/index.js"],
+      "env": {
+        "VIBO_EMAIL": "${VIBO_EMAIL}",
+        "VIBO_PASSWORD": "${VIBO_PASSWORD}",
+        "VIBO_ACCESS_TOKEN": "${VIBO_ACCESS_TOKEN}",
+        "VIBO_REFRESH_TOKEN": "${VIBO_REFRESH_TOKEN}"
+      }
+    }
+  }
+}
