@@ -54,7 +54,9 @@ config error only appears on the first tool call.
 - `vibo_get_section_songs` — songs requested in a section, with likes/flags/comments.
 - `vibo_list_section_questions` — the DJ's planning questions for a section (type, options, current answer).
 - `vibo_search_songs` — find songs to add (Vibo catalog or connected Spotify).
+- `vibo_list_section_song_ideas` / `vibo_list_song_ideas_songs` — browse the DJ's suggested song collections per section.
 - `vibo_get_playlists` / `vibo_get_playlist_songs` — your connected-service playlists.
+- `vibo_list_event_users` — the hosts and guests on an event.
 - `vibo_list_notifications` / `vibo_get_notifications_count`.
 - `vibo_healthcheck` — confirm connectivity + auth.
 
@@ -63,11 +65,18 @@ Each mutating tool makes **no** network call unless `confirm: true`; without it
 you get a dry-run preview of exactly what would be sent.
 
 - `vibo_add_song_to_section` — add a searched song to a section.
+- `vibo_remove_song_from_section` / `vibo_move_song` / `vibo_reorder_songs`.
+- `vibo_update_song` — mark must-play / do-not-play, or set a comment.
 - `vibo_toggle_song_like` — like/unlike a song.
+- `vibo_comment_on_song` / `vibo_comment_on_section` (+ delete) — leave the DJ notes.
+- `vibo_import_playlist_to_section` — pull tracks from a connected Spotify/Apple playlist.
 - `vibo_join_event` — join via a share link/hash (e.g. a `vibodj.app.link/...` URL).
 - `vibo_leave_event`.
 - `vibo_create_event_contact` — add a host/guest contact.
-- `vibo_answer_question` — answer a section planning question (text / option ids / link).
+- `vibo_invite_users` / `vibo_change_user_role` / `vibo_remove_user` — manage who's on the event.
+- `vibo_update_section` — edit a section's name, time, or note.
+- `vibo_answer_question` — answer a planning question (text / option ids / link / image+file uploads).
+- `vibo_set_profile_photo` — set your profile photo from a local image.
 - `vibo_mark_notifications_read`.
 - `vibo_export_event_to_spotify` / `vibo_export_event_to_apple_music`.
 

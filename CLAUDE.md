@@ -1,8 +1,8 @@
 # vibo-mcp
 
 MCP server for [Vibo](https://vibodj.com). Wraps the Vibo consumer GraphQL API
-(`https://api.vibodj.com/v2/graphql`) and exposes 21 host/couple tools to Claude
-over stdio (12 reads + 9 confirm-gated writes). Built on `@chrischall/mcp-utils`
+(`https://api.vibodj.com/v2/graphql`) and exposes 38 host/couple tools to Claude
+over stdio (15 reads + 23 confirm-gated writes). Built on `@chrischall/mcp-utils`
 (`runMcp`, `textResult`, `toolAnnotations`, `schemaConfirm`, error classes).
 
 ## Commands
@@ -30,17 +30,25 @@ src/
   version.ts      # single source of truth for VERSION (x-release-please-version)
   index.ts        # entry — runMcp({ name, version, banner, tools })
   client.ts       # ViboClient — GraphQL POST w/ x-token, deferred config error,
-                  #   single-flight login + refresh-on-expiry + replay-once
+                  #   single-flight login + refresh-on-expiry + replay-once;
+                  #   gqlUpload() for multipart (Upload scalar) file uploads
   gql.ts          # all GraphQL operation documents (selections from introspection)
   tools/
-    profile.ts        # vibo_get_me, vibo_healthcheck
-    events.ts         # list_events, get_event, join_event, leave_event, create_event_contact
-    sections.ts       # vibo_list_sections
-    songs.ts          # get_section_songs, search_songs, add_song_to_section, toggle_song_like
-    playlists.ts      # get_playlists, get_playlist_songs, export_event_to_{spotify,apple_music}
-    notifications.ts  # list_notifications, get_notifications_count, mark_notifications_read
-    questions.ts      # list_section_questions, answer_question
-    shared.ts         # pagination + confirm-preview helpers
+    profile.ts          # vibo_get_me, vibo_healthcheck
+    events.ts           # list_events, get_event, join_event, leave_event, create_event_contact
+    sections.ts         # vibo_list_sections
+    songs.ts            # get_section_songs, search_songs, add_song_to_section, toggle_song_like
+    playlists.ts        # get_playlists, get_playlist_songs, export_event_to_{spotify,apple_music}
+    notifications.ts    # list_notifications, get_notifications_count, mark_notifications_read
+    questions.ts        # list_section_questions, answer_question (incl. image/file uploads)
+    song-management.ts  # remove_song_from_section, update_song, move_song, reorder_songs
+    comments.ts         # comment_on_song/section, delete_song/section_comment
+    ideas.ts            # list_section_song_ideas, list_song_ideas_songs
+    imports.ts          # import_playlist_to_section
+    collaboration.ts    # list_event_users, invite_users, change_user_role, remove_user
+    section-edit.ts     # update_section
+    uploads.ts          # set_profile_photo
+    shared.ts           # pagination + confirm-preview helpers
 ```
 
 Each tool file exports `register<Domain>Tools(server)` calling
@@ -73,19 +81,21 @@ variables. See `docs/VIBO-API.md` for the pinned input shapes.
 
 ## Verification status
 
-- All 21 GraphQL documents were validated **live** against the production schema
-  (each parses + resolves to an auth error, not a field-validation error) and
-  every input type was confirmed via introspection.
+- All 38 tools' GraphQL documents were validated **live** against the production
+  schema (each parses + resolves to an auth error, not a field-validation error)
+  and every input type was confirmed via introspection.
 - The real auth-error shape (`{ code: "UNAUTHORIZED", message: "Not authorized.
   Try to log in" }` — top-level `code`) is what `isAuthError` matches.
-- **Verified authenticated end-to-end** against a real account: the full read
-  path (profile, events, sections, section songs/questions, search) and a
-  reversible write (`toggleLike` → persisted via re-read → restored).
-- **Not yet live-round-tripped:** the remaining write mutations
-  (`addSongToSection`, `answerEventSectionQuestionV2`, exports, contact, etc.) —
-  they share the proven `client.gql` auth path and their documents are
-  live-validated + unit-tested, but mutate real event data so weren't exercised.
-  Verify with a re-read before trusting each in earnest.
+- **Verified authenticated end-to-end** against a real account: the read path
+  (profile, events, sections, section songs/questions, search, **song ideas**,
+  **event users**) and a reversible write (`toggleLike` → persisted → restored).
+- **Not yet live-round-tripped:** the write mutations (add/remove/update/move
+  songs, comments, imports, invites, section edits, exports, contact, **uploads**)
+  — they share the proven `client.gql`/`gqlUpload` auth path and their documents
+  are live-validated + unit-tested, but mutate real event data so weren't
+  exercised. Verify with a re-read before trusting each in earnest. `eventUsers`
+  returns nothing unless `usersType` is set, so `vibo_list_event_users` queries
+  host+guest and merges when no filter is given.
 
 ## Deferred follow-ups
 

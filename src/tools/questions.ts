@@ -30,7 +30,7 @@ export function registerQuestionTools(server: McpServer): void {
     'vibo_answer_question',
     {
       description:
-        "Answer a section planning question. Provide exactly the field matching the question's type: `text` for a text question, `selectedOptions` (array of option _ids from vibo_list_section_questions) for radio/checkbox/select, or `link` (array of URLs) for a link question. Use `otherOptionTitle` with the question's \"other\" option. Confirm-gated.",
+        "Answer a section planning question. Provide the field matching the question's type: `text` for a text question, `selectedOptions` (array of option _ids from vibo_list_section_questions) for radio/checkbox/select, or `link` (array of URLs) for a link question. Use `otherOptionTitle` with the question's \"other\" option. For photo/file questions, pass `imagePaths` / `filePaths` (absolute local paths). Confirm-gated.",
       annotations: toolAnnotations({ title: 'Answer Vibo question', readOnly: false }),
       inputSchema: {
         eventId: z.string().describe('Event id.'),
@@ -46,15 +46,25 @@ export function registerQuestionTools(server: McpServer): void {
           .string()
           .optional()
           .describe('Free-text value when selecting the question\'s "other" option.'),
+        imagePaths: z
+          .array(z.string())
+          .optional()
+          .describe('Absolute local image file paths, for a photo question.'),
+        filePaths: z
+          .array(z.string())
+          .optional()
+          .describe('Absolute local file paths, for a file-attachment question.'),
         confirm: schemaConfirm,
       },
     },
-    async ({ eventId, sectionId, questionId, text, selectedOptions, link, otherOptionTitle, confirm }) => {
+    async ({ eventId, sectionId, questionId, text, selectedOptions, link, otherOptionTitle, imagePaths, filePaths, confirm }) => {
+      const hasImages = (imagePaths?.length ?? 0) > 0;
+      const hasFiles = (filePaths?.length ?? 0) > 0;
       // Require at least one PRIMARY answer field. otherOptionTitle is only a
       // modifier for selectedOptions — on its own it is not a valid answer.
-      if (text === undefined && selectedOptions === undefined && link === undefined) {
-        throw new McpToolError('Provide an answer: text, selectedOptions, or link.', {
-          hint: "Match the question's type — text → `text`, radio/checkbox/select → `selectedOptions`, link → `link`.",
+      if (text === undefined && selectedOptions === undefined && link === undefined && !hasImages && !hasFiles) {
+        throw new McpToolError('Provide an answer: text, selectedOptions, link, imagePaths, or filePaths.', {
+          hint: "Match the question's type — text → `text`, radio/checkbox/select → `selectedOptions`, link → `link`, photo/file → `imagePaths`/`filePaths`.",
         });
       }
       const answer: Record<string, unknown> = {};
@@ -62,6 +72,26 @@ export function registerQuestionTools(server: McpServer): void {
       if (selectedOptions !== undefined) answer.selectedOptions = selectedOptions;
       if (link !== undefined) answer.link = link;
       if (otherOptionTitle !== undefined) answer.otherOptionTitle = otherOptionTitle;
+
+      // File answers route through a multipart upload (the Upload scalar).
+      if (hasImages || hasFiles) {
+        if (hasImages) answer.images = (imagePaths as string[]).map(() => null);
+        if (hasFiles) answer.files = (filePaths as string[]).map(() => null);
+        const payload = { answer };
+        const fileMap: Record<string, string> = {};
+        (imagePaths ?? []).forEach((p, i) => (fileMap[`variables.payload.answer.images.${i}`] = p));
+        (filePaths ?? []).forEach((p, i) => (fileMap[`variables.payload.answer.files.${i}`] = p));
+        if (!confirm) {
+          return previewResult('answerEventSectionQuestionV2', { eventId, sectionId, questionId, payload, uploads: fileMap });
+        }
+        const data = await client.gqlUpload<{ answerEventSectionQuestionV2: unknown }>(
+          ANSWER_SECTION_QUESTION,
+          { eventId, sectionId, questionId, payload },
+          fileMap,
+        );
+        return textResult(data.answerEventSectionQuestionV2);
+      }
+
       const payload = { answer };
       if (!confirm) return previewResult('answerEventSectionQuestionV2', { eventId, sectionId, questionId, payload });
       const data = await client.gql<{ answerEventSectionQuestionV2: unknown }>(ANSWER_SECTION_QUESTION, {
