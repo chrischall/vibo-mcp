@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.3.0](https://github.com/chrischall/vibo-mcp/compare/v1.2.0...v1.3.0) (2026-06-16)
+
+
+### Features
+
+* SSO browser token auto-capture (fetchproxy) + docs polish ([#9](https://github.com/chrischall/vibo-mcp/issues/9)) ([7b061b5](https://github.com/chrischall/vibo-mcp/commit/7b061b5038e2cf0bc3a6b3d4603c33e1fd50b226))
+
+
+### Bug Fixes
+
+* persist captured Vibo session only after GET_ME verify ([#12](https://github.com/chrischall/vibo-mcp/issues/12)) ([976d194](https://github.com/chrischall/vibo-mcp/commit/976d194a634fc8205b5f3dc42aeff0ffcd148792)), closes [#10](https://github.com/chrischall/vibo-mcp/issues/10)
+* use the real x-token/x-refresh-token localStorage keys for SSO capture ([#13](https://github.com/chrischall/vibo-mcp/issues/13)) ([a5a5f99](https://github.com/chrischall/vibo-mcp/commit/a5a5f99472e82620e80bb75a2596113320e32c4d))
+
 ## [1.2.0](https://github.com/chrischall/vibo-mcp/compare/v1.1.0...v1.2.0) (2026-06-16)
 
 

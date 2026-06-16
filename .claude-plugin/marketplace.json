@@ -7,7 +7,7 @@
   },
   "metadata": {
     "description": "MCP server for Vibo (vibodj.com) — plan & manage event music, song requests, ideas, guests, and playlists via natural language",
-    "version": "1.2.0"
+    "version": "1.3.0"
   },
   "plugins": [
     {
@@ -15,7 +15,7 @@
       "displayName": "Vibo",
       "source": "./",
       "description": "MCP server for Vibo — browse & manage events, timeline, songs, the DJ song ideas/questions, guests, and exports to Spotify/Apple Music",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "author": {
         "name": "Chris Hall"
       },
