@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ViboClient } from '../src/client.js';
+import { saveSession } from '../src/session-store.js';
 import { GET_ME } from '../src/gql.js';
 
 type RouterResult = { status?: number; data?: unknown; errors?: unknown };
@@ -138,7 +139,7 @@ describe('ViboClient auth lifecycle', () => {
   });
 
   it('loads a persisted browser-captured session when no env credentials', async () => {
-    writeFileSync(process.env.VIBO_SESSION_FILE as string, JSON.stringify({ accessToken: 'SAVED', refreshToken: 'SR' }));
+    saveSession({ accessToken: 'SAVED', refreshToken: 'SR' });
     const calls = installFetch(({ token }) =>
       token === 'SAVED' ? { data: { me: { _id: 'u1' } } } : { errors: [{ code: 'UNAUTHORIZED' }] },
     );
@@ -152,7 +153,7 @@ describe('ViboClient auth lifecycle', () => {
 
   it('ignores a saved session when email/password are set (preferred path wins)', async () => {
     // A stale capture exists on disk...
-    writeFileSync(process.env.VIBO_SESSION_FILE as string, JSON.stringify({ accessToken: 'STALE', refreshToken: 'SR' }));
+    saveSession({ accessToken: 'STALE', refreshToken: 'SR' });
     process.env.VIBO_EMAIL = 'a@b.com';
     process.env.VIBO_PASSWORD = 'pw';
     const calls = installFetch(({ query, token }) => {
