@@ -28,11 +28,22 @@ describe('session-store', () => {
     expect(loadSession()).toBeNull();
   });
 
-  it('returns null on a malformed file', () => {
+  it('returns null on a malformed file and preserves it as a .corrupt backup', () => {
     saveSession({ accessToken: 'AT', refreshToken: 'RT' });
     const file = process.env.VIBO_SESSION_FILE as string;
     writeFileSync(file, '{not json'); // corrupt it
     expect(loadSession()).toBeNull();
+    // the unparseable bytes are moved aside, not silently destroyed
+    expect(existsSync(`${file}.corrupt`)).toBe(true);
+  });
+
+  it('degrades a stale pre-migration file (old {accessToken,...} object) to "no session"', () => {
+    const file = process.env.VIBO_SESSION_FILE as string;
+    writeFileSync(file, JSON.stringify({ accessToken: 'OLD', refreshToken: 'OR' }, null, 2));
+    expect(loadSession()).toBeNull(); // valid JSON, wrong shape — never crashes
+    // save/load still works over the top of it
+    saveSession({ accessToken: 'NEW', refreshToken: null });
+    expect(loadSession()).toEqual({ accessToken: 'NEW', refreshToken: null });
   });
 });
 
