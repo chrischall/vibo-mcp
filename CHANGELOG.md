@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.3.1](https://github.com/chrischall/vibo-mcp/compare/v1.3.0...v1.3.1) (2026-07-07)
+
+
+### Bug Fixes
+
+* bump @chrischall/mcp-utils to ^0.12.0 ([#19](https://github.com/chrischall/vibo-mcp/issues/19)) ([70f50e4](https://github.com/chrischall/vibo-mcp/commit/70f50e4ed3a0b4664355f43e3ad9c5b1cd3ad37f))
+
+
+### Refactor
+
+* adopt SessionStore from mcp-utils/session ([#17](https://github.com/chrischall/vibo-mcp/issues/17)) ([fcf1d01](https://github.com/chrischall/vibo-mcp/commit/fcf1d01d0a858db023f374a95650ef9021ecb616))
+
+
+### Documentation
+
+* document first-party dependency-bump label exception ([#22](https://github.com/chrischall/vibo-mcp/issues/22)) ([e002c1d](https://github.com/chrischall/vibo-mcp/commit/e002c1db61c46ce151abfac9a8b1ada956756d02))
+
 ## [1.3.0](https://github.com/chrischall/vibo-mcp/compare/v1.2.0...v1.3.0) (2026-06-16)
 
 
