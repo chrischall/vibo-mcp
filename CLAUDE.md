@@ -149,6 +149,8 @@ the squash subject release-please parses). **Don't merge PRs yourself** —
 squash-merges once `ci / ci` is green. Open a PR only when complete in one push
 (auto-merge ships it; later commits orphan). Need a checkpoint? Open `--draft`.
 
+**Exception for first-party dependency bumps.** When bumping a package we own (`@chrischall/mcp-utils`, `@chrischall/realty-core`, `@fetchproxy/server` — anything published from a chrischall-owned repo), label the PR `enhancement` or `bug` instead of `dependencies`, and use the matching Conventional-Commit prefix (`feat:` or `fix:`) instead of `chore:`/`build(deps):`. Those bumps deliver real product fixes or features through us, so they should drive a release-please version bump and show up under Features/Bug Fixes in the release notes — not get hidden under "Dependencies" (which doesn't trigger a release).
+
 ## Gotchas
 
 - **ESM + NodeNext**: relative imports use `.js` extensions even from `.ts`.
