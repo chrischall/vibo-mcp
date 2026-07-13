@@ -48,7 +48,7 @@ confirm-gated: without `confirm: true` it returns a dry-run preview and makes no
 network call.
 
 See [docs/VIBO-API.md](docs/VIBO-API.md) for the reverse-engineered API notes
-and [SKILL.md](SKILL.md) for the full tool list.
+and [skills/vibo-mcp/SKILL.md](skills/vibo-mcp/SKILL.md) for the full tool list.
 
 ## Development
 
