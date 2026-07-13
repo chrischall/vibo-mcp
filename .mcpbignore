@@ -41,6 +41,10 @@ server.json
 plugin.json
 .claude-plugin/
 .mcp.json
+# The release workflow stages skills/vibo-mcp/SKILL.md at the repo root for
+# mcp-publish (ClawHub + .skill artifact) BEFORE the .mcpb is packed — keep the
+# staged copy out of the .mcpb.
+SKILL.md
 skills/
 
 # Companion native bits (e.g. Chrome extension) are installed separately
