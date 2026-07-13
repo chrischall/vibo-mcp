@@ -48,6 +48,14 @@ jobs:
         with:
           ref: ${{ needs.release-please.outputs.tag_name }}
 
+      # The plugin skill lives at skills/vibo-mcp/SKILL.md (required for
+      # `claude plugin` skill loading), but the shared mcp-publish action
+      # packages and ClawHub-publishes the repo-root SKILL.md and silently
+      # skips both steps when it is absent. Stage a copy at the root so the
+      # .skill release artifact and ClawHub publish keep working.
+      - name: Stage plugin SKILL.md for mcp-publish
+        run: cp skills/vibo-mcp/SKILL.md SKILL.md
+
       - uses: chrischall/workflows/.github/actions/mcp-publish@main
         with:
           version: ${{ needs.release-please.outputs.version }}
