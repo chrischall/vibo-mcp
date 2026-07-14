@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { textResult, toolAnnotations, schemaConfirm } from '@chrischall/mcp-utils';
-import { client } from '../client.js';
+import type { ViboClient } from '../client.js';
 import {
   GET_PLAYLISTS,
   GET_PLAYLIST_SONGS,
@@ -14,7 +14,7 @@ const sourceSchema = z
   .enum(['spotify', 'appleMusic'])
   .describe('Streaming source — must be connected to your Vibo account.');
 
-export function registerPlaylistTools(server: McpServer): void {
+export function registerPlaylistTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
     'vibo_get_playlists',
     {

@@ -22,7 +22,7 @@ afterAll(async () => { if (harness) await harness.close(); });
 
 describe('session tool', () => {
   it('setup', async () => {
-    harness = await createTestHarness((s) => registerSessionTools(s));
+    harness = await createTestHarness((s) => registerSessionTools(s, client));
   });
 
   it('vibo_capture_session captures, adopts the tokens, and confirms identity', async () => {

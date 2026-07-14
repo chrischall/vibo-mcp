@@ -21,7 +21,7 @@ afterAll(async () => { if (harness) await harness.close(); });
 
 describe('event tools', () => {
   it('setup', async () => {
-    harness = await createTestHarness((s) => registerEventTools(s));
+    harness = await createTestHarness((s) => registerEventTools(s, client));
   });
 
   it('vibo_list_events defaults to upcoming with pagination', async () => {

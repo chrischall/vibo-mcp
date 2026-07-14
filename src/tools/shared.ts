@@ -23,6 +23,16 @@ export function pagination(limit?: number, skip?: number): { skip: number; limit
 }
 
 /**
+ * One inline file (base64 bytes + optional filename) for the hosted connector,
+ * which has no filesystem. Mirrors the local-path upload inputs so a tool can
+ * accept either a filesystem path (stdio) or inline bytes (Worker).
+ */
+export const inlineFileSchema = z.object({
+  data: z.string().describe('Base64-encoded file bytes (a `data:` URL prefix is allowed).'),
+  filename: z.string().optional().describe('Filename to send with this file.'),
+});
+
+/**
  * Dry-run response for a confirm-gated write. Returned WITHOUT making any
  * network call when `confirm` is not `true`, so the caller can see exactly what
  * would be sent before committing.

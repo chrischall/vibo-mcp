@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { textResult, toolAnnotations } from '@chrischall/mcp-utils';
-import { client } from '../client.js';
+import type { ViboClient } from '../client.js';
 import { LIST_SECTION_SONG_IDEAS, LIST_SONG_IDEAS_SONGS } from '../gql.js';
 import { limitSchema, skipSchema, pagination } from './shared.js';
 
-export function registerIdeasTools(server: McpServer): void {
+export function registerIdeasTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
     'vibo_list_section_song_ideas',
     {

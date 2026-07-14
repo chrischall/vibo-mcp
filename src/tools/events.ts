@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { textResult, toolAnnotations, schemaConfirm, McpToolError } from '@chrischall/mcp-utils';
-import { client } from '../client.js';
+import type { ViboClient } from '../client.js';
 import {
   LIST_UPCOMING_EVENTS,
   LIST_HISTORY_EVENTS,
@@ -13,7 +13,7 @@ import {
 } from '../gql.js';
 import { limitSchema, skipSchema, pagination, previewResult } from './shared.js';
 
-export function registerEventTools(server: McpServer): void {
+export function registerEventTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
     'vibo_list_events',
     {

@@ -13,7 +13,7 @@ afterAll(async () => { if (harness) await harness.close(); });
 
 describe('song management tools', () => {
   it('setup', async () => {
-    harness = await createTestHarness((s) => registerSongManagementTools(s));
+    harness = await createTestHarness((s) => registerSongManagementTools(s, client));
   });
 
   it('vibo_remove_song_from_section is confirm-gated', async () => {

@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { textResult, toolAnnotations, schemaConfirm, McpToolError } from '@chrischall/mcp-utils';
-import { client } from '../client.js';
+import type { ViboClient } from '../client.js';
 import { GET_NOTIFICATIONS, GET_NOTIFICATIONS_COUNT, MARK_AS_READ } from '../gql.js';
 import { limitSchema, skipSchema, pagination, previewResult } from './shared.js';
 
-export function registerNotificationTools(server: McpServer): void {
+export function registerNotificationTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
     'vibo_list_notifications',
     {

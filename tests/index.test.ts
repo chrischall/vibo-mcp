@@ -14,6 +14,7 @@ import { registerCollaborationTools } from '../src/tools/collaboration.js';
 import { registerSectionEditTools } from '../src/tools/section-edit.js';
 import { registerUploadTools } from '../src/tools/uploads.js';
 import { registerSessionTools } from '../src/tools/session.js';
+import { client } from '../src/client.js';
 import { createTestHarness } from './helpers.js';
 
 describe('tool registry', () => {
@@ -22,21 +23,21 @@ describe('tool registry', () => {
 
   it('registers exactly the expected 39 tools', async () => {
     harness = await createTestHarness((server) => {
-      registerProfileTools(server);
-      registerEventTools(server);
-      registerSectionTools(server);
-      registerSongTools(server);
-      registerPlaylistTools(server);
-      registerNotificationTools(server);
-      registerQuestionTools(server);
-      registerSongManagementTools(server);
-      registerCommentTools(server);
-      registerIdeasTools(server);
-      registerImportTools(server);
-      registerCollaborationTools(server);
-      registerSectionEditTools(server);
-      registerUploadTools(server);
-      registerSessionTools(server);
+      registerProfileTools(server, client);
+      registerEventTools(server, client);
+      registerSectionTools(server, client);
+      registerSongTools(server, client);
+      registerPlaylistTools(server, client);
+      registerNotificationTools(server, client);
+      registerQuestionTools(server, client);
+      registerSongManagementTools(server, client);
+      registerCommentTools(server, client);
+      registerIdeasTools(server, client);
+      registerImportTools(server, client);
+      registerCollaborationTools(server, client);
+      registerSectionEditTools(server, client);
+      registerUploadTools(server, client);
+      registerSessionTools(server, client);
     });
 
     const names = (await harness.listTools()).map((t) => t.name).sort();

@@ -10,5 +10,9 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["src"]
+  "include": ["src"],
+  // `src/worker.ts` is the Cloudflare Worker entry (imports `cloudflare:workers`
+  // / `agents`). It's built by wrangler/esbuild, NOT by this stdio `tsc` build —
+  // excluding it keeps `dist/worker.js` out of the npm/mcpb bundle.
+  "exclude": ["node_modules", "dist", "src/worker.ts"]
 }

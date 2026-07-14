@@ -13,7 +13,7 @@ afterAll(async () => { if (harness) await harness.close(); });
 
 describe('collaboration tools', () => {
   it('setup', async () => {
-    harness = await createTestHarness((s) => registerCollaborationTools(s));
+    harness = await createTestHarness((s) => registerCollaborationTools(s, client));
   });
 
   it('vibo_list_event_users fetches both groups and merges when usersType omitted', async () => {

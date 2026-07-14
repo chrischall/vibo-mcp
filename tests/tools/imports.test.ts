@@ -13,7 +13,7 @@ afterAll(async () => { if (harness) await harness.close(); });
 
 describe('import tools', () => {
   it('setup', async () => {
-    harness = await createTestHarness((s) => registerImportTools(s));
+    harness = await createTestHarness((s) => registerImportTools(s, client));
   });
 
   it('vibo_import_playlist_to_section previews without calling gql', async () => {

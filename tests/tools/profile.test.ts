@@ -13,7 +13,7 @@ afterAll(async () => { if (harness) await harness.close(); });
 
 describe('profile tools', () => {
   it('setup', async () => {
-    harness = await createTestHarness((s) => registerProfileTools(s));
+    harness = await createTestHarness((s) => registerProfileTools(s, client));
   });
 
   it('vibo_get_me runs getMe and returns the user', async () => {
