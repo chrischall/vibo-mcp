@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.2](https://github.com/chrischall/vibo-mcp/compare/v1.3.1...v1.3.2) (2026-07-14)
+
+
+### Bug Fixes
+
+* **plugin:** move SKILL.md into skills/ directory so plugin skills load ([#23](https://github.com/chrischall/vibo-mcp/issues/23)) ([5fef5f8](https://github.com/chrischall/vibo-mcp/commit/5fef5f8cce78154bb46faff67a888db2829faabd))
+
 ## [1.3.1](https://github.com/chrischall/vibo-mcp/compare/v1.3.0...v1.3.1) (2026-07-07)
 
 
