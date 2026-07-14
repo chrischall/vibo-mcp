@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/chrischall/vibo-mcp/compare/v1.3.2...v1.4.0) (2026-07-14)
+
+
+### Features
+
+* add hosted Cloudflare Worker connector (password accounts) ([#29](https://github.com/chrischall/vibo-mcp/issues/29)) ([c27ca4a](https://github.com/chrischall/vibo-mcp/commit/c27ca4a1922c6ccb841a686b489132a7f1ad6453))
+
 ## [1.3.2](https://github.com/chrischall/vibo-mcp/compare/v1.3.1...v1.3.2) (2026-07-14)
 
 
