@@ -18,7 +18,7 @@ afterAll(async () => { if (harness) await harness.close(); });
 
 describe('comment tools', () => {
   it('setup', async () => {
-    harness = await createTestHarness((s) => registerCommentTools(s));
+    harness = await createTestHarness((s) => registerCommentTools(s, client));
   });
 
   it('vibo_comment_on_song previews then sends the message payload', async () => {

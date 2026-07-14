@@ -8,12 +8,20 @@ import {
   truncateErrorMessage,
 } from '@chrischall/mcp-utils';
 import { loadSession, saveSession } from './session-store.js';
+import type { UploadFile } from './upload-source.js';
 
 // Load .env for local dev; silently skip if dotenv is unavailable (e.g. the
 // mcpb bundle, which externalizes dotenv). `override: false` means a
-// host-provided env var always wins over .env.
-const __dirname = dirname(fileURLToPath(import.meta.url));
-await loadDotenvSafely({ path: join(__dirname, '..', '.env'), override: false });
+// host-provided env var always wins over .env. The try/catch additionally
+// guards the Cloudflare Worker runtime (src/worker.ts): there `import.meta.url`
+// is undefined and `fileURLToPath(undefined)` would otherwise throw at module
+// init (Worker startup validation) — there is no filesystem / .env there anyway.
+try {
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  await loadDotenvSafely({ path: join(__dirname, '..', '.env'), override: false });
+} catch {
+  /* v8 ignore next -- only reached in a non-Node runtime (Workers): no .env to load */
+}
 
 const DEFAULT_API_URL = 'https://api.vibodj.com/v2/graphql';
 const SERVICE = 'Vibo';
@@ -70,41 +78,68 @@ interface GraphQLResponse<T> {
  * The config error is deferred: the constructor never throws, so the server
  * still boots and answers the host's install-time `tools/list` probe when no
  * credentials are set. The error surfaces on the first tool call.
+ *
+ * Credentials can be INJECTED via the constructor (`new ViboClient({ email,
+ * password })`) instead of read from the environment — the hosted Cloudflare
+ * connector (src/worker.ts) builds a per-user client this way from each user's
+ * stored email/password. Omitted fields fall back to the corresponding env var,
+ * so the no-arg stdio construction is unchanged.
  */
+export interface ViboClientOptions {
+  email?: string;
+  password?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  apiUrl?: string;
+}
+
 export class ViboClient {
   private readonly apiUrl: string;
   private readonly email: string | null;
   private readonly password: string | null;
   // Not readonly: cleared by setTokens() after a browser capture seeds a session.
-  private configError: McpToolError | null;
+  private configError: McpToolError | null = null;
 
   private accessToken: string | null;
   private refreshTokenValue: string | null;
+
+  // The constructor is PURE — it does no filesystem / homedir / async-I/O /
+  // random op — so it is safe to run at Worker global scope (where the
+  // module-level `export const client` singleton below is constructed). The
+  // saved-session fallback and the config-error determination both touch
+  // homedir()/the filesystem via loadSession(), so they are deferred to the
+  // first request through `ensureConfigResolved()`. No effect on the stdio path.
+  private configResolved = false;
 
   // Single-flight guards so concurrent tool calls never race two logins /
   // refreshes against each other (à la mcp-utils' TokenManager).
   private loginInFlight: Promise<string> | null = null;
   private reauthInFlight: Promise<string> | null = null;
 
-  constructor() {
-    this.apiUrl = readEnvVar('VIBO_API_URL') ?? DEFAULT_API_URL;
+  constructor(opts: ViboClientOptions = {}) {
+    this.apiUrl = opts.apiUrl ?? readEnvVar('VIBO_API_URL') ?? DEFAULT_API_URL;
+    this.email = opts.email ?? readEnvVar('VIBO_EMAIL') ?? null;
+    this.password = opts.password ?? readEnvVar('VIBO_PASSWORD') ?? null;
+    this.accessToken = opts.accessToken ?? readEnvVar('VIBO_ACCESS_TOKEN') ?? null;
+    this.refreshTokenValue = opts.refreshToken ?? readEnvVar('VIBO_REFRESH_TOKEN') ?? null;
+  }
 
-    const email = readEnvVar('VIBO_EMAIL');
-    const password = readEnvVar('VIBO_PASSWORD');
-    const accessToken = readEnvVar('VIBO_ACCESS_TOKEN');
-    const refreshToken = readEnvVar('VIBO_REFRESH_TOKEN');
+  /**
+   * Resolve the saved-session fallback and the deferred config error on first
+   * use. Kept out of the constructor so construction is pure (Worker-safe):
+   * `loadSession()` reads homedir()/the filesystem, which the Workers runtime
+   * forbids at global scope. Runs its body at most once.
+   */
+  private ensureConfigResolved(): void {
+    if (this.configResolved) return;
+    this.configResolved = true;
 
-    this.email = email ?? null;
-    this.password = password ?? null;
-    this.accessToken = accessToken ?? null;
-    this.refreshTokenValue = refreshToken ?? null;
-
-    const haveLogin = Boolean(email && password);
+    const haveLogin = Boolean(this.email && this.password);
 
     // Fall back to a previously browser-captured session (SSO accounts) ONLY
-    // when there's no env token AND no email/password. Email/password is the
-    // documented preferred path and must win over a (possibly stale) saved
-    // session — otherwise an old session.json would silently shadow it.
+    // when there's no env/injected token AND no email/password. Email/password
+    // is the documented preferred path and must win over a (possibly stale)
+    // saved session — otherwise an old session.json would silently shadow it.
     if (!this.accessToken && !haveLogin) {
       const saved = loadSession();
       if (saved) {
@@ -123,8 +158,6 @@ export class ViboClient {
             'token from your signed-in web.vibodj.com browser tab (Apple/Google/Facebook accounts).',
         },
       );
-    } else {
-      this.configError = null;
     }
   }
 
@@ -148,6 +181,7 @@ export class ViboClient {
 
   /** Run a GraphQL operation, transparently authenticating + retrying once on token expiry. */
   async gql<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
+    this.ensureConfigResolved();
     if (this.configError) throw this.configError;
 
     const token = await this.ensureAccessToken();
@@ -164,24 +198,29 @@ export class ViboClient {
 
   /**
    * Run a GraphQL operation that uploads one or more files (the `Upload` scalar),
-   * using the graphql-multipart-request spec. `fileMap` maps a dotted variable
-   * path (e.g. "variables.photo" or "variables.payload.answer.images.0") to a
-   * local file path; `variables` must carry `null` at each of those positions.
-   * Same auth + single-retry-on-expiry behavior as `gql`.
+   * using the graphql-multipart-request spec. `files` maps a dotted variable
+   * path (e.g. "variables.photo" or "variables.payload.answer.images.0") to an
+   * in-memory {@link UploadFile} (blob + filename); `variables` must carry
+   * `null` at each of those positions. The bytes arrive already resolved (from
+   * a local file on stdio, or inline base64 on the hosted connector — see
+   * src/upload-source.ts), so this method never touches the filesystem and runs
+   * unchanged in the Workers runtime (`FormData`/`Blob`/`fetch` are all
+   * available there). Same auth + single-retry-on-expiry behavior as `gql`.
    */
   async gqlUpload<T>(
     query: string,
     variables: Record<string, unknown>,
-    fileMap: Record<string, string>,
+    files: Record<string, UploadFile>,
   ): Promise<T> {
+    this.ensureConfigResolved();
     if (this.configError) throw this.configError;
 
     const token = await this.ensureAccessToken();
-    let res = await this.postMultipart<T>(query, variables, fileMap, token);
+    let res = await this.postMultipart<T>(query, variables, files, token);
 
     if (this.isAuthError(res.status, res.body.errors)) {
       const fresh = await this.reauthenticate();
-      res = await this.postMultipart<T>(query, variables, fileMap, fresh);
+      res = await this.postMultipart<T>(query, variables, files, fresh);
     }
 
     return this.unwrap(res.status, res.body);
@@ -190,17 +229,14 @@ export class ViboClient {
   private async postMultipart<T>(
     query: string,
     variables: Record<string, unknown>,
-    fileMap: Record<string, string>,
+    files: Record<string, UploadFile>,
     token: string | null,
   ): Promise<{ status: number; body: GraphQLResponse<T> }> {
-    const { openAsBlob } = await import('node:fs');
-    const { basename } = await import('node:path');
-
     const form = new FormData();
     form.append('operations', JSON.stringify({ query, variables }));
 
     // map: { "0": ["variables.photo"], "1": ["variables.payload.answer.images.0"] }
-    const paths = Object.keys(fileMap);
+    const paths = Object.keys(files);
     const map: Record<string, string[]> = {};
     paths.forEach((varPath, i) => {
       map[String(i)] = [varPath];
@@ -208,17 +244,8 @@ export class ViboClient {
     form.append('map', JSON.stringify(map));
 
     for (let i = 0; i < paths.length; i++) {
-      const filePath = fileMap[paths[i]];
-      let blob: Blob;
-      try {
-        blob = await openAsBlob(filePath);
-      } catch (err) {
-        throw new McpToolError(`Could not read file for upload: ${filePath}`, {
-          hint: 'Provide an absolute path to a readable local file.',
-          cause: err,
-        });
-      }
-      form.append(String(i), blob, basename(filePath));
+      const file = files[paths[i]];
+      form.append(String(i), file.blob, file.filename);
     }
 
     const headers: Record<string, string> = { 'apollo-require-preflight': 'true' };

@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { textResult, toolAnnotations, schemaConfirm } from '@chrischall/mcp-utils';
-import { client } from '../client.js';
+import type { ViboClient } from '../client.js';
 import { LIST_EVENT_USERS, INVITE_USERS, CHANGE_USER_ROLE, REMOVE_USER } from '../gql.js';
 import { limitSchema, skipSchema, pagination, previewResult } from './shared.js';
 
-export function registerCollaborationTools(server: McpServer): void {
+export function registerCollaborationTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
     'vibo_list_event_users',
     {

@@ -18,7 +18,7 @@ afterAll(async () => { if (harness) await harness.close(); });
 
 describe('playlist tools', () => {
   it('setup', async () => {
-    harness = await createTestHarness((s) => registerPlaylistTools(s));
+    harness = await createTestHarness((s) => registerPlaylistTools(s, client));
   });
 
   it('vibo_get_playlists passes source + pagination', async () => {

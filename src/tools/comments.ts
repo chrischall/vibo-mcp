@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { textResult, toolAnnotations, schemaConfirm } from '@chrischall/mcp-utils';
-import { client } from '../client.js';
+import type { ViboClient } from '../client.js';
 import {
   CREATE_SONG_COMMENT,
   DELETE_SONG_COMMENT,
@@ -10,7 +10,7 @@ import {
 } from '../gql.js';
 import { previewResult } from './shared.js';
 
-export function registerCommentTools(server: McpServer): void {
+export function registerCommentTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
     'vibo_comment_on_song',
     {

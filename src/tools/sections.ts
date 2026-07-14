@@ -1,10 +1,10 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { textResult, toolAnnotations } from '@chrischall/mcp-utils';
-import { client } from '../client.js';
+import type { ViboClient } from '../client.js';
 import { LIST_SECTIONS } from '../gql.js';
 
-export function registerSectionTools(server: McpServer): void {
+export function registerSectionTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
     'vibo_list_sections',
     {

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { runMcp } from '@chrischall/mcp-utils';
 import { VERSION } from './version.js';
+import { client } from './client.js';
 import { registerProfileTools } from './tools/profile.js';
 import { registerEventTools } from './tools/events.js';
 import { registerSectionTools } from './tools/sections.js';
@@ -27,6 +28,10 @@ await runMcp({
   version: VERSION,
   banner:
     '[vibo-mcp] This project was developed and is maintained by AI (Claude Code). Use at your own discretion.',
+  // runMcp invokes each registrar as `register(server, deps)`, threading this
+  // singleton so the tool modules import only the ViboClient TYPE. Same client
+  // as before — just passed in rather than imported by each module.
+  deps: client,
   tools: [
     registerProfileTools,
     registerEventTools,

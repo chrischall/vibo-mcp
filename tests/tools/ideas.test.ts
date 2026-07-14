@@ -13,7 +13,7 @@ afterAll(async () => { if (harness) await harness.close(); });
 
 describe('ideas tools', () => {
   it('setup', async () => {
-    harness = await createTestHarness((s) => registerIdeasTools(s));
+    harness = await createTestHarness((s) => registerIdeasTools(s, client));
   });
 
   it('vibo_list_section_song_ideas passes pagination and unwraps the payload', async () => {

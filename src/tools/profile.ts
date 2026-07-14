@@ -1,9 +1,9 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { textResult, toolAnnotations } from '@chrischall/mcp-utils';
-import { client } from '../client.js';
+import type { ViboClient } from '../client.js';
 import { GET_ME } from '../gql.js';
 
-export function registerProfileTools(server: McpServer): void {
+export function registerProfileTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
     'vibo_get_me',
     {

@@ -1,11 +1,15 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { textResult, toolAnnotations } from '@chrischall/mcp-utils';
-import { client } from '../client.js';
+import type { ViboClient } from '../client.js';
 import { captureViboSession } from '../auth.js';
 import { saveSession } from '../session-store.js';
 import { GET_ME } from '../gql.js';
 
-export function registerSessionTools(server: McpServer): void {
+// NB: this registrar is STDIO-ONLY — it is deliberately NOT wired into the
+// hosted Cloudflare connector (src/worker.ts). vibo_capture_session needs the
+// fetchproxy browser bridge + a signed-in browser tab, neither of which exists
+// in the serverless Worker runtime.
+export function registerSessionTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
     'vibo_capture_session',
     {

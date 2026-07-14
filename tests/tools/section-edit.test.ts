@@ -13,7 +13,7 @@ afterAll(async () => { if (harness) await harness.close(); });
 
 describe('section edit tools', () => {
   it('setup', async () => {
-    harness = await createTestHarness((s) => registerSectionEditTools(s));
+    harness = await createTestHarness((s) => registerSectionEditTools(s, client));
   });
 
   it('vibo_update_section errors when no fields are provided', async () => {

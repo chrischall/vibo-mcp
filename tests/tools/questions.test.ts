@@ -2,22 +2,30 @@ import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import { client } from '../../src/client.js';
 import { registerQuestionTools } from '../../src/tools/questions.js';
 import { LIST_SECTION_QUESTIONS, ANSWER_SECTION_QUESTION } from '../../src/gql.js';
+import type { UploadFile, FileRef } from '../../src/upload-source.js';
 import { createTestHarness } from '../helpers.js';
 import { parseToolResult } from '@chrischall/mcp-utils/test';
 
 const gql = vi.spyOn(client, 'gql').mockResolvedValue(undefined as never);
 const gqlUpload = vi.spyOn(client, 'gqlUpload').mockResolvedValue(undefined as never);
+
+// Fake upload resolver (see uploads.test.ts): the tool hands it a FileRef and
+// gets back a stub in-memory file, so no filesystem is touched in tests.
+const stubFile: UploadFile = { blob: new Blob(['x']), filename: 'f' };
+const resolve = vi.fn<(ref: FileRef) => Promise<UploadFile>>().mockResolvedValue(stubFile);
+
 let harness: Awaited<ReturnType<typeof createTestHarness>>;
 
 beforeEach(() => {
   gql.mockClear();
   gqlUpload.mockClear();
+  resolve.mockClear();
 });
 afterAll(async () => { if (harness) await harness.close(); });
 
 describe('question tools', () => {
   it('setup', async () => {
-    harness = await createTestHarness((s) => registerQuestionTools(s));
+    harness = await createTestHarness((s) => registerQuestionTools(s, client, resolve));
   });
 
   it('vibo_list_section_questions passes event + section', async () => {
@@ -107,7 +115,7 @@ describe('question tools', () => {
     });
   });
 
-  it('vibo_answer_question routes image/file answers through the multipart upload path', async () => {
+  it('vibo_answer_question routes local-path image/file answers through the multipart upload path', async () => {
     gqlUpload.mockResolvedValue({ answerEventSectionQuestionV2: { progress: 1 } });
     await harness.callTool('vibo_answer_question', {
       eventId: 'e1',
@@ -117,8 +125,11 @@ describe('question tools', () => {
       filePaths: ['/tmp/c.pdf'],
       confirm: true,
     });
-    // JSON path is not used; the upload path carries null placeholders + a file map.
+    // JSON path is not used; the upload path carries null placeholders + resolved blobs.
     expect(gql).not.toHaveBeenCalled();
+    expect(resolve).toHaveBeenCalledWith({ path: '/tmp/a.jpg' });
+    expect(resolve).toHaveBeenCalledWith({ path: '/tmp/b.jpg' });
+    expect(resolve).toHaveBeenCalledWith({ path: '/tmp/c.pdf' });
     expect(gqlUpload).toHaveBeenCalledWith(
       ANSWER_SECTION_QUESTION,
       {
@@ -128,10 +139,33 @@ describe('question tools', () => {
         payload: { answer: { images: [null, null], files: [null] } },
       },
       {
-        'variables.payload.answer.images.0': '/tmp/a.jpg',
-        'variables.payload.answer.images.1': '/tmp/b.jpg',
-        'variables.payload.answer.files.0': '/tmp/c.pdf',
+        'variables.payload.answer.images.0': stubFile,
+        'variables.payload.answer.images.1': stubFile,
+        'variables.payload.answer.files.0': stubFile,
       },
+    );
+  });
+
+  it('vibo_answer_question routes inline base64 image answers (the hosted-connector path)', async () => {
+    gqlUpload.mockResolvedValue({ answerEventSectionQuestionV2: { progress: 1 } });
+    await harness.callTool('vibo_answer_question', {
+      eventId: 'e1',
+      sectionId: 's1',
+      questionId: 'q3',
+      images: [{ data: 'aGk=', filename: 'a.png' }],
+      confirm: true,
+    });
+    expect(gql).not.toHaveBeenCalled();
+    expect(resolve).toHaveBeenCalledWith({ data: 'aGk=', filename: 'a.png' });
+    expect(gqlUpload).toHaveBeenCalledWith(
+      ANSWER_SECTION_QUESTION,
+      {
+        eventId: 'e1',
+        sectionId: 's1',
+        questionId: 'q3',
+        payload: { answer: { images: [null] } },
+      },
+      { 'variables.payload.answer.images.0': stubFile },
     );
   });
 
@@ -142,6 +176,7 @@ describe('question tools', () => {
       questionId: 'q3',
       imagePaths: ['/tmp/a.jpg'],
     });
+    expect(resolve).not.toHaveBeenCalled();
     expect(gqlUpload).not.toHaveBeenCalled();
     expect(gql).not.toHaveBeenCalled();
     expect(parseToolResult<{ preview: boolean }>(res).preview).toBe(true);

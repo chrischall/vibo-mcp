@@ -13,7 +13,7 @@ afterAll(async () => { if (harness) await harness.close(); });
 
 describe('song tools', () => {
   it('setup', async () => {
-    harness = await createTestHarness((s) => registerSongTools(s));
+    harness = await createTestHarness((s) => registerSongTools(s, client));
   });
 
   it('vibo_get_section_songs applies filter + sort + pagination', async () => {

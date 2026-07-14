@@ -13,7 +13,7 @@ afterAll(async () => { if (harness) await harness.close(); });
 
 describe('section tools', () => {
   it('setup', async () => {
-    harness = await createTestHarness((s) => registerSectionTools(s));
+    harness = await createTestHarness((s) => registerSectionTools(s, client));
   });
 
   it('vibo_list_sections returns the timeline for an event', async () => {

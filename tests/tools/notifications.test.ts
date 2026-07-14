@@ -13,7 +13,7 @@ afterAll(async () => { if (harness) await harness.close(); });
 
 describe('notification tools', () => {
   it('setup', async () => {
-    harness = await createTestHarness((s) => registerNotificationTools(s));
+    harness = await createTestHarness((s) => registerNotificationTools(s, client));
   });
 
   it('vibo_list_notifications paginates', async () => {

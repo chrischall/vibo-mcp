@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { textResult, toolAnnotations, schemaConfirm } from '@chrischall/mcp-utils';
-import { client } from '../client.js';
+import type { ViboClient } from '../client.js';
 import { GET_SECTION_SONGS, SEARCH_SONGS, ADD_SONG_TO_SECTION, TOGGLE_LIKE } from '../gql.js';
 import { limitSchema, skipSchema, pagination, previewResult } from './shared.js';
 
-export function registerSongTools(server: McpServer): void {
+export function registerSongTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
     'vibo_get_section_songs',
     {
