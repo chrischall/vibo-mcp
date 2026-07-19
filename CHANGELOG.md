@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/chrischall/vibo-mcp/compare/v1.4.0...v1.4.1) (2026-07-19)
+
+
+### Bug Fixes
+
+* **ci:** run the Workers test pool in CI ([#32](https://github.com/chrischall/vibo-mcp/issues/32)) ([c4c7dd1](https://github.com/chrischall/vibo-mcp/commit/c4c7dd1efc5dabb2add2c0de67b3f94de1f6b3b5))
+
 ## [1.4.0](https://github.com/chrischall/vibo-mcp/compare/v1.3.2...v1.4.0) (2026-07-14)
 
 
