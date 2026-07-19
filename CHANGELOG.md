@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.2](https://github.com/chrischall/vibo-mcp/compare/v1.4.1...v1.4.2) (2026-07-19)
+
+
+### Bug Fixes
+
+* **deps:** move to workers-oauth-provider 0.8.x and mcp-connector 1.0.0 ([#34](https://github.com/chrischall/vibo-mcp/issues/34)) ([6dbf025](https://github.com/chrischall/vibo-mcp/commit/6dbf025776d56fb3d829e36c737d6ede619c181b))
+
 ## [1.4.1](https://github.com/chrischall/vibo-mcp/compare/v1.4.0...v1.4.1) (2026-07-19)
 
 
