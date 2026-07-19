@@ -1,7 +1,7 @@
 {
   "name": "vibo-mcp",
   "displayName": "Vibo",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "MCP server for Vibo (vibodj.com) — plan & manage event music, song requests, ideas, guests, and playlists via natural language",
   "author": {
     "name": "Chris Hall",
