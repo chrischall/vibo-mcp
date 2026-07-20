@@ -3,9 +3,13 @@
 This is the operator runbook for standing up `vibo-mcp` as a hosted Cloudflare
 Worker — a "remote connector" that anyone you share the URL with can add to
 claude.ai (web, desktop, or mobile), each logging in with their own Vibo email
-and password. It's a manual, one-time (per operator) process; there is no CI/CD
-path for it, and none of the steps below can be done by an agent since they
-require your own Cloudflare account.
+and password. Standing it up is a manual, one-time (per operator) process: none
+of the steps below can be done by an agent, since they require your own
+Cloudflare account. Once it's standing, though, deploys are automated — the
+`deploy-connector` job in `.github/workflows/release-please.yml` redeploys the
+Worker on every release, pinned to the release tag, and
+`.github/workflows/deploy-connector.yml` gives an on-demand
+**Actions → deploy-connector → Run workflow** path for any ref.
 
 If you just want the server on your own machine talking only to your own Vibo
 account, you don't need any of this — see the main [README](../README.md) for the
@@ -109,6 +113,11 @@ in the deploying Cloudflare account; if it isn't, remove the `routes` entry from
 provisions a few minutes after the first deploy — the `*.workers.dev` URL works
 immediately.) Note whichever URL you use — it's what gets added as a connector,
 with `/mcp` appended.
+
+You only need to run this deploy by hand once, to get the Worker created under
+your account. From then on CI redeploys it on release (and on demand from the
+Actions tab); `npm run worker:deploy` stays available for pushing an unreleased
+working tree from your own machine.
 
 > **Stateless — no cache Durable Object.** Vibo reads always hit the live API, so
 > unlike the OFW connector there is no per-user cache: the only Durable Object is
