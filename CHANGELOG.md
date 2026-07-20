@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.3](https://github.com/chrischall/vibo-mcp/compare/v1.4.2...v1.4.3) (2026-07-20)
+
+
+### Documentation
+
+* correct the connector deploy runbook ([#39](https://github.com/chrischall/vibo-mcp/issues/39)) ([a369eee](https://github.com/chrischall/vibo-mcp/commit/a369eee332d2a98eb13a6277ad95d279ca9ddbea))
+
 ## [1.4.2](https://github.com/chrischall/vibo-mcp/compare/v1.4.1...v1.4.2) (2026-07-19)
 
 
