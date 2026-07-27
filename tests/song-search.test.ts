@@ -176,6 +176,44 @@ describe('assessSong', () => {
     expect(assessSong(MAGGS_COVER, stapletonQuery).warnings.join(' ')).toMatch(/SoundCloud handle/);
   });
 
+  // Regression: the handle check filters name tokens to >=4 chars to avoid
+  // matching noise, which leaves short-named artists with nothing to compare.
+  // It must abstain there, not warn — an unrunnable check is not evidence.
+  it.each(['Sia', 'SZA', 'U2', 'Nas', 'MIA'])('does not warn on the short-named artist %s', (name) => {
+    const song: SearchSong = {
+      title: 'Chandelier',
+      artist: name,
+      links: {
+        spotify: 'https://open.spotify.com/track/x',
+        appleMusic: 'https://geo.music.apple.com/us/album/_/1',
+        soundcloud: 'https://soundcloud.com/some-label-account/chandelier',
+      },
+    };
+    const result = assessSong(song, parseSearchQuery(`${name} - Chandelier`));
+    expect(result.warnings).toEqual([]);
+    expect(result.confidence).toBe('likely-original');
+  });
+
+  it('still warns on a mismatched handle when the artist has a long-enough token', () => {
+    const song: SearchSong = {
+      title: 'Chandelier',
+      artist: 'Sia Furler',
+      links: { spotify: 'https://open.spotify.com/track/x', soundcloud: 'https://soundcloud.com/random-uploader/x' },
+    };
+    expect(assessSong(song, parseSearchQuery('Sia Furler - Chandelier')).warnings.join(' ')).toMatch(
+      /SoundCloud handle/,
+    );
+  });
+
+  it('abstains when the SoundCloud URL has no parseable handle', () => {
+    const song: SearchSong = {
+      title: 'Chandelier',
+      artist: 'Sia Furler',
+      links: { spotify: 'https://open.spotify.com/track/x', soundcloud: 'https://soundcloud.com/' },
+    };
+    expect(assessSong(song, parseSearchQuery('Sia Furler - Chandelier')).warnings).toEqual([]);
+  });
+
   it('accepts a wider credit than asked for', () => {
     const collab: SearchSong = { ...OFFICIAL_STAPLETON, artist: 'Chris Stapleton & Justin Timberlake' };
     expect(assessSong(collab, stapletonQuery).confidence).toBe('likely-original');
