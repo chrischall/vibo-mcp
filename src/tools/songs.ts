@@ -3,6 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { textResult, toolAnnotations, schemaConfirm } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { GET_SECTION_SONGS, SEARCH_SONGS, ADD_SONG_TO_SECTION, TOGGLE_LIKE } from '../gql.js';
+import { annotateSearchResults, type SearchSong } from '../song-search.js';
 import { limitSchema, skipSchema, pagination, previewResult } from './shared.js';
 
 export function registerSongTools(server: McpServer, client: ViboClient): void {
@@ -45,24 +46,49 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
     'vibo_search_songs',
     {
       description:
-        "Search for songs to add to a section. source 'searchField' (default) searches Vibo's catalog; 'spotify' searches your connected Spotify. Returns songUrl/viboSongId/title/artist to pass to vibo_add_song_to_section.",
+        'Search for songs to add to a section. ALWAYS query as "<Artist> - <Title>" with a ' +
+        'space-hyphen-space separator (e.g. "Ed Sheeran - Thinking Out Loud"). Vibo\'s default ' +
+        "'searchField' index is a loose text match over a catalog full of YouTube covers, " +
+        'karaoke tracks and re-uploads: the hyphenated form resolves to the official recording, ' +
+        'while the same words unhyphenated rank covers and re-uploads above it (measured live — ' +
+        '"Chris Stapleton - Tennessee Whiskey" returned only the official master; without the ' +
+        'hyphen, none of the nine results was the original). Each result carries a `quality` ' +
+        'verdict (likely-original / uncertain / likely-not-original) plus warnings — check it ' +
+        'before adding, and never add a `likely-not-original` result without saying so. ' +
+        "source 'spotify' searches your connected Spotify (a structured catalog, so the hyphen " +
+        'matters less). Returns songUrl/viboSongId/title/artist for vibo_add_song_to_section.',
       annotations: toolAnnotations({ title: 'Search Vibo songs', readOnly: true }),
       inputSchema: {
         eventId: z.string().describe('Event id (search is scoped to an event/section).'),
         sectionId: z.string().describe('Section id the search is for.'),
-        query: z.string().describe('Song or artist to search for.'),
+        query: z
+          .string()
+          .describe(
+            'Song to search for, as "<Artist> - <Title>" (space-hyphen-space). Use the artist\'s ' +
+              'own stylization — the index does not fold variants together, and "Dan + Shay - ' +
+              'Speechless" returns the official master while "Dan and Shay - Speechless" returns ' +
+              'covers and live cuts without it. Artist alone returns only a short ' +
+              'popularity-ranked subset of their catalog, so a specific track may be missing ' +
+              'entirely. If the hyphenated query looks wrong, retry as "<Title> - <Artist>", ' +
+              'then the title alone filtered by artist.',
+          ),
         source: z.enum(['searchField', 'spotify']).optional().describe("Search source (default 'searchField')."),
         limit: z.number().int().min(1).max(50).optional().describe('Max results (default 20).'),
       },
     },
     async ({ eventId, sectionId, query, source, limit }) => {
+      const resolvedSource = source ?? 'searchField';
       const data = await client.gql<{ getSongs: unknown }>(SEARCH_SONGS, {
         eventId,
         sectionId,
-        filter: { q: query, source: source ?? 'searchField' },
+        filter: { q: query, source: resolvedSource },
         limit: limit ?? 20,
       });
-      return textResult(data.getSongs);
+      const songs = data.getSongs;
+      // Vibo returns a bare array; if that ever changes, pass it through untouched
+      // rather than guessing at a shape.
+      if (!Array.isArray(songs)) return textResult(songs);
+      return textResult(annotateSearchResults(songs as SearchSong[], query, resolvedSource));
     },
   );
 
@@ -70,7 +96,11 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
     'vibo_add_song_to_section',
     {
       description:
-        'Add a song to a section. Pass a song from vibo_search_songs (songUrl is required; include viboSongId/title/artist when known). Confirm-gated.',
+        'Add a song to a section. Pass a song from vibo_search_songs (songUrl is required; ' +
+        'include viboSongId/title/artist when known). Before adding, check that result\'s ' +
+        '`quality.confidence`: adding a `likely-not-original` result puts a cover, karaoke ' +
+        'track or junk-metadata re-upload in front of a live DJ. If nothing looks original, ' +
+        'report the closest matches back rather than adding a best guess. Confirm-gated.',
       annotations: toolAnnotations({ title: 'Add song to Vibo section', readOnly: false }),
       inputSchema: {
         eventId: z.string().describe('Event id.'),
