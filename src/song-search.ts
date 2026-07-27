@@ -168,19 +168,23 @@ function streamingLinkCount(links?: SongLinks | null): number {
 }
 
 /**
- * True when a SoundCloud URL's handle plausibly belongs to `artist` — i.e. the
- * handle contains one of the artist's substantial name tokens. Deliberately
- * loose: `soundcloud.com/elvissonymusic/...` counts for Elvis Presley (a label
- * account), while `soundcloud.com/jen-prince-602192391/...` does not.
+ * True when a SoundCloud URL's handle is consistent with `artist` — i.e. the
+ * handle contains one of the artist's substantial name tokens, *or* the check
+ * cannot be run at all. Deliberately loose: `soundcloud.com/elvissonymusic/...`
+ * counts for Elvis Presley (a label account), while
+ * `soundcloud.com/jen-prince-602192391/...` does not.
  */
-function soundcloudHandleMatchesArtist(url: string, artist: string): boolean {
+function soundcloudHandleIsConsistentWith(url: string, artist: string): boolean {
   const path = url.replace(/^https?:\/\/(www\.)?soundcloud\.com\//i, '').split('/')[0] ?? '';
   const handle = normalizeName(path).split(' ').join('');
-  if (!handle) return false;
   const tokens = normalizeName(artist)
     .split(' ')
     .filter((t) => t.length >= 4);
-  if (!tokens.length) return false;
+  // Nothing to compare — an unparseable handle, or an artist whose every name
+  // token is too short to match on without hitting noise ("Sia", "SZA", "U2",
+  // "Nas"). Abstain rather than accuse: this is a soft signal, and a check that
+  // cannot run is not evidence against the result.
+  if (!handle || !tokens.length) return true;
   return tokens.some((t) => handle.includes(t));
 }
 
@@ -241,7 +245,7 @@ export function assessSong(song: SearchSong, intended?: ParsedQuery): SongQualit
   // Soft signal: only checkable when a SoundCloud link is present.
   const soundcloud = song.links?.soundcloud;
   const artistForHandle = isJunkArtist ? intended?.artist : artist || intended?.artist;
-  if (soundcloud && artistForHandle && !soundcloudHandleMatchesArtist(soundcloud, artistForHandle)) {
+  if (soundcloud && artistForHandle && !soundcloudHandleIsConsistentWith(soundcloud, artistForHandle)) {
     warnings.push(`SoundCloud handle does not obviously belong to "${artistForHandle}".`);
   }
 
