@@ -185,6 +185,33 @@ If both work, the deploy is verified end-to-end.
   They are used only to sign into Vibo on that user's behalf, never for anything
   else.
 
+## The commit prefix decides whether a Worker change deploys
+
+`deploy-connector` in `release-please.yml` runs only
+`if: needs.release-please.outputs.release_created == 'true'`. So a change that
+release-please does not turn into a release never reaches the Worker, however
+correct it is on `main`.
+
+That makes the Conventional-Commit prefix a **deploy switch** for anything the
+Worker depends on. `feat:`, `fix:` and `!` cut a release and therefore deploy.
+`build:`, `chore:`, `ci:`, `test:`, `refactor:`, `perf:` and docs do not.
+
+The trap is that "is this a dev dependency?" is the wrong question. The right
+one is "does the Worker import it?" `@chrischall/mcp-connector` is a
+**devDependency** and is absent from the published `dist/` — yet `src/worker.ts`
+imports it at runtime and wrangler bundles it at deploy time. Prefixing a bump
+of it `build(deps):` because it "ships nothing" leaves `main`'s lockfile
+claiming one version while the deployed Worker runs whatever the last release
+tag bundled. Same for `agents`, `@cloudflare/workers-oauth-provider` and
+`@modelcontextprotocol/sdk`.
+
+If a change genuinely should not cut a release but must reach the Worker,
+deploy it by hand: **Actions → deploy-connector → Run workflow**.
+
+Note that on a **single-commit PR** GitHub squashes using the *commit* subject,
+not the PR title — so fixing only the title leaves the deploy switch untouched.
+Match the two, or add a second commit so the title wins.
+
 ## Rotation / teardown
 
 There are no operator secrets to rotate for Vibo auth (users manage their own
