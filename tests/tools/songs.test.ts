@@ -45,6 +45,49 @@ describe('song tools', () => {
     });
   });
 
+  it('vibo_search_songs annotates results with a quality verdict', async () => {
+    gql.mockResolvedValue({
+      getSongs: [
+        {
+          viboSongId: 'v1',
+          songUrl: 'https://y/1',
+          title: 'Tennessee Whiskey',
+          artist: 'Chris Stapleton',
+          links: { spotify: 'https://open.spotify.com/track/x', soundcloud: 'https://soundcloud.com/chris-stapleton-music/tennessee-whiskey' },
+        },
+        { viboSongId: 'v2', songUrl: 'https://y/2', title: 'Tennessee Whiskey', artist: 'board', links: {} },
+      ],
+    });
+    const res = await harness.callTool('vibo_search_songs', {
+      eventId: 'e1',
+      sectionId: 's1',
+      query: 'Chris Stapleton - Tennessee Whiskey',
+    });
+    const parsed = parseToolResult<{
+      summary: { total: number; likelyOriginal: number; flagged: number };
+      results: Array<{ viboSongId: string; quality: { confidence: string } }>;
+    }>(res);
+    expect(parsed.summary).toEqual({ total: 2, likelyOriginal: 1, flagged: 1 });
+    expect(parsed.results[0]).toMatchObject({ viboSongId: 'v1', quality: { confidence: 'likely-original' } });
+    expect(parsed.results[1]).toMatchObject({ viboSongId: 'v2', quality: { confidence: 'likely-not-original' } });
+  });
+
+  it('vibo_search_songs warns when the query omits the artist/title hyphen', async () => {
+    gql.mockResolvedValue({ getSongs: [] });
+    const res = await harness.callTool('vibo_search_songs', {
+      eventId: 'e1',
+      sectionId: 's1',
+      query: 'Chris Stapleton Tennessee Whiskey',
+    });
+    expect(parseToolResult<{ hint?: string }>(res).hint).toMatch(/"<Artist> - <Title>" form/);
+  });
+
+  it('vibo_search_songs passes through a non-array payload untouched', async () => {
+    gql.mockResolvedValue({ getSongs: { unexpected: 'shape' } });
+    const res = await harness.callTool('vibo_search_songs', { eventId: 'e1', sectionId: 's1', query: 'abba' });
+    expect(parseToolResult<{ unexpected: string }>(res).unexpected).toBe('shape');
+  });
+
   it('vibo_add_song_to_section previews then sends the song payload', async () => {
     const args = { eventId: 'e1', sectionId: 's1', songUrl: 'https://x/y', viboSongId: 'v1', title: 'T', artist: 'A' };
     const preview = await harness.callTool('vibo_add_song_to_section', args);

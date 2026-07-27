@@ -36,6 +36,9 @@ src/
   auth.ts         # captureViboSession() — fetchproxy browser-bridge token capture (SSO)
   session-store.ts# persist {accessToken,refreshToken} to ~/.vibo-mcp/session.json (0600)
   gql.ts          # all GraphQL operation documents (selections from introspection)
+  song-search.ts  # pure search-quality heuristics — parseSearchQuery, assessSong,
+                  #   annotateSearchResults; grades each search hit
+                  #   likely-original / uncertain / likely-not-original
   tools/
     profile.ts          # vibo_get_me, vibo_healthcheck
     events.ts           # list_events, get_event, join_event, leave_event, create_event_contact
@@ -118,6 +121,39 @@ variables. See `docs/VIBO-API.md` for the pinned input shapes.
   each in earnest.
 - `eventUsers` returns nothing unless `usersType` is set, so
   `vibo_list_event_users` queries host+guest and merges when no filter is given.
+
+## Song search is adversarial
+
+The `searchField` catalog mixes official masters with YouTube covers, karaoke
+tracks and re-uploads, and the text index ranks them by title text — which
+cover uploaders game. Three behaviours measured live (fixtures in
+`tests/song-search.test.ts` are verbatim captures):
+
+- **The hyphen decides the result set.** `"Chris Stapleton - Tennessee Whiskey"`
+  returned exactly one hit, the official master with six streaming links. The
+  same words *without* the hyphen returned nine hits and **none** was the
+  original — top was a re-upload whose `artist` field read `board`, then Sing
+  King karaoke, three violin/piano covers, an instrumental and a techno edit.
+- **Artist stylization is not folded.** `"Dan + Shay - Speechless"` finds the
+  master; `"Dan and Shay - Speechless"` returns an acoustic cut, a `- Topic`
+  upload, a live awards performance and a cover, with the master absent.
+- **Artist alone** returns a short popularity-ranked subset, so a specific
+  track can be missing entirely.
+
+`src/song-search.ts` grades every hit (`quality.confidence` +`warnings`) on
+artist-vs-query mismatch, placeholder/uploader artist fields, version markers
+in the title, and streaming-link breadth (official masters carry several;
+re-uploads are YouTube-only). It biases toward false warnings — a title
+legitimately containing "cover" is flagged — because a missed karaoke track
+reaches a live DJ. `annotateSearchResults` also returns a `hint` telling the
+caller to re-query when the form was unhyphenated or nothing looked original.
+
+- **`addSongToSection` can store a thinner record than search returned.**
+  Adding Dan + Shay's *Speechless* (`peWhXJwn`) from a search hit carrying six
+  streaming links persisted with only `appleMusic` and no thumbnails; the same
+  add for Stapleton and Elvis kept the full set. `viboSongId`/`title`/`artist`
+  were correct, so the DJ still gets the right track — but don't treat the
+  stored `links` blob as a faithful copy of the search result.
 
 ## Environment
 
