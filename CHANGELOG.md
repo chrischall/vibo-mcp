@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/chrischall/vibo-mcp/compare/v1.4.3...v1.5.0) (2026-07-27)
+
+
+### Features
+
+* **songs:** grade search results and steer callers to "&lt;Artist&gt; - &lt;Title&gt;" ([#48](https://github.com/chrischall/vibo-mcp/issues/48)) ([6be410c](https://github.com/chrischall/vibo-mcp/commit/6be410c8a914752c33a9a927c42e17ebc4a0a360))
+
 ## [1.4.3](https://github.com/chrischall/vibo-mcp/compare/v1.4.2...v1.4.3) (2026-07-20)
 
 
