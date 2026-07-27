@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.1](https://github.com/chrischall/vibo-mcp/compare/v1.5.0...v1.5.1) (2026-07-27)
+
+
+### Bug Fixes
+
+* **deps:** lift @chrischall/mcp-connector to 1.1.1 ([#44](https://github.com/chrischall/vibo-mcp/issues/44)) ([7fe7938](https://github.com/chrischall/vibo-mcp/commit/7fe79385a280182379229680a43c019176ecfb69))
+* **songs:** abstain on the SoundCloud check for short-named artists ([#51](https://github.com/chrischall/vibo-mcp/issues/51)) ([16861fb](https://github.com/chrischall/vibo-mcp/commit/16861fbeff52bab7342aa74d8d87041b9f3fc56e)), closes [#49](https://github.com/chrischall/vibo-mcp/issues/49)
+
 ## [1.5.0](https://github.com/chrischall/vibo-mcp/compare/v1.4.3...v1.5.0) (2026-07-27)
 
 
