@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.2](https://github.com/chrischall/vibo-mcp/compare/v1.5.1...v1.5.2) (2026-07-30)
+
+
+### Bug Fixes
+
+* **deps:** bump @fetchproxy/* to 1.7.0 and @chrischall/mcp-utils to 0.14.0 ([#60](https://github.com/chrischall/vibo-mcp/issues/60)) ([100001e](https://github.com/chrischall/vibo-mcp/commit/100001e95ea63f0a61771b12c2133d45a45e70e8))
+
 ## [1.5.1](https://github.com/chrischall/vibo-mcp/compare/v1.5.0...v1.5.1) (2026-07-27)
 
 

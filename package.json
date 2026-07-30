@@ -1,8 +1,8 @@
 {
   "name": "vibo-mcp",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "mcpName": "io.github.chrischall/vibo-mcp",
-  "description": "Vibo (vibodj.com) MCP server for Claude \u2014 host/couple event music planning & management. Developed and maintained by AI (Claude Code).",
+  "description": "Vibo (vibodj.com) MCP server for Claude — host/couple event music planning & management. Developed and maintained by AI (Claude Code).",
   "author": "Claude Code (AI) <https://www.anthropic.com/claude>",
   "repository": {
     "type": "git",
