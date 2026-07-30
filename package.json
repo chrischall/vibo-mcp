@@ -2,7 +2,7 @@
   "name": "vibo-mcp",
   "version": "1.5.1",
   "mcpName": "io.github.chrischall/vibo-mcp",
-  "description": "Vibo (vibodj.com) MCP server for Claude — host/couple event music planning & management. Developed and maintained by AI (Claude Code).",
+  "description": "Vibo (vibodj.com) MCP server for Claude \u2014 host/couple event music planning & management. Developed and maintained by AI (Claude Code).",
   "author": "Claude Code (AI) <https://www.anthropic.com/claude>",
   "repository": {
     "type": "git",
@@ -48,8 +48,8 @@
     "worker:test": "vitest run --config vitest.workers.config.ts"
   },
   "dependencies": {
-    "@chrischall/mcp-utils": "^0.13.1",
-    "@fetchproxy/bootstrap": "^1.3.4",
+    "@chrischall/mcp-utils": "^0.14.0",
+    "@fetchproxy/bootstrap": "^1.7.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "dotenv": "^17.4.0",
     "zod": "^4.4.2"
