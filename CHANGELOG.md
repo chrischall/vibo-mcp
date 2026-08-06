@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.3](https://github.com/chrischall/vibo-mcp/compare/v1.5.2...v1.5.3) (2026-08-06)
+
+
+### Bug Fixes
+
+* **deps:** move to @fetchproxy/server 2.0.0 for the v3 handshake ([#68](https://github.com/chrischall/vibo-mcp/issues/68)) ([65f9f33](https://github.com/chrischall/vibo-mcp/commit/65f9f33973c3927fbd98c866b2d46b96016e0749))
+
 ## [1.5.2](https://github.com/chrischall/vibo-mcp/compare/v1.5.1...v1.5.2) (2026-07-30)
 
 
