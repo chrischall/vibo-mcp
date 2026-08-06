@@ -9,7 +9,7 @@ import { previewResult, inlineFileSchema } from './shared.js';
 /**
  * `resolveUpload` is the injectable file-source seam for photo/file answers:
  * stdio uses the default `nodeUploadResolver` (local `*Paths`), the hosted
- * connector passes `inlineUploadResolver` (inline base64 `images`/`files`).
+ * remote caller sends inline base64 (`images`/`files`) instead.
  */
 export function registerQuestionTools(
   server: McpServer,
@@ -40,7 +40,7 @@ export function registerQuestionTools(
     'vibo_answer_question',
     {
       description:
-        "Answer a section planning question. Provide the field matching the question's type: `text` for a text question, `selectedOptions` (array of option _ids from vibo_list_section_questions) for radio/checkbox/select, or `link` (array of URLs) for a link question. Use `otherOptionTitle` with the question's \"other\" option. For photo/file questions, pass local paths (`imagePaths`/`filePaths`) on the stdio server, or inline base64 bytes (`images`/`files`) on the hosted connector. Confirm-gated.",
+        "Answer a section planning question. Provide the field matching the question's type: `text` for a text question, `selectedOptions` (array of option _ids from vibo_list_section_questions) for radio/checkbox/select, or `link` (array of URLs) for a link question. Use `otherOptionTitle` with the question's \"other\" option. For photo/file questions, pass local paths (`imagePaths`/`filePaths`) when the server can read your disk, or inline base64 bytes (`images`/`files`) otherwise. Confirm-gated.",
       annotations: toolAnnotations({ title: 'Answer Vibo question', readOnly: false }),
       inputSchema: {
         eventId: z.string().describe('Event id.'),
@@ -67,17 +67,17 @@ export function registerQuestionTools(
         images: z
           .array(inlineFileSchema)
           .optional()
-          .describe('Inline base64 images, for a photo question (used by the hosted connector, which has no filesystem).'),
+          .describe('Inline base64 images, for a photo question — use these when the server cannot read your filesystem.'),
         files: z
           .array(inlineFileSchema)
           .optional()
-          .describe('Inline base64 files, for a file-attachment question (used by the hosted connector).'),
+          .describe('Inline base64 files, for a file-attachment question — use these when the server cannot read your filesystem.'),
         confirm: schemaConfirm,
       },
     },
     async ({ eventId, sectionId, questionId, text, selectedOptions, link, otherOptionTitle, imagePaths, filePaths, images, files, confirm }) => {
       // Merge local-path and inline-byte file refs (in that order) into one list
-      // per slot. stdio supplies paths; the hosted connector supplies inline
+      // per slot. A local caller supplies paths; a remote one supplies inline
       // bytes; the injected resolver turns each ref into an in-memory blob.
       const imageRefs: FileRef[] = [
         ...(imagePaths ?? []).map((path) => ({ path })),
@@ -93,7 +93,7 @@ export function registerQuestionTools(
       // modifier for selectedOptions — on its own it is not a valid answer.
       if (text === undefined && selectedOptions === undefined && link === undefined && !hasImages && !hasFiles) {
         throw new McpToolError('Provide an answer: text, selectedOptions, link, imagePaths/images, or filePaths/files.', {
-          hint: "Match the question's type — text → `text`, radio/checkbox/select → `selectedOptions`, link → `link`, photo/file → `imagePaths`/`filePaths` (stdio) or `images`/`files` (hosted connector).",
+          hint: "Match the question's type — text → `text`, radio/checkbox/select → `selectedOptions`, link → `link`, photo/file → `imagePaths`/`filePaths` for local files, or `images`/`files` for inline base64.",
         });
       }
       const answer: Record<string, unknown> = {};

@@ -13,7 +13,7 @@ import type { UploadFile } from './upload-source.js';
 // Load .env for local dev; silently skip if dotenv is unavailable (e.g. the
 // mcpb bundle, which externalizes dotenv). `override: false` means a
 // host-provided env var always wins over .env. The try/catch additionally
-// guards the Cloudflare Worker runtime (src/worker.ts): there `import.meta.url`
+// guards non-Node runtimes, where `import.meta.url`
 // is undefined and `fileURLToPath(undefined)` would otherwise throw at module
 // init (Worker startup validation) — there is no filesystem / .env there anyway.
 try {
@@ -80,8 +80,8 @@ interface GraphQLResponse<T> {
  * credentials are set. The error surfaces on the first tool call.
  *
  * Credentials can be INJECTED via the constructor (`new ViboClient({ email,
- * password })`) instead of read from the environment — the hosted Cloudflare
- * connector (src/worker.ts) builds a per-user client this way from each user's
+ * password })`) instead of read from the environment — a hosted per-user
+ * deployment builds a client this way from each user's
  * stored email/password. Omitted fields fall back to the corresponding env var,
  * so the no-arg stdio construction is unchanged.
  */
@@ -127,7 +127,7 @@ export class ViboClient {
   /**
    * Resolve the saved-session fallback and the deferred config error on first
    * use. Kept out of the constructor so construction is pure (Worker-safe):
-   * `loadSession()` reads homedir()/the filesystem, which the Workers runtime
+   * `loadSession()` reads homedir()/the filesystem, which a sandboxed runtime
    * forbids at global scope. Runs its body at most once.
    */
   private ensureConfigResolved(): void {
@@ -202,10 +202,9 @@ export class ViboClient {
    * path (e.g. "variables.photo" or "variables.payload.answer.images.0") to an
    * in-memory {@link UploadFile} (blob + filename); `variables` must carry
    * `null` at each of those positions. The bytes arrive already resolved (from
-   * a local file on stdio, or inline base64 on the hosted connector — see
-   * src/upload-source.ts), so this method never touches the filesystem and runs
-   * unchanged in the Workers runtime (`FormData`/`Blob`/`fetch` are all
-   * available there). Same auth + single-retry-on-expiry behavior as `gql`.
+   * a local file, or inline base64 when the caller has no filesystem to name —
+   * see src/upload-source.ts), so this method never touches the filesystem
+   * itself. Same auth + single-retry-on-expiry behavior as `gql`.
    */
   async gqlUpload<T>(
     query: string,

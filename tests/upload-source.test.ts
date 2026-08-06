@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { nodeUploadResolver, inlineUploadResolver } from '../src/upload-source.js';
+import { nodeUploadResolver } from '../src/upload-source.js';
 
 // The injectable upload boundary: stdio reads a local path (node:fs), the
 // hosted Worker decodes inline base64. Both converge on an in-memory blob.
@@ -45,28 +45,3 @@ describe('nodeUploadResolver (stdio)', () => {
   });
 });
 
-describe('inlineUploadResolver (hosted connector)', () => {
-  it('decodes base64 bytes into a blob (default filename)', async () => {
-    const out = await inlineUploadResolver({ data: 'aGk=' });
-    expect(await out.blob.text()).toBe('hi');
-    expect(out.filename).toBe('upload');
-  });
-
-  it('strips a data: URL prefix before decoding', async () => {
-    const out = await inlineUploadResolver({ data: 'data:image/png;base64,aGk=', filename: 'p.png' });
-    expect(await out.blob.text()).toBe('hi');
-    expect(out.filename).toBe('p.png');
-  });
-
-  it('rejects a filesystem path (no filesystem on the Worker)', async () => {
-    await expect(inlineUploadResolver({ path: '/tmp/x.jpg' })).rejects.toThrow(/no filesystem|not available/i);
-  });
-
-  it('throws when no bytes are supplied', async () => {
-    await expect(inlineUploadResolver({})).rejects.toThrow(/No file provided/);
-  });
-
-  it('throws an actionable error on undecodable base64', async () => {
-    await expect(inlineUploadResolver({ data: '!!!not base64!!!' })).rejects.toThrow(/decode inline file data/);
-  });
-});
