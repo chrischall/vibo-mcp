@@ -23,9 +23,9 @@ export function pagination(limit?: number, skip?: number): { skip: number; limit
 }
 
 /**
- * One inline file (base64 bytes + optional filename) for the hosted connector,
- * which has no filesystem. Mirrors the local-path upload inputs so a tool can
- * accept either a filesystem path (stdio) or inline bytes (Worker).
+ * One inline file (base64 bytes + optional filename) for callers with no
+ * filesystem to name — a hosted deployment reaches the server's disk, not the
+ * user's. Mirrors the local-path upload inputs so a tool can accept either.
  */
 export const inlineFileSchema = z.object({
   data: z.string().describe('Base64-encoded file bytes (a `data:` URL prefix is allowed).'),

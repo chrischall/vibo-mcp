@@ -9,7 +9,7 @@ import { previewResult } from './shared.js';
 /**
  * `resolveUpload` is the injectable file-source seam: the stdio server uses the
  * default `nodeUploadResolver` (reads a local `path`), while the hosted
- * Cloudflare connector (src/worker.ts) passes `inlineUploadResolver` so the same
+ * A caller with no shared filesystem sends inline base64 instead, so the same
  * tool works from base64 `fileData` with no filesystem.
  */
 export function registerUploadTools(
@@ -21,14 +21,14 @@ export function registerUploadTools(
     'vibo_set_profile_photo',
     {
       description:
-        'Set your Vibo profile photo from an image. On the local (stdio) server pass a local file `path`; on the hosted connector pass the image bytes as base64 `fileData`. Returns the uploaded image URL. Confirm-gated.',
+        'Set your Vibo profile photo from an image. Pass a local file `path` if the server shares your filesystem; otherwise pass the image bytes as base64 `fileData`. Returns the uploaded image URL. Confirm-gated.',
       annotations: toolAnnotations({ title: 'Set Vibo profile photo', readOnly: false }),
       inputSchema: {
         path: z.string().optional().describe('Absolute path to a local image file (jpg/png). Local/stdio server only.'),
         fileData: z
           .string()
           .optional()
-          .describe('Base64-encoded image bytes (a `data:` URL prefix is allowed). Used by the hosted connector, which has no filesystem.'),
+          .describe('Base64-encoded image bytes (a `data:` URL prefix is allowed). Use this when the server cannot read your filesystem.'),
         filename: z.string().optional().describe('Filename for the image when using fileData (default "photo.jpg").'),
         confirm: schemaConfirm,
       },
@@ -36,7 +36,7 @@ export function registerUploadTools(
     async ({ path, fileData, filename, confirm }) => {
       if (!path && !fileData) {
         throw new McpToolError('Provide an image: a local file `path` or inline base64 `fileData`.', {
-          hint: 'On the local server pass `path`; on the hosted connector pass `fileData` (base64).',
+          hint: 'Pass `path` for a local file, or `fileData` (base64) if the server cannot read your filesystem.',
         });
       }
       if (!confirm) return previewResult('uploadUserPhoto', { photo: path ?? '(inline bytes)' });

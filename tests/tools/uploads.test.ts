@@ -10,7 +10,7 @@ const gqlUpload = vi.spyOn(client, 'gqlUpload').mockResolvedValue(undefined as n
 
 // A fake upload resolver so the tool never touches the filesystem: it records
 // the ref it was handed and returns a stub in-memory file. This is the same
-// injectable seam the hosted connector uses (inlineUploadResolver) — here we
+// injectable upload-resolver seam — here we
 // assert the tool resolves the right ref and streams the blob into gqlUpload.
 const stubFile: UploadFile = { blob: new Blob(['x']), filename: 'photo.jpg' };
 const resolve = vi.fn<(ref: FileRef) => Promise<UploadFile>>().mockResolvedValue(stubFile);

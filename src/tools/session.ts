@@ -6,7 +6,7 @@ import { saveSession } from '../session-store.js';
 import { GET_ME } from '../gql.js';
 
 // NB: this registrar is STDIO-ONLY — it is deliberately NOT wired into the
-// hosted Cloudflare connector (src/worker.ts). vibo_capture_session needs the
+// a remote caller. vibo_capture_session needs the
 // fetchproxy browser bridge + a signed-in browser tab, neither of which exists
 // in the serverless Worker runtime.
 export function registerSessionTools(server: McpServer, client: ViboClient): void {
