@@ -5,10 +5,9 @@ import { captureViboSession } from '../auth.js';
 import { saveSession } from '../session-store.js';
 import { GET_ME } from '../gql.js';
 
-// NB: this registrar is STDIO-ONLY — it is deliberately NOT wired into the
-// a remote caller. vibo_capture_session needs the
-// fetchproxy browser bridge + a signed-in browser tab, neither of which exists
-// in the serverless Worker runtime.
+// NB: vibo_capture_session needs the fetchproxy browser bridge and a signed-in
+// browser tab on the same machine, so this registrar is only useful where both
+// exist — a deployment without them should not wire it in.
 export function registerSessionTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
     'vibo_capture_session',

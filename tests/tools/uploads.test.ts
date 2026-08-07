@@ -47,7 +47,7 @@ describe('upload tools', () => {
     expect(parseToolResult<{ url: string }>(res).url).toBe('https://x/y.jpg');
   });
 
-  it('vibo_set_profile_photo resolves inline base64 fileData (the hosted-connector path)', async () => {
+  it('vibo_set_profile_photo resolves inline base64 fileData (the no-local-filesystem path)', async () => {
     gqlUpload.mockResolvedValue({ uploadUserPhoto: { url: 'https://x/z.jpg' } });
     await harness.callTool('vibo_set_profile_photo', { fileData: 'aGk=', filename: 'me.png', confirm: true });
     expect(resolve).toHaveBeenCalledWith({ path: undefined, data: 'aGk=', filename: 'me.png' });

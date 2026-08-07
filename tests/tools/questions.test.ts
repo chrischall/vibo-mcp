@@ -146,7 +146,7 @@ describe('question tools', () => {
     );
   });
 
-  it('vibo_answer_question routes inline base64 image answers (the hosted-connector path)', async () => {
+  it('vibo_answer_question routes inline base64 image answers (the no-local-filesystem path)', async () => {
     gqlUpload.mockResolvedValue({ answerEventSectionQuestionV2: { progress: 1 } });
     await harness.callTool('vibo_answer_question', {
       eventId: 'e1',

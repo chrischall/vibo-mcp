@@ -8,9 +8,9 @@ import { previewResult } from './shared.js';
 
 /**
  * `resolveUpload` is the injectable file-source seam: the stdio server uses the
- * default `nodeUploadResolver` (reads a local `path`), while the hosted
- * A caller with no shared filesystem sends inline base64 instead, so the same
- * tool works from base64 `fileData` with no filesystem.
+ * default `nodeUploadResolver`, which resolves either a local `path` or inline
+ * base64 `fileData`. A caller that shares no filesystem with the server sends
+ * the bytes inline, and the same tool works unchanged.
  */
 export function registerUploadTools(
   server: McpServer,
