@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.4](https://github.com/chrischall/vibo-mcp/compare/v1.5.3...v1.5.4) (2026-08-07)
+
+
+### Refactor
+
+* **connector:** retire the standalone Cloudflare Worker connector ([#70](https://github.com/chrischall/vibo-mcp/issues/70)) ([ccbf3ec](https://github.com/chrischall/vibo-mcp/commit/ccbf3ec8c33933713bc7c241b16cecf6c406c7ba))
+
 ## [1.5.3](https://github.com/chrischall/vibo-mcp/compare/v1.5.2...v1.5.3) (2026-08-06)
 
 
