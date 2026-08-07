@@ -4,8 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { nodeUploadResolver } from '../src/upload-source.js';
 
-// The injectable upload boundary: stdio reads a local path (node:fs), the
-// hosted Worker decodes inline base64. Both converge on an in-memory blob.
+// The injectable upload boundary: a caller that shares the filesystem names a
+// local path (node:fs); one that does not sends inline base64. Both converge on
+// an in-memory blob.
 
 let dir: string;
 afterEach(() => {
@@ -43,5 +44,22 @@ describe('nodeUploadResolver (stdio)', () => {
   it('throws when neither path nor data is supplied', async () => {
     await expect(nodeUploadResolver({})).rejects.toThrow(/No file provided/);
   });
-});
+  // These three paths inside blobFromBase64 are reachable through this resolver
+  // too — they lost their only coverage when the inline-only resolver went.
+  it('strips a data: URL prefix before decoding', async () => {
+    const out = await nodeUploadResolver({ data: 'data:image/png;base64,aGk=', filename: 'p.png' });
+    expect(await out.blob.text()).toBe('hi');
+    expect(out.filename).toBe('p.png');
+  });
 
+  it('falls back to a default filename when inline bytes carry none', async () => {
+    const out = await nodeUploadResolver({ data: 'aGk=' });
+    expect(out.filename).toBe('upload');
+  });
+
+  it('rejects undecodable base64 with an actionable error', async () => {
+    await expect(nodeUploadResolver({ data: '!!!not base64!!!' })).rejects.toThrow(
+      /decode inline file data/,
+    );
+  });
+});
