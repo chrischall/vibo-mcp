@@ -1,0 +1,59 @@
+version: 1
+name: Vibo
+slug: vibo
+summary: >-
+  Plan and manage your event music in Vibo (vibodj.com) — events, timeline,
+  song requests, the DJ's song ideas and planning questions,
+  must-play/do-not-play, comments, guests, and exports to Spotify/Apple
+  Music, via natural language.
+#
+# Hosting note (a comment, not user-facing summary text): this is a
+# BROWSER-BRIDGE MCP — it reaches its site through the user's signed-in
+# tab via the fetchproxy bridge. A bridged registration also needs runtime
+# `fly-shared`, `bridge: true` and a `bridgePortEnv`, which are registration
+# fields this manifest has no schema for (set them over the control API).
+# `state.dataDir` below is required for `bridge`.
+env:
+  - name: VIBO_EMAIL
+    required: false
+    help: >-
+      Vibo account email (or use VIBO_ACCESS_TOKEN for SSO accounts)
+  - name: VIBO_PASSWORD
+    secret: true
+    required: false
+    help: >-
+      Vibo account password
+  - name: VIBO_ACCESS_TOKEN
+    secret: true
+    required: false
+    help: >-
+      Captured x-token from a signed-in web.vibodj.com session (SSO alternative)
+  - name: VIBO_REFRESH_TOKEN
+    secret: true
+    required: false
+    help: >-
+      Matching x-refresh-token so the session can renew
+  - name: VIBO_API_URL
+    required: false
+    help: >-
+      Overrides the upstream API base URL. Leave unset for the default; if you
+      change it, update egress.allow to match.
+  - name: VIBO_SESSION_FILE
+    required: false
+    help: >-
+      Filesystem path/flag for saved state or output. Relates to state.dataDir;
+      leave unset for the default.
+state:
+  dataDir: true
+  reason: >-
+    The fetchproxy identity lives at $HOME/.fetchproxy/identity/<name>.json
+    and the pair code derives from it. Without a persistent $HOME every cold
+    start mints a fresh identity and re-prompts pairing in the browser; the
+    API refuses bridge without it.
+egress:
+  allow:
+    # Only hosts the SERVER process actually fetches. Hosts that appear
+    # solely in a URL this server BUILDS and returns are excluded.
+    - api.vibodj.com
+    - vibodj.com
+    - web.vibodj.com
