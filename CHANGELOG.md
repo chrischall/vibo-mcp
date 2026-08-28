@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.5](https://github.com/chrischall/vibo-mcp/compare/v1.5.4...v1.5.5) (2026-08-28)
+
+
+### Bug Fixes
+
+* **egress:** declare only the hosts the server process dials in mint.yaml ([#85](https://github.com/chrischall/vibo-mcp/issues/85)) ([1d76992](https://github.com/chrischall/vibo-mcp/commit/1d769926a4365b81cd2d63316266247375a1e1c9))
+
 ## [1.5.4](https://github.com/chrischall/vibo-mcp/compare/v1.5.3...v1.5.4) (2026-08-07)
 
 
