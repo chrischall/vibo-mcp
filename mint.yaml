@@ -54,6 +54,12 @@ egress:
   allow:
     # Only hosts the SERVER process actually fetches. Hosts that appear
     # solely in a URL this server BUILDS and returns are excluded.
+    #
+    # Every mode (email/password signIn, captured token, refresh, uploads)
+    # POSTs to the GraphQL endpoint from the process itself
+    # (src/client.ts DEFAULT_API_URL); no redirect hop. `vibo_capture_session`
+    # lifts x-token/x-refresh-token from the signed-in web.vibodj.com tab over
+    # the fetchproxy bridge — that is the browser's dial, not the process's, so
+    # web.vibodj.com and vibodj.com are NOT listed. A VIBO_API_URL override
+    # names a host this list cannot know; add it here if you set one.
     - api.vibodj.com
-    - vibodj.com
-    - web.vibodj.com
