@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/chrischall/vibo-mcp/compare/v1.5.5...v1.6.0) (2026-08-29)
+
+
+### Features
+
+* **deps:** take @fetchproxy/server 2.2.0 so the concentrator can bind its sandbox address ([#87](https://github.com/chrischall/vibo-mcp/issues/87)) ([9d4b9c7](https://github.com/chrischall/vibo-mcp/commit/9d4b9c75e21b472076cdadf545a9988b06200aaa))
+
 ## [1.5.5](https://github.com/chrischall/vibo-mcp/compare/v1.5.4...v1.5.5) (2026-08-28)
 
 
