@@ -85,6 +85,66 @@ you get a dry-run preview of exactly what would be sent.
 - `vibo_mark_notifications_read`.
 - `vibo_export_event_to_spotify` / `vibo_export_event_to_apple_music`.
 
+## Response shape (`view`)
+
+Exactly one of this server's 39 tools takes `view: "compact" | "full"` —
+**`vibo_search_songs`** — and on it **`compact` is the DEFAULT**. You get the
+slim rung without asking for it.
+
+**Compact here is media stripping, not a field projection.** `src/view.ts`
+writes no field list, because this repo holds no captured Vibo payload to
+derive one from honestly; instead it removes keys whose value is a picture,
+which is subtractive and so cannot drop a field nobody knew about.
+
+Why `vibo_search_songs` is the tool that got it: `annotateSearchResults`
+SPREADS Vibo's own song objects (`{ ...song, quality }`), so it is a
+pass-through with a verdict attached rather than a projection — and the search
+query selects `thumbnails { s180x180 original }` per track, so every cover-art
+URL in the catalog was coming straight back to the caller. Compact removes
+those.
+
+What compact does **not** touch on that tool is the point of the tool:
+`songUrl`, the `links` block (`spotify` / `youtube` / `appleMusic`) and the
+`quality` verdict all survive. A streaming link is this server's product, not
+decoration — `vibo_add_song_to_section` cannot add anything without `songUrl`,
+and the quality verdict is computed from how many services carry a track. A
+`null` link survives too: an absent key and a null one are the same to
+`JSON.parse` but not to a reader deciding whether a service was checked.
+
+`view: "full"` returns Vibo's payload untouched, cover art included. There is
+deliberately **no `raw` rung**: nothing here re-serialises or normalises the
+GraphQL response, so `full` already IS the upstream payload and a third value
+would silently alias one that exists.
+
+### The other 38 tools have no `view` — and one group of them matters
+
+- **The 24 mutating tools** (every confirm-gated write, plus
+  `vibo_capture_session`) answer with a dry-run preview or a receipt — an id,
+  a count, a status. Nothing in a receipt is decoration, and slimming one is
+  how you lose the field that says what actually happened.
+- **`vibo_healthcheck`** answers with a connectivity/auth diagnostic, for the
+  same reason.
+- **The 13 remaining reads hand back Vibo's GraphQL payload as it arrived.**
+  No rung is declared on them, so there is no slim option to ask for — and a
+  `view` passed anyway is dropped by zod without a warning, so a successful
+  call is not evidence the rung was honoured.
+
+That last group is not a neutral fact, so budget for it. **Five of those reads
+select media fields from Vibo and return them in full:**
+
+| Tool | What arrives per record |
+| --- | --- |
+| `vibo_get_section_songs` | `thumbnails { s180x180 original }` per song |
+| `vibo_list_song_ideas_songs` | `thumbnails { s180x180 original }` per song |
+| `vibo_list_event_users` | `imageUrl` per person |
+| `vibo_list_notifications` | `imageUrl` per notification |
+| `vibo_get_me` | `imageUrl` |
+
+`vibo_get_section_songs` is the one to watch: it returns the same catalog's
+song records that `vibo_search_songs` returns, carrying the same per-track
+cover art — but with no rung to drop it. Page it with `limit` rather than
+reaching for a `view` that is not there.
+
 ## Typical flow
 
 1. `vibo_list_events` → pick an event id.
