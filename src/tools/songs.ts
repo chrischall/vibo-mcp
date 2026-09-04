@@ -89,8 +89,16 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
       const songs = data.getSongs;
       // Vibo returns a bare array; if that ever changes, pass it through untouched
       // rather than guessing at a shape.
+      //
+      // BOTH exits answer through `viewResponse`. The array branch — the one
+      // that actually runs on every call — used to end at `minifiedResult`,
+      // which left `view` honoured only on the branch that never fires. The
+      // annotated results SPREAD Vibo's own song objects (`{ ...song, quality }`
+      // in `annotateSearchResults`), so the artwork and thumbnail URLs the
+      // catalog carries per track were the very payload compact exists to drop,
+      // and it dropped none of them.
       if (!Array.isArray(songs)) return viewResponse(view, songs);
-      return minifiedResult(annotateSearchResults(songs as SearchSong[], query, resolvedSource));
+      return viewResponse(view, annotateSearchResults(songs as SearchSong[], query, resolvedSource));
     },
   );
 
