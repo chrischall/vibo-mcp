@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { textResult, toolAnnotations, schemaConfirm } from '@chrischall/mcp-utils';
+import { minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { LIST_EVENT_USERS, INVITE_USERS, CHANGE_USER_ROLE, REMOVE_USER } from '../gql.js';
 import { limitSchema, skipSchema, pagination, previewResult } from './shared.js';
@@ -28,7 +28,7 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
           usersType,
           pagination: page,
         });
-        return textResult({ ...data.eventUsers, usersType });
+        return minifiedResult({ ...data.eventUsers, usersType });
       }
       // The API returns nothing unless usersType is set, so fetch both groups
       // and merge for the intuitive "everyone on the event" listing.
@@ -36,7 +36,7 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
         client.gql<{ eventUsers: UsersPage }>(LIST_EVENT_USERS, { eventId, usersType: 'host', pagination: page }),
         client.gql<{ eventUsers: UsersPage }>(LIST_EVENT_USERS, { eventId, usersType: 'guest', pagination: page }),
       ]);
-      return textResult({
+      return minifiedResult({
         hosts: hosts.eventUsers.users,
         guests: guests.eventUsers.users,
         hostsCount: hosts.eventUsers.totalCount,
@@ -62,7 +62,7 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
       const variables = { eventId, type, text, emails };
       if (!confirm) return previewResult('inviteUserViaEmail', variables);
       const data = await client.gql<{ inviteUserViaEmail: unknown }>(INVITE_USERS, variables);
-      return textResult(data.inviteUserViaEmail);
+      return minifiedResult(data.inviteUserViaEmail);
     },
   );
 
@@ -82,7 +82,7 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
       const variables = { eventId, userId, type };
       if (!confirm) return previewResult('changeUserTypeInEvent', variables);
       const data = await client.gql<{ changeUserTypeInEvent: unknown }>(CHANGE_USER_ROLE, variables);
-      return textResult(data.changeUserTypeInEvent);
+      return minifiedResult(data.changeUserTypeInEvent);
     },
   );
 
@@ -101,7 +101,7 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
       const variables = { eventId, userId };
       if (!confirm) return previewResult('removeUserFromEvent', variables);
       const data = await client.gql<{ removeUserFromEvent: unknown }>(REMOVE_USER, variables);
-      return textResult(data.removeUserFromEvent);
+      return minifiedResult(data.removeUserFromEvent);
     },
   );
 }

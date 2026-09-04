@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { textResult, toolAnnotations, schemaConfirm } from '@chrischall/mcp-utils';
+import { minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import {
   GET_PLAYLISTS,
@@ -34,7 +34,7 @@ export function registerPlaylistTools(server: McpServer, client: ViboClient): vo
         pagination: pagination(limit, skip),
         ...(q ? { filter: { q } } : {}),
       });
-      return textResult(data.getPlaylists);
+      return minifiedResult(data.getPlaylists);
     },
   );
 
@@ -56,7 +56,7 @@ export function registerPlaylistTools(server: McpServer, client: ViboClient): vo
         source,
         pagination: pagination(limit, skip),
       });
-      return textResult(data.getPlaylistSongs);
+      return minifiedResult(data.getPlaylistSongs);
     },
   );
 
@@ -80,7 +80,7 @@ export function registerPlaylistTools(server: McpServer, client: ViboClient): vo
       if (onlyFlagged !== undefined) variables.filter = { isFlagged: onlyFlagged };
       if (!confirm) return previewResult('exportEventToSpotify', variables);
       const data = await client.gql<{ exportEventToSpotify: unknown }>(EXPORT_EVENT_TO_SPOTIFY, variables);
-      return textResult(data.exportEventToSpotify);
+      return minifiedResult(data.exportEventToSpotify);
     },
   );
 
@@ -104,7 +104,7 @@ export function registerPlaylistTools(server: McpServer, client: ViboClient): vo
       if (onlyFlagged !== undefined) variables.filter = { isFlagged: onlyFlagged };
       if (!confirm) return previewResult('exportEventToAppleMusic', variables);
       const data = await client.gql<{ exportEventToAppleMusic: unknown }>(EXPORT_EVENT_TO_APPLE_MUSIC, variables);
-      return textResult(data.exportEventToAppleMusic);
+      return minifiedResult(data.exportEventToAppleMusic);
     },
   );
 }

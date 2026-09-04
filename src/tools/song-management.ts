@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { textResult, toolAnnotations, schemaConfirm, McpToolError } from '@chrischall/mcp-utils';
+import { McpToolError, minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { REMOVE_SECTION_SONGS, UPDATE_SECTION_SONGS, MOVE_SECTION_SONGS, REORDER_SONGS } from '../gql.js';
 import { previewResult } from './shared.js';
@@ -25,7 +25,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
       const vars = { eventId, sectionId, songIds };
       if (!confirm) return previewResult('removeSectionSongsV2', vars);
       const data = await client.gql<{ removeSectionSongsV2: unknown }>(REMOVE_SECTION_SONGS, vars);
-      return textResult(data.removeSectionSongsV2);
+      return minifiedResult(data.removeSectionSongsV2);
     },
   );
 
@@ -61,7 +61,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
       const vars = { eventId, sectionId, songIds, payload };
       if (!confirm) return previewResult('updateSectionSongs', vars);
       const data = await client.gql<{ updateSectionSongs: unknown }>(UPDATE_SECTION_SONGS, vars);
-      return textResult(data.updateSectionSongs);
+      return minifiedResult(data.updateSectionSongs);
     },
   );
 
@@ -85,7 +85,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
       const vars = { eventId, sourceSectionId, targetSectionId, songIds };
       if (!confirm) return previewResult('moveSectionSongsV2', vars);
       const data = await client.gql<{ moveSectionSongsV2: unknown }>(MOVE_SECTION_SONGS, vars);
-      return textResult(data.moveSectionSongsV2);
+      return minifiedResult(data.moveSectionSongsV2);
     },
   );
 
@@ -112,7 +112,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
       const vars = { eventId, sectionId, sourceSongIds, targetSongId: targetSongId ?? null };
       if (!confirm) return previewResult('reorderSongsBatch', vars);
       const data = await client.gql<{ reorderSongsBatch: unknown }>(REORDER_SONGS, vars);
-      return textResult(data.reorderSongsBatch);
+      return minifiedResult(data.reorderSongsBatch);
     },
   );
 }

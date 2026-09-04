@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { textResult, toolAnnotations, schemaConfirm } from '@chrischall/mcp-utils';
+import { minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
+import { viewArg, viewResponse } from '../view.js';
 import type { ViboClient } from '../client.js';
 import { GET_SECTION_SONGS, SEARCH_SONGS, ADD_SONG_TO_SECTION, TOGGLE_LIKE } from '../gql.js';
 import { annotateSearchResults, type SearchSong } from '../song-search.js';
@@ -38,7 +39,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         ...(sortField ? { sort: { field: sortField, direction: sortDirection ?? 'desc' } } : {}),
       };
       const data = await client.gql<{ getSectionSongs: unknown }>(GET_SECTION_SONGS, variables);
-      return textResult(data.getSectionSongs);
+      return minifiedResult(data.getSectionSongs);
     },
   );
 
@@ -59,6 +60,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         'matters less). Returns songUrl/viboSongId/title/artist for vibo_add_song_to_section.',
       annotations: toolAnnotations({ title: 'Search Vibo songs', readOnly: true }),
       inputSchema: {
+        view: viewArg(),
         eventId: z.string().describe('Event id (search is scoped to an event/section).'),
         sectionId: z.string().describe('Section id the search is for.'),
         query: z
@@ -76,7 +78,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         limit: z.number().int().min(1).max(50).optional().describe('Max results (default 20).'),
       },
     },
-    async ({ eventId, sectionId, query, source, limit }) => {
+    async ({ eventId, sectionId, query, source, limit, view }) => {
       const resolvedSource = source ?? 'searchField';
       const data = await client.gql<{ getSongs: unknown }>(SEARCH_SONGS, {
         eventId,
@@ -87,8 +89,8 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
       const songs = data.getSongs;
       // Vibo returns a bare array; if that ever changes, pass it through untouched
       // rather than guessing at a shape.
-      if (!Array.isArray(songs)) return textResult(songs);
-      return textResult(annotateSearchResults(songs as SearchSong[], query, resolvedSource));
+      if (!Array.isArray(songs)) return viewResponse(view, songs);
+      return minifiedResult(annotateSearchResults(songs as SearchSong[], query, resolvedSource));
     },
   );
 
@@ -124,7 +126,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         sectionId,
         payload,
       });
-      return textResult(data.addSongToSection);
+      return minifiedResult(data.addSongToSection);
     },
   );
 
@@ -149,7 +151,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         songId,
         liked,
       });
-      return textResult(data.toggleLike);
+      return minifiedResult(data.toggleLike);
     },
   );
 }

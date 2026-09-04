@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { textResult, toolAnnotations, schemaConfirm, McpToolError } from '@chrischall/mcp-utils';
+import { McpToolError, minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import {
   LIST_UPCOMING_EVENTS,
@@ -34,7 +34,7 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
       };
       const doc = past ? LIST_HISTORY_EVENTS : LIST_UPCOMING_EVENTS;
       const data = await client.gql<Record<string, unknown>>(doc, variables);
-      return textResult(past ? data.historyEvents : data.upcomingEvents);
+      return minifiedResult(past ? data.historyEvents : data.upcomingEvents);
     },
   );
 
@@ -50,7 +50,7 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
     },
     async ({ eventId }) => {
       const data = await client.gql<{ event: unknown }>(GET_EVENT, { eventId });
-      return textResult(data.event);
+      return minifiedResult(data.event);
     },
   );
 
@@ -76,10 +76,10 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
         const data = await client.gql<{ joinEventViaDeepLink: { _id: string } }>(JOIN_EVENT_BY_DEEP_LINK, {
           deepLink: link,
         });
-        return textResult({ joined: true, eventId: data.joinEventViaDeepLink._id });
+        return minifiedResult({ joined: true, eventId: data.joinEventViaDeepLink._id });
       }
       const data = await client.gql<{ joinEventByHash: { _id: string } }>(JOIN_EVENT_BY_HASH, { hash: link });
-      return textResult({ joined: true, eventId: data.joinEventByHash._id });
+      return minifiedResult({ joined: true, eventId: data.joinEventByHash._id });
     },
   );
 
@@ -96,7 +96,7 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
     async ({ eventId, confirm }) => {
       if (!confirm) return previewResult('leaveEvent', { eventId });
       const data = await client.gql<{ leaveEvent: unknown }>(LEAVE_EVENT, { eventId });
-      return textResult({ left: true, eventId, result: data.leaveEvent });
+      return minifiedResult({ left: true, eventId, result: data.leaveEvent });
     },
   );
 
@@ -130,7 +130,7 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
       }
       if (!confirm) return previewResult('createEventContact', { eventId, payload });
       const data = await client.gql<{ createEventContact: unknown }>(CREATE_EVENT_CONTACT, { eventId, payload });
-      return textResult(data.createEventContact);
+      return minifiedResult(data.createEventContact);
     },
   );
 }

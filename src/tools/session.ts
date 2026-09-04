@@ -1,5 +1,5 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { textResult, toolAnnotations } from '@chrischall/mcp-utils';
+import { minifiedResult, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { captureViboSession } from '../auth.js';
 import { saveSession } from '../session-store.js';
@@ -23,7 +23,7 @@ export function registerSessionTools(server: McpServer, client: ViboClient): voi
       // so a stale snapshot never lands in session.json.
       const data = await client.gql<{ me: { _id: string; email?: string } }>(GET_ME);
       saveSession({ accessToken, refreshToken });
-      return textResult({
+      return minifiedResult({
         captured: true,
         hasRefreshToken: Boolean(refreshToken),
         userId: data.me._id,

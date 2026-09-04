@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { textResult, toolAnnotations, schemaConfirm, McpToolError } from '@chrischall/mcp-utils';
+import { McpToolError, minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { GET_NOTIFICATIONS, GET_NOTIFICATIONS_COUNT, MARK_AS_READ } from '../gql.js';
 import { limitSchema, skipSchema, pagination, previewResult } from './shared.js';
@@ -21,7 +21,7 @@ export function registerNotificationTools(server: McpServer, client: ViboClient)
       const data = await client.gql<{ getNotifications: unknown }>(GET_NOTIFICATIONS, {
         pagination: pagination(limit, skip),
       });
-      return textResult(data.getNotifications);
+      return minifiedResult(data.getNotifications);
     },
   );
 
@@ -33,7 +33,7 @@ export function registerNotificationTools(server: McpServer, client: ViboClient)
     },
     async () => {
       const data = await client.gql<{ getNotificationsCount: { total: number } }>(GET_NOTIFICATIONS_COUNT);
-      return textResult(data.getNotificationsCount);
+      return minifiedResult(data.getNotificationsCount);
     },
   );
 
@@ -60,7 +60,7 @@ export function registerNotificationTools(server: McpServer, client: ViboClient)
       if (readAll) variables.readAll = true;
       if (!confirm) return previewResult('markAsRead', variables);
       const data = await client.gql<{ markAsRead: unknown }>(MARK_AS_READ, variables);
-      return textResult({ marked: true, result: data.markAsRead });
+      return minifiedResult({ marked: true, result: data.markAsRead });
     },
   );
 }
