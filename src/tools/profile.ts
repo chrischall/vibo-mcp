@@ -1,5 +1,5 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { textResult, toolAnnotations } from '@chrischall/mcp-utils';
+import { minifiedResult, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { GET_ME } from '../gql.js';
 
@@ -13,7 +13,7 @@ export function registerProfileTools(server: McpServer, client: ViboClient): voi
     },
     async () => {
       const data = await client.gql<{ me: unknown }>(GET_ME);
-      return textResult(data.me);
+      return minifiedResult(data.me);
     },
   );
 
@@ -26,7 +26,7 @@ export function registerProfileTools(server: McpServer, client: ViboClient): voi
     },
     async () => {
       const data = await client.gql<{ me: { _id: string; email?: string } }>(GET_ME);
-      return textResult({ ok: true, userId: data.me._id, email: data.me.email });
+      return minifiedResult({ ok: true, userId: data.me._id, email: data.me.email });
     },
   );
 }

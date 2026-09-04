@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { textResult, toolAnnotations } from '@chrischall/mcp-utils';
+import { minifiedResult, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { LIST_SECTIONS } from '../gql.js';
 
@@ -17,7 +17,7 @@ export function registerSectionTools(server: McpServer, client: ViboClient): voi
     },
     async ({ eventId }) => {
       const data = await client.gql<{ sections: unknown }>(LIST_SECTIONS, { eventId });
-      return textResult(data.sections);
+      return minifiedResult(data.sections);
     },
   );
 }

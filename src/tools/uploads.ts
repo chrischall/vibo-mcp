@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { textResult, toolAnnotations, schemaConfirm, McpToolError } from '@chrischall/mcp-utils';
+import { McpToolError, minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { UPLOAD_USER_PHOTO } from '../gql.js';
 import { nodeUploadResolver, type UploadResolver } from '../upload-source.js';
@@ -46,7 +46,7 @@ export function registerUploadTools(
         { photo: null },
         { 'variables.photo': file },
       );
-      return textResult(data.uploadUserPhoto);
+      return minifiedResult(data.uploadUserPhoto);
     },
   );
 }

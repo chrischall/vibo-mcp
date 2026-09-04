@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { textResult, toolAnnotations } from '@chrischall/mcp-utils';
+import { minifiedResult, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { LIST_SECTION_SONG_IDEAS, LIST_SONG_IDEAS_SONGS } from '../gql.js';
 import { limitSchema, skipSchema, pagination } from './shared.js';
@@ -25,7 +25,7 @@ export function registerIdeasTools(server: McpServer, client: ViboClient): void 
         sectionId,
         pagination: pagination(limit, skip),
       });
-      return textResult(data.getEventSectionSongIdeas);
+      return minifiedResult(data.getEventSectionSongIdeas);
     },
   );
 
@@ -50,7 +50,7 @@ export function registerIdeasTools(server: McpServer, client: ViboClient): void 
         songIdeasId,
         pagination: pagination(limit, skip),
       });
-      return textResult(data.getEventSectionSongIdeasSongs);
+      return minifiedResult(data.getEventSectionSongIdeasSongs);
     },
   );
 }

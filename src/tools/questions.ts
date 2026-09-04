@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { textResult, toolAnnotations, schemaConfirm, McpToolError } from '@chrischall/mcp-utils';
+import { McpToolError, minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { LIST_SECTION_QUESTIONS, ANSWER_SECTION_QUESTION } from '../gql.js';
 import { nodeUploadResolver, type UploadResolver, type FileRef, type UploadFile } from '../upload-source.js';
@@ -32,7 +32,7 @@ export function registerQuestionTools(
         eventId,
         sectionId,
       });
-      return textResult(data.getEventSectionQuestionsV2);
+      return minifiedResult(data.getEventSectionQuestionsV2);
     },
   );
 
@@ -130,7 +130,7 @@ export function registerQuestionTools(
           { eventId, sectionId, questionId, payload },
           resolvedFiles,
         );
-        return textResult(data.answerEventSectionQuestionV2);
+        return minifiedResult(data.answerEventSectionQuestionV2);
       }
 
       const payload = { answer };
@@ -141,7 +141,7 @@ export function registerQuestionTools(
         questionId,
         payload,
       });
-      return textResult(data.answerEventSectionQuestionV2);
+      return minifiedResult(data.answerEventSectionQuestionV2);
     },
   );
 }

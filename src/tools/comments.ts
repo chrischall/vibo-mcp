@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { textResult, toolAnnotations, schemaConfirm } from '@chrischall/mcp-utils';
+import { minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import {
   CREATE_SONG_COMMENT,
@@ -28,7 +28,7 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
       const vars = { eventId, sectionId, songId, payload: { message } };
       if (!confirm) return previewResult('createSongComment', vars);
       const data = await client.gql<{ createSongComment: unknown }>(CREATE_SONG_COMMENT, vars);
-      return textResult(data.createSongComment);
+      return minifiedResult(data.createSongComment);
     },
   );
 
@@ -49,7 +49,7 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
       const vars = { eventId, sectionId, songId, commentId };
       if (!confirm) return previewResult('deleteSongComment', vars);
       const data = await client.gql<{ deleteSongComment: unknown }>(DELETE_SONG_COMMENT, vars);
-      return textResult(data.deleteSongComment);
+      return minifiedResult(data.deleteSongComment);
     },
   );
 
@@ -69,7 +69,7 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
       const vars = { eventId, sectionId, payload: { message } };
       if (!confirm) return previewResult('createSectionComment', vars);
       const data = await client.gql<{ createSectionComment: unknown }>(CREATE_SECTION_COMMENT, vars);
-      return textResult(data.createSectionComment);
+      return minifiedResult(data.createSectionComment);
     },
   );
 
@@ -89,7 +89,7 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
       const vars = { eventId, sectionId, commentId };
       if (!confirm) return previewResult('deleteSectionComment', vars);
       const data = await client.gql<{ deleteSectionComment: unknown }>(DELETE_SECTION_COMMENT, vars);
-      return textResult(data.deleteSectionComment);
+      return minifiedResult(data.deleteSectionComment);
     },
   );
 }

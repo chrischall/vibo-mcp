@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { textResult } from '@chrischall/mcp-utils';
+import { minifiedResult } from '@chrischall/mcp-utils';
 
 /** Pagination knobs shared by the list tools (maps to Vibo's PaginationInput). */
 export const limitSchema = z
@@ -38,7 +38,7 @@ export const inlineFileSchema = z.object({
  * would be sent before committing.
  */
 export function previewResult(action: string, willSend: Record<string, unknown>) {
-  return textResult({
+  return minifiedResult({
     preview: true,
     action,
     willSend,

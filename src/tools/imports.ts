@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { textResult, toolAnnotations, schemaConfirm } from '@chrischall/mcp-utils';
+import { minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { IMPORT_PLAYLIST_TO_SECTION } from '../gql.js';
 import { previewResult } from './shared.js';
@@ -41,7 +41,7 @@ export function registerImportTools(server: McpServer, client: ViboClient): void
         IMPORT_PLAYLIST_TO_SECTION,
         vars,
       );
-      return textResult(data.importPlaylistToSectionWeb);
+      return minifiedResult(data.importPlaylistToSectionWeb);
     },
   );
 }

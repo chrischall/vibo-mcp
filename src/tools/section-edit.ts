@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { textResult, toolAnnotations, schemaConfirm, McpToolError } from '@chrischall/mcp-utils';
+import { McpToolError, minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { UPDATE_SECTION } from '../gql.js';
 import { previewResult } from './shared.js';
@@ -36,7 +36,7 @@ export function registerSectionEditTools(server: McpServer, client: ViboClient):
       const vars = { eventId, sectionId, payload };
       if (!confirm) return previewResult('updateSection', vars);
       const data = await client.gql<{ updateSection: unknown }>(UPDATE_SECTION, vars);
-      return textResult(data.updateSection);
+      return minifiedResult(data.updateSection);
     },
   );
 }
