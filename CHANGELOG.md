@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.7.0](https://github.com/chrischall/vibo-mcp/compare/v1.6.0...v1.7.0) (2026-09-04)
+
+
+### Features
+
+* **tools:** compact by default — strip media URLs, and minify every response ([#101](https://github.com/chrischall/vibo-mcp/issues/101)) ([bad36c2](https://github.com/chrischall/vibo-mcp/commit/bad36c2a39611b0cd05afe29ca8b0409dd312fbb))
+
+
+### Bug Fixes
+
+* **deps:** pick up @chrischall/mcp-utils 0.23.2 ([#104](https://github.com/chrischall/vibo-mcp/issues/104)) ([e3658bb](https://github.com/chrischall/vibo-mcp/commit/e3658bb9ab9263f414c2bd800156ee0d705a59ed))
+
 ## [1.6.0](https://github.com/chrischall/vibo-mcp/compare/v1.5.5...v1.6.0) (2026-08-29)
 
 
