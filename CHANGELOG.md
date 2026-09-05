@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.1](https://github.com/chrischall/vibo-mcp/compare/v1.7.0...v1.7.1) (2026-09-04)
+
+
+### Documentation
+
+* **skill:** document the `view` response-shape parameter ([#105](https://github.com/chrischall/vibo-mcp/issues/105)) ([f0ecdb0](https://github.com/chrischall/vibo-mcp/commit/f0ecdb0c6eb656349d1da4eea53434f6fa6299d6))
+
 ## [1.7.0](https://github.com/chrischall/vibo-mcp/compare/v1.6.0...v1.7.0) (2026-09-04)
 
 
