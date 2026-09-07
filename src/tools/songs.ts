@@ -22,11 +22,12 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         isFlagged: z.boolean().optional().describe('Filter to do-not-play / flagged songs.'),
         sortField: z.enum(['likesCount', 'createdAt', 'title']).optional(),
         sortDirection: z.enum(['asc', 'desc']).optional(),
+        view: viewArg(),
         limit: limitSchema,
         skip: skipSchema,
       },
     },
-    async ({ eventId, sectionId, q, isMustPlay, isFlagged, sortField, sortDirection, limit, skip }) => {
+    async ({ eventId, sectionId, q, isMustPlay, isFlagged, sortField, sortDirection, limit, skip, view }) => {
       const filter: Record<string, unknown> = {};
       if (q !== undefined) filter.q = q;
       if (isMustPlay !== undefined) filter.isMustPlay = isMustPlay;
@@ -39,7 +40,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         ...(sortField ? { sort: { field: sortField, direction: sortDirection ?? 'desc' } } : {}),
       };
       const data = await client.gql<{ getSectionSongs: unknown }>(GET_SECTION_SONGS, variables);
-      return minifiedResult(data.getSectionSongs);
+      return viewResponse(view, data.getSectionSongs);
     },
   );
 

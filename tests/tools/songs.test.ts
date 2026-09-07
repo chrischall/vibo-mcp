@@ -196,4 +196,37 @@ describe('song tools', () => {
     await harness.callTool('vibo_toggle_song_like', { ...args, confirm: true });
     expect(gql).toHaveBeenCalledWith(TOGGLE_LIKE, args);
   });
+
+  it('vibo_get_section_songs drops thumbnails by DEFAULT and keeps them on view:"full"', async () => {
+    const payload = {
+      getSectionSongs: {
+        songs: [
+          {
+            _id: 's1',
+            viboSongId: 'v1',
+            title: 'Thinking Out Loud',
+            artist: 'Ed Sheeran',
+            likesCount: 3,
+            thumbnails: { s180x180: 'https://img.vibo.com/a.jpg', original: 'https://img.vibo.com/b.jpg' },
+            links: { spotify: 'https://open.spotify.com/track/x' },
+          },
+        ],
+        totalCount: 1,
+      },
+    };
+    gql.mockResolvedValue(payload);
+    const compact = parseToolResult<{ songs: Array<Record<string, unknown>> }>(
+      await harness.callTool('vibo_get_section_songs', { eventId: 'e1', sectionId: 's1' }),
+    );
+    expect(compact.songs[0]!.thumbnails).toBeUndefined();
+    expect(compact.songs[0]!.likesCount).toBe(3);
+    expect(compact.songs[0]!.links).toEqual({ spotify: 'https://open.spotify.com/track/x' });
+
+    gql.mockResolvedValue(payload);
+    const full = parseToolResult<{ songs: Array<Record<string, unknown>> }>(
+      await harness.callTool('vibo_get_section_songs', { eventId: 'e1', sectionId: 's1', view: 'full' }),
+    );
+    expect(full.songs[0]!.thumbnails).toEqual({ s180x180: 'https://img.vibo.com/a.jpg', original: 'https://img.vibo.com/b.jpg' });
+  });
+
 });

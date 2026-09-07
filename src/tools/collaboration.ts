@@ -4,6 +4,7 @@ import { minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-
 import type { ViboClient } from '../client.js';
 import { LIST_EVENT_USERS, INVITE_USERS, CHANGE_USER_ROLE, REMOVE_USER } from '../gql.js';
 import { limitSchema, skipSchema, pagination, previewResult } from './shared.js';
+import { viewArg, viewResponse } from '../view.js';
 
 export function registerCollaborationTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
@@ -15,11 +16,12 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
       inputSchema: {
         eventId: z.string().describe('Event id.'),
         usersType: z.enum(['host', 'guest']).optional().describe('Filter to only hosts or only guests.'),
+        view: viewArg(),
         limit: limitSchema.describe('Max items to return (default 20). Applies per group when usersType is omitted.'),
         skip: skipSchema,
       },
     },
-    async ({ eventId, usersType, limit, skip }) => {
+    async ({ eventId, usersType, limit, skip, view }) => {
       type UsersPage = { users: unknown[]; totalCount: number };
       const page = pagination(limit, skip);
       if (usersType) {
@@ -28,7 +30,7 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
           usersType,
           pagination: page,
         });
-        return minifiedResult({ ...data.eventUsers, usersType });
+        return viewResponse(view, { ...data.eventUsers, usersType });
       }
       // The API returns nothing unless usersType is set, so fetch both groups
       // and merge for the intuitive "everyone on the event" listing.
@@ -36,7 +38,10 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
         client.gql<{ eventUsers: UsersPage }>(LIST_EVENT_USERS, { eventId, usersType: 'host', pagination: page }),
         client.gql<{ eventUsers: UsersPage }>(LIST_EVENT_USERS, { eventId, usersType: 'guest', pagination: page }),
       ]);
-      return minifiedResult({
+      // BOTH exits go through the rung. The merged branch is the one that runs
+      // when `usersType` is omitted — the default call — so honouring `view` on
+      // only the filtered branch would leave the common path paying full price.
+      return viewResponse(view, {
         hosts: hosts.eventUsers.users,
         guests: guests.eventUsers.users,
         hostsCount: hosts.eventUsers.totalCount,

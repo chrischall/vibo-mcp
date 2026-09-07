@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { minifiedResult, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { GET_ME } from '../gql.js';
+import { viewArg, viewResponse } from '../view.js';
 
 export function registerProfileTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
@@ -10,10 +11,11 @@ export function registerProfileTools(server: McpServer, client: ViboClient): voi
       description:
         "Get the signed-in Vibo user's profile (id, name, email, phone, locale, and whether Spotify/Apple Music are connected). Use the returned _id to recognize your own songs/contacts.",
       annotations: toolAnnotations({ title: 'Get my Vibo profile', readOnly: true }),
+      inputSchema: { view: viewArg() },
     },
-    async () => {
+    async ({ view }) => {
       const data = await client.gql<{ me: unknown }>(GET_ME);
-      return minifiedResult(data.me);
+      return viewResponse(view, data.me);
     },
   );
 
