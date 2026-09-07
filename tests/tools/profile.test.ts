@@ -28,4 +28,30 @@ describe('profile tools', () => {
     const res = await harness.callTool('vibo_healthcheck');
     expect(parseToolResult(res)).toEqual({ ok: true, userId: 'u1', email: 'a@b.com' });
   });
+
+  // GET_ME selects `imageUrl`, so every call to this tool carried an avatar URL
+  // no model can look at. Compact is the default rung; `full` is the way back.
+  it('vibo_get_me drops the avatar URL by DEFAULT and keeps it on view:"full"', async () => {
+    const me = { _id: 'u1', firstName: 'Chris', email: 'a@b.com', imageUrl: 'https://img.vibo.com/u1.jpg' };
+    gql.mockResolvedValue({ me });
+    expect(parseToolResult(await harness.callTool('vibo_get_me'))).toEqual({
+      _id: 'u1',
+      firstName: 'Chris',
+      email: 'a@b.com',
+    });
+    gql.mockResolvedValue({ me });
+    expect(parseToolResult(await harness.callTool('vibo_get_me', { view: 'full' }))).toEqual(me);
+  });
+
+  // The receipt-shaped sibling on the same document. It builds its own object,
+  // so there is nothing to strip and it must not have gained a rung.
+  it('vibo_healthcheck still answers its receipt, unaffected', async () => {
+    gql.mockResolvedValue({ me: { _id: 'u1', email: 'a@b.com', imageUrl: 'https://img.vibo.com/u1.jpg' } });
+    expect(parseToolResult(await harness.callTool('vibo_healthcheck'))).toEqual({
+      ok: true,
+      userId: 'u1',
+      email: 'a@b.com',
+    });
+  });
+
 });

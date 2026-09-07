@@ -4,6 +4,7 @@ import { minifiedResult, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { LIST_SECTION_SONG_IDEAS, LIST_SONG_IDEAS_SONGS } from '../gql.js';
 import { limitSchema, skipSchema, pagination } from './shared.js';
+import { viewArg, viewResponse } from '../view.js';
 
 export function registerIdeasTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
@@ -39,18 +40,19 @@ export function registerIdeasTools(server: McpServer, client: ViboClient): void 
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id (from vibo_list_sections).'),
         songIdeasId: z.string().describe('The _id from vibo_list_section_song_ideas.'),
+        view: viewArg(),
         limit: limitSchema,
         skip: skipSchema,
       },
     },
-    async ({ eventId, sectionId, songIdeasId, limit, skip }) => {
+    async ({ eventId, sectionId, songIdeasId, limit, skip, view }) => {
       const data = await client.gql<{ getEventSectionSongIdeasSongs: unknown }>(LIST_SONG_IDEAS_SONGS, {
         eventId,
         sectionId,
         songIdeasId,
         pagination: pagination(limit, skip),
       });
-      return minifiedResult(data.getEventSectionSongIdeasSongs);
+      return viewResponse(view, data.getEventSectionSongIdeasSongs);
     },
   );
 }

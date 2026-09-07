@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
+import { readFile } from 'node:fs/promises';
 import { VIBO_VIEWS, viewArg, viewResponse } from '../src/view.js';
+import { registerProfileTools } from '../src/tools/profile.js';
+import { registerSongTools } from '../src/tools/songs.js';
+import { registerNotificationTools } from '../src/tools/notifications.js';
+import { registerIdeasTools } from '../src/tools/ideas.js';
+import { registerCollaborationTools } from '../src/tools/collaboration.js';
+import { client } from '../src/client.js';
+import { createTestHarness } from './helpers.js';
 
 /** The serialised text of a tool result — always a single text block here. */
 const textOf = (r: ReturnType<typeof viewResponse>): string =>
@@ -117,5 +125,67 @@ describe('viewArg', () => {
     // `.describe()` applied to the inner enum leaves the wrapper's description
     // blank — a parameter documented to nobody.
     expect(viewArg().description).toContain('compact');
+  });
+});
+
+/**
+ * The coverage guard.
+ *
+ * `view` reaching only one of 39 tools was the actual defect in #107 — not a
+ * missing feature but an unnoticed gap, because nothing tied the wire surface
+ * to the tool wiring. `gql.ts` ASKS Vibo for media in six documents; every
+ * response those calls produce therefore carries image URLs a model cannot see
+ * and pays for either way. So the rung has to exist on exactly the reads behind
+ * those six, and that correspondence is what these two tests hold.
+ *
+ * They are deliberately a pair. The first pins which tools offer the rung; the
+ * second pins how many documents create the need for one. Add a seventh media
+ * selection to `gql.ts` and the second fails, pointing at the first.
+ */
+describe('view coverage', () => {
+  it('gql.ts selects media in exactly six documents', async () => {
+    const gql = await readFile(new URL('../src/gql.ts', import.meta.url), 'utf8');
+    // `THUMBS` is a shared fragment interpolated at three sites; `imageUrl` is
+    // selected literally at three more. Count the USE sites, not the defs.
+    const thumbSites = gql.match(/\$\{THUMBS\}/g) ?? [];
+    const imageUrlSites = gql.match(/\bimageUrl\b/g) ?? [];
+    expect(thumbSites).toHaveLength(3);
+    expect(imageUrlSites).toHaveLength(3);
+  });
+
+  it('every read behind one of those documents declares view', async () => {
+    const harness = await createTestHarness((server) => {
+      registerProfileTools(server, client);
+      registerSongTools(server, client);
+      registerNotificationTools(server, client);
+      registerIdeasTools(server, client);
+      registerCollaborationTools(server, client);
+    });
+    const { tools } = await harness.client.listTools();
+    const withView = tools
+      .filter((t) => Object.keys((t.inputSchema as { properties?: object }).properties ?? {}).includes('view'))
+      .map((t) => t.name)
+      .sort();
+    await harness.close();
+    expect(withView).toEqual([
+      'vibo_get_me', //                 GET_ME              → me.imageUrl
+      'vibo_get_section_songs', //      GET_SECTION_SONGS   → ${THUMBS}
+      'vibo_list_event_users', //       LIST_EVENT_USERS    → users[].imageUrl
+      'vibo_list_notifications', //     GET_NOTIFICATIONS   → imageUrl
+      'vibo_list_song_ideas_songs', //  LIST_SONG_IDEAS_SONGS → ${THUMBS}
+      'vibo_search_songs', //           SEARCH_SONGS        → ${THUMBS}
+    ]);
+  });
+
+  // `vibo_healthcheck` runs GET_ME too, and must NOT gain a rung from that: it
+  // answers `{ok, userId, email}` built here, never Vibo's user object. There
+  // is no media in a receipt, and a `view` on it would be a parameter that
+  // changes nothing — the kind a caller reasonably assumes does something.
+  it('does not put a rung on the healthcheck that shares GET_ME', async () => {
+    const harness = await createTestHarness((server) => registerProfileTools(server, client));
+    const { tools } = await harness.client.listTools();
+    const hc = tools.find((t) => t.name === 'vibo_healthcheck')!;
+    await harness.close();
+    expect(Object.keys((hc.inputSchema as { properties?: object }).properties ?? {})).not.toContain('view');
   });
 });

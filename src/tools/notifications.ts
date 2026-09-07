@@ -4,6 +4,7 @@ import { McpToolError, minifiedResult, schemaConfirm, toolAnnotations } from '@c
 import type { ViboClient } from '../client.js';
 import { GET_NOTIFICATIONS, GET_NOTIFICATIONS_COUNT, MARK_AS_READ } from '../gql.js';
 import { limitSchema, skipSchema, pagination, previewResult } from './shared.js';
+import { viewArg, viewResponse } from '../view.js';
 
 export function registerNotificationTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
@@ -13,15 +14,16 @@ export function registerNotificationTools(server: McpServer, client: ViboClient)
         'List your Vibo notifications (song additions, comments, DJ updates, etc.) with read state and linked event/section ids.',
       annotations: toolAnnotations({ title: 'List Vibo notifications', readOnly: true }),
       inputSchema: {
+        view: viewArg(),
         limit: limitSchema,
         skip: skipSchema,
       },
     },
-    async ({ limit, skip }) => {
+    async ({ limit, skip, view }) => {
       const data = await client.gql<{ getNotifications: unknown }>(GET_NOTIFICATIONS, {
         pagination: pagination(limit, skip),
       });
-      return minifiedResult(data.getNotifications);
+      return viewResponse(view, data.getNotifications);
     },
   );
 

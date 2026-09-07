@@ -50,4 +50,25 @@ describe('notification tools', () => {
     await harness.callTool('vibo_mark_notifications_read', { readAll: true, confirm: true });
     expect(gql).toHaveBeenCalledWith(MARK_AS_READ, { readAll: true });
   });
+
+  it('vibo_list_notifications drops notification imageUrls by DEFAULT', async () => {
+    const page = {
+      getNotifications: {
+        notifications: [{ _id: 'n1', header: 'New song', body: 'x', isRead: false, imageUrl: 'https://img.vibo.com/n1.jpg' }],
+        totalCount: 1,
+      },
+    };
+    gql.mockResolvedValue(page);
+    const out = parseToolResult<{ notifications: Array<Record<string, unknown>> }>(
+      await harness.callTool('vibo_list_notifications', {}),
+    );
+    expect(out.notifications[0]!.imageUrl).toBeUndefined();
+    expect(out.notifications[0]!.header).toBe('New song');
+    gql.mockResolvedValue(page);
+    const full = parseToolResult<{ notifications: Array<Record<string, unknown>> }>(
+      await harness.callTool('vibo_list_notifications', { view: 'full' }),
+    );
+    expect(full.notifications[0]!.imageUrl).toBe('https://img.vibo.com/n1.jpg');
+  });
+
 });

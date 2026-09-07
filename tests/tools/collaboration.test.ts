@@ -104,4 +104,37 @@ describe('collaboration tools', () => {
     await harness.callTool('vibo_remove_user', { eventId: 'e1', userId: 'u1', confirm: true });
     expect(gql).toHaveBeenCalledWith(REMOVE_USER, { eventId: 'e1', userId: 'u1' });
   });
+
+  // Two exits, and the MERGED one is what a caller gets when they omit
+  // usersType — the default call. Both must honour the rung; wiring only the
+  // filtered branch is the shape of bug that already shipped once here, in
+  // vibo_search_songs, where the rung sat on the branch that never fired.
+  it('vibo_list_event_users drops avatar URLs on BOTH exits by DEFAULT', async () => {
+    const host = { eventUsers: { users: [{ _id: 'u1', firstName: 'A', role: 'host', imageUrl: 'https://img.vibo.com/u1.jpg' }], totalCount: 1 } };
+    const guest = { eventUsers: { users: [{ _id: 'u2', firstName: 'B', role: 'guest', imageUrl: 'https://img.vibo.com/u2.jpg' }], totalCount: 1 } };
+
+    gql.mockResolvedValueOnce(host).mockResolvedValueOnce(guest);
+    const merged = parseToolResult<{ hosts: Array<Record<string, unknown>>; guests: Array<Record<string, unknown>> }>(
+      await harness.callTool('vibo_list_event_users', { eventId: 'e1' }),
+    );
+    expect(merged.hosts[0]!.imageUrl).toBeUndefined();
+    expect(merged.guests[0]!.imageUrl).toBeUndefined();
+    expect(merged.hosts[0]!.firstName).toBe('A');
+
+    gql.mockResolvedValueOnce(host);
+    const filtered = parseToolResult<{ users: Array<Record<string, unknown>>; usersType: string }>(
+      await harness.callTool('vibo_list_event_users', { eventId: 'e1', usersType: 'host' }),
+    );
+    expect(filtered.users[0]!.imageUrl).toBeUndefined();
+    expect(filtered.usersType).toBe('host');
+  });
+
+  it('vibo_list_event_users returns avatars on view:"full"', async () => {
+    gql.mockResolvedValueOnce({ eventUsers: { users: [{ _id: 'u1', imageUrl: 'https://img.vibo.com/u1.jpg' }], totalCount: 1 } });
+    const out = parseToolResult<{ users: Array<Record<string, unknown>> }>(
+      await harness.callTool('vibo_list_event_users', { eventId: 'e1', usersType: 'host', view: 'full' }),
+    );
+    expect(out.users[0]!.imageUrl).toBe('https://img.vibo.com/u1.jpg');
+  });
+
 });
