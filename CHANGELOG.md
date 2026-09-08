@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/chrischall/vibo-mcp/compare/v1.7.1...v1.8.0) (2026-09-07)
+
+
+### Features
+
+* **view:** the rung now reaches every read that asks Vibo for media ([#108](https://github.com/chrischall/vibo-mcp/issues/108)) ([49f0660](https://github.com/chrischall/vibo-mcp/commit/49f0660d0f6ca369973425e9a848cbff93c82378)), closes [#107](https://github.com/chrischall/vibo-mcp/issues/107)
+
 ## [1.7.1](https://github.com/chrischall/vibo-mcp/compare/v1.7.0...v1.7.1) (2026-09-04)
 
 
