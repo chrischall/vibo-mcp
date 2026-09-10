@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.8.1](https://github.com/chrischall/vibo-mcp/compare/v1.8.0...v1.8.1) (2026-09-10)
+
+
+### Bug Fixes
+
+* **deps:** @chrischall/mcp-utils 0.26.1 ([#118](https://github.com/chrischall/vibo-mcp/issues/118)) ([e4abf10](https://github.com/chrischall/vibo-mcp/commit/e4abf10bbe7dbb7006592dc0f834f3570be03487))
+* **deps:** bump hono from 4.13.0 to 4.13.7 ([#116](https://github.com/chrischall/vibo-mcp/issues/116)) ([a735cb5](https://github.com/chrischall/vibo-mcp/commit/a735cb5b0305221d03edd37c48139a44e89e2a74))
+
 ## [1.8.0](https://github.com/chrischall/vibo-mcp/compare/v1.7.1...v1.8.0) (2026-09-07)
 
 
