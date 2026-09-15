@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.8.2](https://github.com/chrischall/vibo-mcp/compare/v1.8.1...v1.8.2) (2026-09-15)
+
+
+### Bug Fixes
+
+* **deps:** @fetchproxy/server 3.0.1 — capped peer frames, logged load drops, atomic identity writes ([#124](https://github.com/chrischall/vibo-mcp/issues/124)) ([f1e62a5](https://github.com/chrischall/vibo-mcp/commit/f1e62a59b5d7d7899a30aff1523d3cb3809c3855))
+* **deps:** bump the production-dependencies group with 3 updates ([#122](https://github.com/chrischall/vibo-mcp/issues/122)) ([eb61a93](https://github.com/chrischall/vibo-mcp/commit/eb61a93028066dfe527e4f4172e25bea9dcea7b7))
+
 ## [1.8.1](https://github.com/chrischall/vibo-mcp/compare/v1.8.0...v1.8.1) (2026-09-10)
 
 
