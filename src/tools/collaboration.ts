@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { LIST_EVENT_USERS, INVITE_USERS, CHANGE_USER_ROLE, REMOVE_USER } from '../gql.js';
@@ -13,13 +13,13 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
       description:
         "List the hosts and guests on an event. With no usersType, returns both groups merged ({hosts, guests, hostsCount, guestsCount}) and `limit`/`skip` apply per group; with usersType, returns that one group's page.",
       annotations: toolAnnotations({ title: 'List Vibo event users', readOnly: true }),
-      inputSchema: {
+      inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         usersType: z.enum(['host', 'guest']).optional().describe('Filter to only hosts or only guests.'),
         view: viewArg(),
         limit: limitSchema.describe('Max items to return (default 20). Applies per group when usersType is omitted.'),
         skip: skipSchema,
-      },
+      }),
     },
     async ({ eventId, usersType, limit, skip, view }) => {
       type UsersPage = { users: unknown[]; totalCount: number };
@@ -55,13 +55,13 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
     {
       description: 'Invite people to an event by email (as host or guest). Confirm-gated.',
       annotations: toolAnnotations({ title: 'Invite Vibo event users', readOnly: false }),
-      inputSchema: {
+      inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         type: z.enum(['host', 'guest']).describe('Invite as host or guest.'),
         text: z.string().describe('Personal message included in the invite.'),
         emails: z.array(z.string().email()).min(1).describe('Email addresses to invite.'),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ eventId, type, text, emails, confirm }) => {
       const variables = { eventId, type, text, emails };
@@ -76,12 +76,12 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
     {
       description: "Change an event member's role between host and guest. Confirm-gated.",
       annotations: toolAnnotations({ title: 'Change Vibo user role', readOnly: false }),
-      inputSchema: {
+      inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         userId: z.string().describe('Id of the member to update.'),
         type: z.enum(['host', 'guest']).describe('New role for the member.'),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ eventId, userId, type, confirm }) => {
       const variables = { eventId, userId, type };
@@ -96,11 +96,11 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
     {
       description: 'Remove a member from an event. Confirm-gated.',
       annotations: toolAnnotations({ title: 'Remove Vibo event user', readOnly: false }),
-      inputSchema: {
+      inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         userId: z.string().describe('Id of the member to remove.'),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ eventId, userId, confirm }) => {
       const variables = { eventId, userId };

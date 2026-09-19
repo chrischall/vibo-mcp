@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { McpToolError, minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { REMOVE_SECTION_SONGS, UPDATE_SECTION_SONGS, MOVE_SECTION_SONGS, REORDER_SONGS } from '../gql.js';
@@ -11,7 +11,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
     {
       description: 'Remove one or more songs from a section. Confirm-gated.',
       annotations: toolAnnotations({ title: 'Remove songs from Vibo section', readOnly: false }),
-      inputSchema: {
+      inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),
         songIds: z
@@ -19,7 +19,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
           .min(1)
           .describe('Song _ids from vibo_get_section_songs.'),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ eventId, sectionId, songIds, confirm }) => {
       const vars = { eventId, sectionId, songIds };
@@ -35,7 +35,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
       description:
         'Update songs in a section: mark must-play, flag as do-not-play, and/or set a comment. Provide at least one field. Confirm-gated.',
       annotations: toolAnnotations({ title: 'Update Vibo section songs', readOnly: false }),
-      inputSchema: {
+      inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),
         songIds: z
@@ -46,7 +46,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
         isFlagged: z.boolean().optional().describe('mark do-not-play / flagged'),
         comment: z.string().optional(),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ eventId, sectionId, songIds, isMustPlay, isFlagged, comment, confirm }) => {
       const payload: Record<string, unknown> = {};
@@ -70,7 +70,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
     {
       description: 'Move songs from one section to another. Confirm-gated.',
       annotations: toolAnnotations({ title: 'Move Vibo section songs', readOnly: false }),
-      inputSchema: {
+      inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sourceSectionId: z.string().describe('Section id the songs are currently in.'),
         targetSectionId: z.string().describe('Section id to move the songs to.'),
@@ -79,7 +79,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
           .min(1)
           .describe('Song _ids from vibo_get_section_songs.'),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ eventId, sourceSectionId, targetSectionId, songIds, confirm }) => {
       const vars = { eventId, sourceSectionId, targetSectionId, songIds };
@@ -94,7 +94,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
     {
       description: 'Reorder songs within a section. Confirm-gated.',
       annotations: toolAnnotations({ title: 'Reorder Vibo section songs', readOnly: false }),
-      inputSchema: {
+      inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),
         sourceSongIds: z
@@ -106,7 +106,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
           .optional()
           .describe('place the moved songs after this song _id; omit for start'),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ eventId, sectionId, sourceSongIds, targetSongId, confirm }) => {
       const vars = { eventId, sectionId, sourceSongIds, targetSongId: targetSongId ?? null };

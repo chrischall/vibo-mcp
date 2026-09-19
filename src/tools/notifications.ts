@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { McpToolError, minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { GET_NOTIFICATIONS, GET_NOTIFICATIONS_COUNT, MARK_AS_READ } from '../gql.js';
@@ -13,11 +13,11 @@ export function registerNotificationTools(server: McpServer, client: ViboClient)
       description:
         'List your Vibo notifications (song additions, comments, DJ updates, etc.) with read state and linked event/section ids.',
       annotations: toolAnnotations({ title: 'List Vibo notifications', readOnly: true }),
-      inputSchema: {
+      inputSchema: z.object({
         view: viewArg(),
         limit: limitSchema,
         skip: skipSchema,
-      },
+      }),
     },
     async ({ limit, skip, view }) => {
       const data = await client.gql<{ getNotifications: unknown }>(GET_NOTIFICATIONS, {
@@ -45,11 +45,11 @@ export function registerNotificationTools(server: McpServer, client: ViboClient)
       description:
         'Mark notifications as read — pass specific notificationIds, or readAll:true to clear everything. Confirm-gated.',
       annotations: toolAnnotations({ title: 'Mark notifications read', readOnly: false }),
-      inputSchema: {
+      inputSchema: z.object({
         notificationIds: z.array(z.string()).optional().describe('Specific notification ids to mark read.'),
         readAll: z.boolean().optional().describe('Mark every notification as read.'),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ notificationIds, readAll, confirm }) => {
       if (!notificationIds?.length && !readAll) {

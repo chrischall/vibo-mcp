@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { McpToolError, minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import {
@@ -20,12 +20,12 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
       description:
         "List the events you're part of (as host or guest). Defaults to upcoming events; pass past:true for events that have already happened. Optionally filter by a search query.",
       annotations: toolAnnotations({ title: 'List Vibo events', readOnly: true }),
-      inputSchema: {
+      inputSchema: z.object({
         past: z.boolean().optional().describe('Return past events instead of upcoming (default false).'),
         q: z.string().optional().describe('Search events by title.'),
         limit: limitSchema,
         skip: skipSchema,
-      },
+      }),
     },
     async ({ past, q, limit, skip }) => {
       const variables = {
@@ -44,9 +44,9 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
       description:
         'Get full details for one event: title, date/timezone, location, your role, lock status, playlist size, and section/question progress. Use vibo_list_sections for the timeline.',
       annotations: toolAnnotations({ title: 'Get Vibo event', readOnly: true }),
-      inputSchema: {
+      inputSchema: z.object({
         eventId: z.string().describe('Event id (the _id from vibo_list_events).'),
-      },
+      }),
     },
     async ({ eventId }) => {
       const data = await client.gql<{ event: unknown }>(GET_EVENT, { eventId });
@@ -60,12 +60,12 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
       description:
         "Join an event you were invited to, via its share link or hash (e.g. a vibodj.app.link/... URL someone sent you). Returns the joined event's id. Confirm-gated.",
       annotations: toolAnnotations({ title: 'Join Vibo event', readOnly: false }),
-      inputSchema: {
+      inputSchema: z.object({
         link: z
           .string()
           .describe('The full event share URL (vibodj.app.link/... or web.vibodj.com/...) or the bare join hash.'),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ link, confirm }) => {
       const isUrl = /^https?:\/\//i.test(link);
@@ -88,10 +88,10 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
     {
       description: 'Leave an event you previously joined. Confirm-gated.',
       annotations: toolAnnotations({ title: 'Leave Vibo event', readOnly: false }),
-      inputSchema: {
+      inputSchema: z.object({
         eventId: z.string().describe('Event id to leave.'),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ eventId, confirm }) => {
       if (!confirm) return previewResult('leaveEvent', { eventId });
@@ -106,7 +106,7 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
       description:
         'Add a contact (host or guest) to an event with their name/email/phone. Confirm-gated.',
       annotations: toolAnnotations({ title: 'Add Vibo event contact', readOnly: false }),
-      inputSchema: {
+      inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         role: z.enum(['host', 'guest']).describe("The contact's role in the event."),
         email: z.string().email().describe('Contact email (required by Vibo).'),
@@ -115,7 +115,7 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
         phoneCode: z.string().optional().describe('Country calling code, e.g. "1".'),
         phoneNumber: z.string().optional(),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ eventId, role, email, firstName, lastName, phoneCode, phoneNumber, confirm }) => {
       const payload: Record<string, unknown> = { role, email };

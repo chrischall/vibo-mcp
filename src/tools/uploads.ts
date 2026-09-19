@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { McpToolError, minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { UPLOAD_USER_PHOTO } from '../gql.js';
@@ -23,7 +23,7 @@ export function registerUploadTools(
       description:
         'Set your Vibo profile photo from an image. Pass a local file `path` if the server shares your filesystem; otherwise pass the image bytes as base64 `fileData`. Returns the uploaded image URL. Confirm-gated.',
       annotations: toolAnnotations({ title: 'Set Vibo profile photo', readOnly: false }),
-      inputSchema: {
+      inputSchema: z.object({
         path: z.string().optional().describe('Absolute path to a local image file (jpg/png). Local/stdio server only.'),
         fileData: z
           .string()
@@ -31,7 +31,7 @@ export function registerUploadTools(
           .describe('Base64-encoded image bytes (a `data:` URL prefix is allowed). Use this when the server cannot read your filesystem.'),
         filename: z.string().optional().describe('Filename for the image when using fileData (default "photo.jpg").'),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ path, fileData, filename, confirm }) => {
       if (!path && !fileData) {

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import { viewArg, viewResponse } from '../view.js';
 import type { ViboClient } from '../client.js';
@@ -14,7 +14,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
       description:
         "List the songs requested in a section, with who added each, like counts, must-play / do-not-play flags, comments, and streaming links. Sort by likesCount, createdAt, or title.",
       annotations: toolAnnotations({ title: 'Get Vibo section songs', readOnly: true }),
-      inputSchema: {
+      inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id (from vibo_list_sections).'),
         q: z.string().optional().describe('Filter songs by text.'),
@@ -25,7 +25,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         view: viewArg(),
         limit: limitSchema,
         skip: skipSchema,
-      },
+      }),
     },
     async ({ eventId, sectionId, q, isMustPlay, isFlagged, sortField, sortDirection, limit, skip, view }) => {
       const filter: Record<string, unknown> = {};
@@ -60,7 +60,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         "source 'spotify' searches your connected Spotify (a structured catalog, so the hyphen " +
         'matters less). Returns songUrl/viboSongId/title/artist for vibo_add_song_to_section.',
       annotations: toolAnnotations({ title: 'Search Vibo songs', readOnly: true }),
-      inputSchema: {
+      inputSchema: z.object({
         view: viewArg(),
         eventId: z.string().describe('Event id (search is scoped to an event/section).'),
         sectionId: z.string().describe('Section id the search is for.'),
@@ -77,7 +77,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
           ),
         source: z.enum(['searchField', 'spotify']).optional().describe("Search source (default 'searchField')."),
         limit: z.number().int().min(1).max(50).optional().describe('Max results (default 20).'),
-      },
+      }),
     },
     async ({ eventId, sectionId, query, source, limit, view }) => {
       const resolvedSource = source ?? 'searchField';
@@ -113,7 +113,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         'track or junk-metadata re-upload in front of a live DJ. If nothing looks original, ' +
         'report the closest matches back rather than adding a best guess. Confirm-gated.',
       annotations: toolAnnotations({ title: 'Add song to Vibo section', readOnly: false }),
-      inputSchema: {
+      inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id to add the song to.'),
         songUrl: z.string().describe('The song URL from vibo_search_songs (required).'),
@@ -121,7 +121,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         title: z.string().optional(),
         artist: z.string().optional(),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ eventId, sectionId, songUrl, viboSongId, title, artist, confirm }) => {
       const song: Record<string, unknown> = { songUrl };
@@ -144,13 +144,13 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
     {
       description: 'Like or unlike a song in a section. Confirm-gated.',
       annotations: toolAnnotations({ title: 'Like/unlike Vibo song', readOnly: false }),
-      inputSchema: {
+      inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),
         songId: z.string().describe('Song _id (from vibo_get_section_songs).'),
         liked: z.boolean().describe('true to like, false to unlike.'),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ eventId, sectionId, songId, liked, confirm }) => {
       if (!confirm) return previewResult('toggleLike', { eventId, sectionId, songId, liked });
