@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/chrischall/vibo-mcp/compare/v2.0.0...v2.0.1) (2026-09-19)
+
+
+### Performance
+
+* **bundle:** drop the zod/v4 alias that doubled dist/bundle.js ([#129](https://github.com/chrischall/vibo-mcp/issues/129)) ([a95e42b](https://github.com/chrischall/vibo-mcp/commit/a95e42b3a81e4c4fe6049e226ce1a7aefa57368a)), closes [#127](https://github.com/chrischall/vibo-mcp/issues/127)
+
 ## [2.0.0](https://github.com/chrischall/vibo-mcp/compare/v1.8.2...v2.0.0) (2026-09-19)
 
 
