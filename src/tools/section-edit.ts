@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { McpToolError, minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { UPDATE_SECTION } from '../gql.js';
@@ -12,7 +12,7 @@ export function registerSectionEditTools(server: McpServer, client: ViboClient):
       description:
         "Edit a timeline section's name, time, note, or description. Subject to the section's host-edit permissions. Confirm-gated.",
       annotations: toolAnnotations({ title: 'Update Vibo section', readOnly: false }),
-      inputSchema: {
+      inputSchema: z.object({
         eventId: z.string(),
         sectionId: z.string(),
         name: z.string().optional(),
@@ -20,7 +20,7 @@ export function registerSectionEditTools(server: McpServer, client: ViboClient):
         note: z.string().optional().describe('note to the DJ for this section'),
         description: z.string().optional(),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ eventId, sectionId, name, time, note, description, confirm }) => {
       const payload: Record<string, unknown> = {};

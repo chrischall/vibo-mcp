@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { McpToolError, minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { LIST_SECTION_QUESTIONS, ANSWER_SECTION_QUESTION } from '../gql.js';
@@ -22,10 +22,10 @@ export function registerQuestionTools(
       description:
         "List the DJ's planning questions for a section, with each question's type (text/radio/checkbox/select/link/header), available options, whether it's answered, the current answer, and overall progress. Use the question _id (and option _ids) with vibo_answer_question.",
       annotations: toolAnnotations({ title: 'List Vibo section questions', readOnly: true }),
-      inputSchema: {
+      inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id (from vibo_list_sections).'),
-      },
+      }),
     },
     async ({ eventId, sectionId }) => {
       const data = await client.gql<{ getEventSectionQuestionsV2: unknown }>(LIST_SECTION_QUESTIONS, {
@@ -42,7 +42,7 @@ export function registerQuestionTools(
       description:
         "Answer a section planning question. Provide the field matching the question's type: `text` for a text question, `selectedOptions` (array of option _ids from vibo_list_section_questions) for radio/checkbox/select, or `link` (array of URLs) for a link question. Use `otherOptionTitle` with the question's \"other\" option. For photo/file questions, pass local paths (`imagePaths`/`filePaths`) when the server can read your disk, or inline base64 bytes (`images`/`files`) otherwise. Confirm-gated.",
       annotations: toolAnnotations({ title: 'Answer Vibo question', readOnly: false }),
-      inputSchema: {
+      inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),
         questionId: z.string().describe('Question _id (from vibo_list_section_questions).'),
@@ -73,7 +73,7 @@ export function registerQuestionTools(
           .optional()
           .describe('Inline base64 files, for a file-attachment question — use these when the server cannot read your filesystem.'),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ eventId, sectionId, questionId, text, selectedOptions, link, otherOptionTitle, imagePaths, filePaths, images, files, confirm }) => {
       // Merge local-path and inline-byte file refs (in that order) into one list

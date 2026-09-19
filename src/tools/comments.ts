@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import {
@@ -16,13 +16,13 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
     {
       description: 'Leave a comment / note for the DJ on a specific song. Confirm-gated.',
       annotations: toolAnnotations({ title: 'Comment on Vibo song', readOnly: false }),
-      inputSchema: {
+      inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),
         songId: z.string().describe('Song _id (from vibo_get_section_songs).'),
         message: z.string().describe('The comment text.'),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ eventId, sectionId, songId, message, confirm }) => {
       const vars = { eventId, sectionId, songId, payload: { message } };
@@ -37,13 +37,13 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
     {
       description: 'Delete a comment on a song. Confirm-gated.',
       annotations: toolAnnotations({ title: 'Delete Vibo song comment', readOnly: false }),
-      inputSchema: {
+      inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),
         songId: z.string().describe('Song _id (from vibo_get_section_songs).'),
         commentId: z.string().describe('Comment _id to delete.'),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ eventId, sectionId, songId, commentId, confirm }) => {
       const vars = { eventId, sectionId, songId, commentId };
@@ -58,12 +58,12 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
     {
       description: 'Leave a comment on a timeline section. Confirm-gated.',
       annotations: toolAnnotations({ title: 'Comment on Vibo section', readOnly: false }),
-      inputSchema: {
+      inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id (from vibo_list_sections).'),
         message: z.string().describe('The comment text.'),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ eventId, sectionId, message, confirm }) => {
       const vars = { eventId, sectionId, payload: { message } };
@@ -78,12 +78,12 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
     {
       description: 'Delete a comment on a timeline section. Confirm-gated.',
       annotations: toolAnnotations({ title: 'Delete Vibo section comment', readOnly: false }),
-      inputSchema: {
+      inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id (from vibo_list_sections).'),
         commentId: z.string().describe('Comment _id to delete.'),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ eventId, sectionId, commentId, confirm }) => {
       const vars = { eventId, sectionId, commentId };

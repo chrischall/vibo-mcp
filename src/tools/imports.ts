@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { IMPORT_PLAYLIST_TO_SECTION } from '../gql.js';
@@ -12,7 +12,7 @@ export function registerImportTools(server: McpServer, client: ViboClient): void
       description:
         'Import selected tracks from a connected Spotify/Apple Music playlist into a section. Returns counts of added/existing/ignored. Confirm-gated.',
       annotations: toolAnnotations({ title: 'Import playlist to section', readOnly: false }),
-      inputSchema: {
+      inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id (from vibo_list_sections).'),
         source: z
@@ -25,7 +25,7 @@ export function registerImportTools(server: McpServer, client: ViboClient): void
           .describe('Track ids (from vibo_get_playlist_songs) to import.'),
         tracksToIgnore: z.array(z.string()).optional().describe('Track ids to skip.'),
         confirm: schemaConfirm,
-      },
+      }),
     },
     async ({ eventId, sectionId, source, playlistId, tracksToAdd, tracksToIgnore, confirm }) => {
       const vars = {
