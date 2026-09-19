@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/chrischall/vibo-mcp/compare/v1.8.2...v2.0.0) (2026-09-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* **mcp:** migrate server to SDK v2 ([#126](https://github.com/chrischall/vibo-mcp/issues/126))
+
+### Features
+
+* **mcp:** migrate server to SDK v2 ([#126](https://github.com/chrischall/vibo-mcp/issues/126)) ([49a51d0](https://github.com/chrischall/vibo-mcp/commit/49a51d089236df297e3fdd3993f2506b59b09a25))
+
 ## [1.8.2](https://github.com/chrischall/vibo-mcp/compare/v1.8.1...v1.8.2) (2026-09-15)
 
 
