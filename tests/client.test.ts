@@ -237,4 +237,47 @@ describe('cancellation', () => {
       vi.restoreAllMocks();
     }
   });
+
+  /**
+   * The UPLOAD path, which got the identical change and had no test.
+   *
+   * It is the one that most deserves cancelling: a multipart upload is the
+   * longest-running request this client makes, so it is the one a caller is
+   * most likely to give up on and the one that wastes most by carrying on.
+   */
+  it('hands the multipart upload path the caller’s signal too', async () => {
+    process.env.VIBO_EMAIL = 'a@b.com';
+    process.env.VIBO_PASSWORD = 'pw';
+    const signals: (AbortSignal | null | undefined)[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_url, init) => {
+      signals.push((init as RequestInit | undefined)?.signal);
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ data: { signIn: { accessToken: 'AT', refreshToken: 'RT' } } }),
+        text: async () => '{}',
+      } as unknown as Response;
+    });
+    try {
+      const controller = new AbortController();
+      await withCallSignal(controller.signal, () =>
+        new ViboClient()
+          .gqlUpload('mutation ($f: Upload!) { upload(file: $f) { _id } }', { f: null }, {
+            f: { filename: 'a.txt', contentType: 'text/plain', data: Buffer.from('hi') } as never,
+          })
+          .catch(() => undefined),
+      );
+      expect(signals.length, 'no request was made').toBeGreaterThan(0);
+      for (const [i, signal] of signals.entries()) {
+        expect(signal, `leg ${i} was given no signal`).toBeInstanceOf(AbortSignal);
+      }
+      controller.abort(new Error('caller went away'));
+      for (const [i, signal] of signals.entries()) {
+        expect(signal!.aborted, `leg ${i} did not honour the caller`).toBe(true);
+      }
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
 });
