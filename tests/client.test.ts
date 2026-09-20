@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { withCallSignal } from '@chrischall/mcp-utils';
 import { ViboClient } from '../src/client.js';
 import { saveSession } from '../src/session-store.js';
 import { GET_ME } from '../src/gql.js';
@@ -196,5 +197,44 @@ describe('ViboClient auth lifecycle', () => {
     const client = new ViboClient();
     await Promise.all([client.gql(GET_ME), client.gql(GET_ME), client.gql(GET_ME)]);
     expect(calls.filter((c) => isOp(c.query, 'mutation signIn'))).toHaveLength(1);
+  });
+});
+
+/**
+ * The caller's cancellation reaching Vibo (mcp-utils `cancel`).
+ *
+ * Until this only the request timeout could stop a Vibo call, so a
+ * cancelled tool call held it open for the full budget while the child
+ * burned the CPU mcp-host meters it on. Measured on that fleet: claude.ai
+ * sent 101 cancellations in the week to 2026-09-20.
+ */
+describe('cancellation', () => {
+  it('hands fetch a signal the CALLER can trip, not just our timeout', async () => {
+    process.env.VIBO_EMAIL = 'a@b.com';
+    process.env.VIBO_PASSWORD = 'pw';
+    const signals: (AbortSignal | null | undefined)[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_url, init) => {
+      signals.push((init as RequestInit | undefined)?.signal);
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => 'application/json' },
+        json: async () => ({ data: {} }),
+        text: async () => '{}',
+      } as unknown as Response;
+    });
+    try {
+      const controller = new AbortController();
+      await withCallSignal(controller.signal, () =>
+        new ViboClient().gql('query { __typename }').catch(() => undefined),
+      );
+      expect(signals.length, 'no request was made').toBeGreaterThan(0);
+      expect(signals[0]).toBeInstanceOf(AbortSignal);
+      // The caller's, not merely the timeout's: one abort trips it.
+      controller.abort(new Error('caller went away'));
+      expect(signals[0]!.aborted, 'the request did not honour the caller').toBe(true);
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 });

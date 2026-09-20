@@ -6,6 +6,7 @@ import {
   McpToolError,
   SessionNotAuthenticatedError,
   truncateErrorMessage,
+  withAmbientCancellation,
 } from '@chrischall/mcp-utils';
 import { loadSession, saveSession } from './session-store.js';
 import type { UploadFile } from './upload-source.js';
@@ -256,7 +257,13 @@ export class ViboClient {
         method: 'POST',
         headers, // NB: no content-type — fetch sets the multipart boundary
         body: form,
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        // The caller's cancellation folded in with our timeout (mcp-utils
+        // `cancel`). Until this only the timeout could stop a Vibo request,
+        // so a cancelled tool call held it open for the full budget while
+        // the child burned the CPU mcp-host meters it on. The `TimeoutError`
+        // check below still names a real timeout: an abort from the caller
+        // arrives as `AbortError`, so it falls through to 'failed'.
+        signal: withAmbientCancellation(AbortSignal.timeout(REQUEST_TIMEOUT_MS)),
       });
     } catch (err) {
       const reason = err instanceof Error && err.name === 'TimeoutError' ? 'timed out' : 'failed';
@@ -360,7 +367,13 @@ export class ViboClient {
         method: 'POST',
         headers,
         body: JSON.stringify({ query, variables }),
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        // The caller's cancellation folded in with our timeout (mcp-utils
+        // `cancel`). Until this only the timeout could stop a Vibo request,
+        // so a cancelled tool call held it open for the full budget while
+        // the child burned the CPU mcp-host meters it on. The `TimeoutError`
+        // check below still names a real timeout: an abort from the caller
+        // arrives as `AbortError`, so it falls through to 'failed'.
+        signal: withAmbientCancellation(AbortSignal.timeout(REQUEST_TIMEOUT_MS)),
       });
     } catch (err) {
       const reason = err instanceof Error && err.name === 'TimeoutError' ? 'timed out' : 'failed';
