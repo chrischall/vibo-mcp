@@ -94,6 +94,26 @@ export interface ViboClientOptions {
   apiUrl?: string;
 }
 
+/**
+ * The signal every Vibo request is made with: our timeout, and the caller's
+ * cancellation if there is one (mcp-utils `cancel`).
+ *
+ * Until this, only the timeout could stop a request — a cancelled tool call
+ * held it open for the full budget while the child burned the CPU mcp-host
+ * meters it on. Measured on that fleet: claude.ai sent 101 cancellations in
+ * the week to 2026-09-20.
+ *
+ * ONE definition for both request paths, which is not tidiness: the two are
+ * the multipart upload and the plain query, they had the same seven lines
+ * copied between them, and the next person to add a third path is the one
+ * this saves. The `TimeoutError` checks at both call sites still name a real
+ * timeout — an abort from the caller arrives as `AbortError` and falls
+ * through to 'failed'.
+ */
+function requestSignal(): AbortSignal | undefined {
+  return withAmbientCancellation(AbortSignal.timeout(REQUEST_TIMEOUT_MS));
+}
+
 export class ViboClient {
   private readonly apiUrl: string;
   private readonly email: string | null;
@@ -257,13 +277,7 @@ export class ViboClient {
         method: 'POST',
         headers, // NB: no content-type — fetch sets the multipart boundary
         body: form,
-        // The caller's cancellation folded in with our timeout (mcp-utils
-        // `cancel`). Until this only the timeout could stop a Vibo request,
-        // so a cancelled tool call held it open for the full budget while
-        // the child burned the CPU mcp-host meters it on. The `TimeoutError`
-        // check below still names a real timeout: an abort from the caller
-        // arrives as `AbortError`, so it falls through to 'failed'.
-        signal: withAmbientCancellation(AbortSignal.timeout(REQUEST_TIMEOUT_MS)),
+        signal: requestSignal(),
       });
     } catch (err) {
       const reason = err instanceof Error && err.name === 'TimeoutError' ? 'timed out' : 'failed';
@@ -367,13 +381,7 @@ export class ViboClient {
         method: 'POST',
         headers,
         body: JSON.stringify({ query, variables }),
-        // The caller's cancellation folded in with our timeout (mcp-utils
-        // `cancel`). Until this only the timeout could stop a Vibo request,
-        // so a cancelled tool call held it open for the full budget while
-        // the child burned the CPU mcp-host meters it on. The `TimeoutError`
-        // check below still names a real timeout: an abort from the caller
-        // arrives as `AbortError`, so it falls through to 'failed'.
-        signal: withAmbientCancellation(AbortSignal.timeout(REQUEST_TIMEOUT_MS)),
+        signal: requestSignal(),
       });
     } catch (err) {
       const reason = err instanceof Error && err.name === 'TimeoutError' ? 'timed out' : 'failed';
