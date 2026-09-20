@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.1.0](https://github.com/chrischall/vibo-mcp/compare/v2.0.0...v2.1.0) (2026-09-19)
+
+
+### Features
+
+* **deps:** take mcp-utils 1.0.0 so server/discover works ([#131](https://github.com/chrischall/vibo-mcp/issues/131)) ([74749d8](https://github.com/chrischall/vibo-mcp/commit/74749d861b9a7fdbce252b5271aaac8ab04a7a1c))
+
+
+### Bug Fixes
+
+* **deps:** raise the manifest node floor to match mcp-utils 1.0.0 ([#132](https://github.com/chrischall/vibo-mcp/issues/132)) ([d3b939f](https://github.com/chrischall/vibo-mcp/commit/d3b939f6bb2c8fd228d628292304c468a1712015))
+
+
+### Performance
+
+* **bundle:** drop the zod/v4 alias that doubled dist/bundle.js ([#129](https://github.com/chrischall/vibo-mcp/issues/129)) ([a95e42b](https://github.com/chrischall/vibo-mcp/commit/a95e42b3a81e4c4fe6049e226ce1a7aefa57368a)), closes [#127](https://github.com/chrischall/vibo-mcp/issues/127)
+
 ## [2.0.0](https://github.com/chrischall/vibo-mcp/compare/v1.8.2...v2.0.0) (2026-09-19)
 
 
