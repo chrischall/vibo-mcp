@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.2.0](https://github.com/chrischall/vibo-mcp/compare/v2.1.0...v2.2.0) (2026-09-20)
+
+
+### Features
+
+* **client:** honour the caller's cancellation on Vibo requests ([#133](https://github.com/chrischall/vibo-mcp/issues/133)) ([b808295](https://github.com/chrischall/vibo-mcp/commit/b8082957146500f17db4f713b08fad731a4a0646))
+
+
+### Refactor
+
+* **client:** one signal helper for both request paths, and test the upload one ([#136](https://github.com/chrischall/vibo-mcp/issues/136)) ([7742f12](https://github.com/chrischall/vibo-mcp/commit/7742f125b545413dcf51b75797e478b7fc06978c)), closes [#134](https://github.com/chrischall/vibo-mcp/issues/134)
+
 ## [2.1.0](https://github.com/chrischall/vibo-mcp/compare/v2.0.0...v2.1.0) (2026-09-19)
 
 
