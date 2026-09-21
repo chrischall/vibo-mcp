@@ -10,7 +10,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
     'vibo_remove_song_from_section',
     {
       description: 'Remove one or more songs from a section. Confirm-gated.',
-      annotations: toolAnnotations({ title: 'Remove songs from Vibo section', readOnly: false }),
+      annotations: toolAnnotations({ title: 'Remove songs from Vibo section', readOnly: false, destructive: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),
@@ -34,7 +34,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
     {
       description:
         'Update songs in a section: mark must-play, flag as do-not-play, and/or set a comment. Provide at least one field. Confirm-gated.',
-      annotations: toolAnnotations({ title: 'Update Vibo section songs', readOnly: false }),
+      annotations: toolAnnotations({ title: 'Update Vibo section songs', readOnly: false, destructive: false }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),
@@ -69,7 +69,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
     'vibo_move_song',
     {
       description: 'Move songs from one section to another. Confirm-gated.',
-      annotations: toolAnnotations({ title: 'Move Vibo section songs', readOnly: false }),
+      annotations: toolAnnotations({ title: 'Move Vibo section songs', readOnly: false, destructive: false }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sourceSectionId: z.string().describe('Section id the songs are currently in.'),
@@ -93,7 +93,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
     'vibo_reorder_songs',
     {
       description: 'Reorder songs within a section. Confirm-gated.',
-      annotations: toolAnnotations({ title: 'Reorder Vibo section songs', readOnly: false }),
+      annotations: toolAnnotations({ title: 'Reorder Vibo section songs', readOnly: false, destructive: false }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),

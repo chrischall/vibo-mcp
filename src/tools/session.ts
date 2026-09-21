@@ -14,7 +14,7 @@ export function registerSessionTools(server: McpServer, client: ViboClient): voi
     {
       description:
         "Capture your Vibo login from a signed-in web.vibodj.com browser tab via the fetchproxy bridge — for accounts that sign in with Apple/Google/Facebook (no password). Requires the fetchproxy browser extension installed and you signed into https://web.vibodj.com; approve the pair code shown on first use. The token is saved locally and reused on future calls.",
-      annotations: toolAnnotations({ title: 'Capture Vibo session (SSO)', readOnly: false }),
+      annotations: toolAnnotations({ title: 'Capture Vibo session (SSO)', readOnly: false, destructive: false }),
     },
     async () => {
       const { accessToken, refreshToken } = await captureViboSession();

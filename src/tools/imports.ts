@@ -11,7 +11,7 @@ export function registerImportTools(server: McpServer, client: ViboClient): void
     {
       description:
         'Import selected tracks from a connected Spotify/Apple Music playlist into a section. Returns counts of added/existing/ignored. Confirm-gated.',
-      annotations: toolAnnotations({ title: 'Import playlist to section', readOnly: false }),
+      annotations: toolAnnotations({ title: 'Import playlist to section', readOnly: false, destructive: false }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id (from vibo_list_sections).'),
