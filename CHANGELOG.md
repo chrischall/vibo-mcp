@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.1](https://github.com/chrischall/vibo-mcp/compare/v2.2.0...v2.2.1) (2026-09-21)
+
+
+### Bug Fixes
+
+* **tools:** say which writes are destructive ([#137](https://github.com/chrischall/vibo-mcp/issues/137)) ([a4fe026](https://github.com/chrischall/vibo-mcp/commit/a4fe026d9a1e53fac3e8b64665295a8663ce959e))
+
 ## [2.2.0](https://github.com/chrischall/vibo-mcp/compare/v2.1.0...v2.2.0) (2026-09-20)
 
 
