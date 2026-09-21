@@ -130,4 +130,35 @@ describe('tool registry', () => {
       else expect(readOnly, t.name).toBe(true);
     }
   });
+
+  // `destructiveHint` DEFAULTS TO TRUE in the spec whenever `readOnlyHint` is
+  // false, so a write that simply forgets to declare it is published as
+  // destructive and nothing fails. The readOnly check above cannot see that:
+  // both a considered `false` and a forgotten one leave `readOnlyHint: false`.
+  // This pins the other half, per tool, so a new write tool cannot ship
+  // silently alarming.
+  it('declares destructiveHint on every write, and only the right ones are destructive', async () => {
+    const { tools } = await harness.client.listTools();
+
+    // Reaches another person, or spends something with no inverse here.
+    const destructive = new Set([
+      'vibo_change_user_role',
+      'vibo_delete_section_comment',
+      'vibo_delete_song_comment',
+      'vibo_invite_users',
+      'vibo_leave_event',
+      'vibo_remove_song_from_section',
+      'vibo_remove_user',
+    ]);
+
+    for (const t of tools) {
+      const { readOnlyHint, destructiveHint } = t.annotations ?? {};
+      if (readOnlyHint !== false) {
+        expect(destructiveHint, `${t.name} is a read; it should not claim to destroy`).not.toBe(true);
+        continue;
+      }
+      expect(destructiveHint, `${t.name} must SAY whether it destroys — silence means true`).toBeTypeOf('boolean');
+      expect(destructiveHint, t.name).toBe(destructive.has(t.name));
+    }
+  });
 });
