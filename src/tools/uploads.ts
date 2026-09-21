@@ -22,7 +22,7 @@ export function registerUploadTools(
     {
       description:
         'Set your Vibo profile photo from an image. Pass a local file `path` if the server shares your filesystem; otherwise pass the image bytes as base64 `fileData`. Returns the uploaded image URL. Confirm-gated.',
-      annotations: toolAnnotations({ title: 'Set Vibo profile photo', readOnly: false }),
+      annotations: toolAnnotations({ title: 'Set Vibo profile photo', readOnly: false, destructive: false }),
       inputSchema: z.object({
         path: z.string().optional().describe('Absolute path to a local image file (jpg/png). Local/stdio server only.'),
         fileData: z

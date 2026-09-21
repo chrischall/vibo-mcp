@@ -41,7 +41,7 @@ export function registerQuestionTools(
     {
       description:
         "Answer a section planning question. Provide the field matching the question's type: `text` for a text question, `selectedOptions` (array of option _ids from vibo_list_section_questions) for radio/checkbox/select, or `link` (array of URLs) for a link question. Use `otherOptionTitle` with the question's \"other\" option. For photo/file questions, pass local paths (`imagePaths`/`filePaths`) when the server can read your disk, or inline base64 bytes (`images`/`files`) otherwise. Confirm-gated.",
-      annotations: toolAnnotations({ title: 'Answer Vibo question', readOnly: false }),
+      annotations: toolAnnotations({ title: 'Answer Vibo question', readOnly: false, destructive: false }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),

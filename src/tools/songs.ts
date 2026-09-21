@@ -112,7 +112,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         '`quality.confidence`: adding a `likely-not-original` result puts a cover, karaoke ' +
         'track or junk-metadata re-upload in front of a live DJ. If nothing looks original, ' +
         'report the closest matches back rather than adding a best guess. Confirm-gated.',
-      annotations: toolAnnotations({ title: 'Add song to Vibo section', readOnly: false }),
+      annotations: toolAnnotations({ title: 'Add song to Vibo section', readOnly: false, destructive: false }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id to add the song to.'),
@@ -143,7 +143,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
     'vibo_toggle_song_like',
     {
       description: 'Like or unlike a song in a section. Confirm-gated.',
-      annotations: toolAnnotations({ title: 'Like/unlike Vibo song', readOnly: false }),
+      annotations: toolAnnotations({ title: 'Like/unlike Vibo song', readOnly: false, destructive: false }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),

@@ -44,7 +44,7 @@ export function registerNotificationTools(server: McpServer, client: ViboClient)
     {
       description:
         'Mark notifications as read — pass specific notificationIds, or readAll:true to clear everything. Confirm-gated.',
-      annotations: toolAnnotations({ title: 'Mark notifications read', readOnly: false }),
+      annotations: toolAnnotations({ title: 'Mark notifications read', readOnly: false, destructive: false }),
       inputSchema: z.object({
         notificationIds: z.array(z.string()).optional().describe('Specific notification ids to mark read.'),
         readAll: z.boolean().optional().describe('Mark every notification as read.'),
