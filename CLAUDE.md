@@ -78,7 +78,10 @@ operation docs from `gql.ts`.
   (so the preferred password path always wins over a possibly-stale saved
   session). `VIBO_API_URL` overrides the
   endpoint. Refreshed tokens are re-persisted in token-only mode so they survive
-  restarts. `@fetchproxy/bootstrap` is **lazy-imported** (the .mcpb externalizes
+  restarts: Vibo rotates the refresh token, so for a pasted env pair the saved
+  record carries a `lineage` (sha256 prefix of the pasted refresh token) and a
+  restart with the SAME env pair resumes from the rotated tokens, while a newly
+  pasted pair or an unrelated browser capture never shadows the env tokens. `@fetchproxy/bootstrap` is **lazy-imported** (the .mcpb externalizes
   it; an eager import would crash boot) — capture works on the npm/`npx` install,
   not the bundled .mcpb.
 - **Deferred-config-error pattern:** the constructor never throws; with no
@@ -163,6 +166,9 @@ VIBO_PASSWORD=…
 VIBO_ACCESS_TOKEN=…      # alternative: captured token (SSO accounts)
 VIBO_REFRESH_TOKEN=…
 VIBO_API_URL=…           # optional endpoint override
+VIBO_UPLOAD_DIR=…        # optional; the only dir local-path uploads may read
+                         #   (default ~/Downloads/vibo-mcp; dotfiles, symlinks
+                         #   out of it, and files >25 MiB are refused)
 ```
 
 Loaded via `loadDotenvSafely` from `.env` next to `dist/` (`override: false`, so

@@ -13,6 +13,13 @@ import { SessionStore } from '@chrischall/mcp-utils/session';
 export interface ViboSession {
   accessToken: string;
   refreshToken: string | null;
+  /**
+   * Which configured (env / .mcp.json / manifest) token pair this session was
+   * rotated from — a one-way hash, never the token itself. Absent for a
+   * browser-captured session. Lets a restart with the SAME pasted pair resume
+   * from the rotated tokens, while a newly pasted pair still wins.
+   */
+  lineage?: string;
 }
 
 const SESSION_KEY = 'vibo';
@@ -21,6 +28,7 @@ interface StoredSession extends Record<string, unknown> {
   key: string;
   accessToken: string;
   refreshToken: string | null;
+  lineage?: string;
 }
 
 // Constructed per call (it re-reads disk) so VIBO_SESSION_FILE is honored
@@ -41,6 +49,7 @@ export function loadSession(): ViboSession | null {
       return {
         accessToken: rec.accessToken,
         refreshToken: typeof rec.refreshToken === 'string' ? rec.refreshToken : null,
+        ...(typeof rec.lineage === 'string' && rec.lineage ? { lineage: rec.lineage } : {}),
       };
     }
     return null;
@@ -55,6 +64,7 @@ export function saveSession(session: ViboSession): void {
     key: SESSION_KEY,
     accessToken: session.accessToken,
     refreshToken: session.refreshToken ?? null,
+    ...(session.lineage ? { lineage: session.lineage } : {}),
   });
 }
 

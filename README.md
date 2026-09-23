@@ -38,6 +38,14 @@ Choose one method:
 The server boots without credentials; the config error only surfaces on the
 first tool call.
 
+### Uploads
+
+`vibo_set_profile_photo` and photo/file answers to `vibo_answer_question` only
+read local files from the upload directory — `VIBO_UPLOAD_DIR`, default
+`~/Downloads/vibo-mcp`. Copy a file there before asking Claude to upload it.
+Hidden files, symlinks that lead outside the directory, and files over 25 MiB
+are refused, and photo slots need an image file.
+
 ## How it works
 
 Vibo's app talks to a GraphQL API at `https://api.vibodj.com/v2/graphql`,

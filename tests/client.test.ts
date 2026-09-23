@@ -139,6 +139,39 @@ describe('ViboClient auth lifecycle', () => {
     expect(calls).toHaveLength(1); // no retry on a non-auth error
   });
 
+  it('treats a FORBIDDEN mutation as a permission denial: no refresh, no replay, no sign-in advice', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'AT0';
+    process.env.VIBO_REFRESH_TOKEN = 'RT0';
+    const calls = installFetch(({ query }) => {
+      if (isOp(query, 'mutation refreshToken')) return { data: { refreshToken: { accessToken: 'AT2', refreshToken: 'RT2' } } };
+      return { errors: [{ code: 'FORBIDDEN', message: 'You do not have permission to remove users' }] };
+    });
+    const client = new ViboClient();
+    const err = await client.gql('mutation removeUser { removeUser }').catch((e: unknown) => e as Error);
+    expect(err).toBeInstanceOf(Error);
+    expect(err.message).toMatch(/permission/i);
+    expect(err.message).not.toMatch(/sign in|not signed in|log in/i);
+    expect(calls).toHaveLength(1); // no refresh-token grant, no replay
+  });
+
+  it('treats an HTTP 403 as a permission denial, not an expired session', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'AT0';
+    process.env.VIBO_REFRESH_TOKEN = 'RT0';
+    const calls = installFetch(() => ({ status: 403 }));
+    const client = new ViboClient();
+    await expect(client.gql('mutation updateSection { x }')).rejects.toThrow(/permission/i);
+    expect(calls).toHaveLength(1);
+  });
+
+  it('does not treat an unrelated error mentioning "login" as an expired session', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'AT0';
+    process.env.VIBO_REFRESH_TOKEN = 'RT0';
+    const calls = installFetch(() => ({ errors: [{ code: 'BAD_USER_INPUT', message: 'Invalid login email for invitee' }] }));
+    const client = new ViboClient();
+    await expect(client.gql('mutation inviteUsers { x }')).rejects.toThrow(/Invalid login email/);
+    expect(calls).toHaveLength(1);
+  });
+
   it('loads a persisted browser-captured session when no env credentials', async () => {
     saveSession({ accessToken: 'SAVED', refreshToken: 'SR' });
     const calls = installFetch(({ token }) =>
@@ -168,6 +201,58 @@ describe('ViboClient auth lifecycle', () => {
     // logged in fresh; never sent the STALE saved token
     expect(calls.some((c) => isOp(c.query, 'mutation signIn'))).toBe(true);
     expect(calls.every((c) => c.token !== 'STALE')).toBe(true);
+  });
+
+  it('an env-token session resumes from the rotated pair after a restart', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'AT0';
+    process.env.VIBO_REFRESH_TOKEN = 'RT0';
+    // Vibo rotates on refresh: RT0 is single-use, and AT0 is expired.
+    let rt0Used = false;
+    const calls = installFetch(({ query, variables, token }) => {
+      if (isOp(query, 'mutation refreshToken')) {
+        if (variables.refreshToken === 'RT0' && !rt0Used) {
+          rt0Used = true;
+          return { data: { refreshToken: { accessToken: 'AT2', refreshToken: 'RT2' } } };
+        }
+        return { errors: [{ code: 'UNAUTHORIZED', message: 'Not authorized. Try to log in' }] };
+      }
+      if (token === 'AT2') return { data: { me: { _id: 'u1' } } };
+      return { errors: [{ code: 'UNAUTHORIZED', message: 'Not authorized. Try to log in' }] };
+    });
+
+    await new ViboClient().gql(GET_ME); // refreshes AT0/RT0 -> AT2/RT2
+
+    // Restart: same env, fresh process.
+    calls.length = 0;
+    const data = await new ViboClient().gql<{ me: { _id: string } }>(GET_ME);
+    expect(data.me._id).toBe('u1');
+    expect(calls).toHaveLength(1);
+    expect(calls[0].token).toBe('AT2');
+  });
+
+  it('a NEW pasted env pair wins over a saved session rotated from an older one', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'OLD';
+    process.env.VIBO_REFRESH_TOKEN = 'OLD_RT';
+    installFetch(({ query, token }) => {
+      if (isOp(query, 'mutation refreshToken')) return { data: { refreshToken: { accessToken: 'OLD2', refreshToken: 'OLD_RT2' } } };
+      if (token === 'OLD') return { errors: [{ code: 'UNAUTHORIZED' }] };
+      return { data: { me: { _id: 'u1' } } };
+    });
+    await new ViboClient().gql(GET_ME); // saves OLD2/OLD_RT2 with OLD lineage
+
+    process.env.VIBO_ACCESS_TOKEN = 'NEW';
+    process.env.VIBO_REFRESH_TOKEN = 'NEW_RT';
+    const calls = installFetch(() => ({ data: { me: { _id: 'u2' } } }));
+    await new ViboClient().gql(GET_ME);
+    expect(calls[0].token).toBe('NEW');
+  });
+
+  it('an env token is not shadowed by an unrelated browser-captured session', async () => {
+    saveSession({ accessToken: 'CAPTURED', refreshToken: 'CR' });
+    process.env.VIBO_ACCESS_TOKEN = 'ENV';
+    const calls = installFetch(() => ({ data: { me: { _id: 'u1' } } }));
+    await new ViboClient().gql(GET_ME);
+    expect(calls[0].token).toBe('ENV');
   });
 
   it('setTokens adopts a captured pair and clears the config error (no persist)', async () => {
@@ -279,5 +364,63 @@ describe('cancellation', () => {
     } finally {
       vi.restoreAllMocks();
     }
+  });
+});
+
+/**
+ * A write that times out is an UNKNOWN outcome: Vibo may already have committed
+ * it. Telling the model to "retry" duplicates invitations, exported playlists,
+ * comments and imports — the confirm gate cannot stop it, the retry carries
+ * confirm:true.
+ */
+describe('timeouts and dropped connections', () => {
+  function failFetch(name: string) {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      const err = new Error('boom');
+      err.name = name;
+      throw err;
+    });
+  }
+
+  it('a timed-out mutation says the change may have been applied and to check before retrying', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'AT';
+    failFetch('TimeoutError');
+    const err = (await new ViboClient()
+      .gql('mutation inviteUsers($x: String) { inviteUsers(x: $x) }')
+      .catch((e: unknown) => e)) as Error & { hint?: string };
+    expect(err.message).toMatch(/timed out/);
+    expect(err.message).toMatch(/may (already )?have been applied|outcome is unknown/i);
+    expect(err.hint).toMatch(/before retrying/i);
+    expect(err.hint).not.toMatch(/check your connection and retry/i);
+  });
+
+  it('a dropped connection on a mutation is also an unknown outcome', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'AT';
+    failFetch('TypeError');
+    const err = (await new ViboClient()
+      .gql('  mutation addComment { x }')
+      .catch((e: unknown) => e)) as Error & { hint?: string };
+    expect(err.hint).toMatch(/before retrying/i);
+  });
+
+  it('a timed-out upload (always a write) is an unknown outcome', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'AT';
+    failFetch('TimeoutError');
+    const err = (await new ViboClient()
+      .gqlUpload('mutation uploadUserPhoto($photo: Upload!) { uploadUserPhoto(photo: $photo) }', { photo: null }, {
+        'variables.photo': { blob: new Blob(['x']), filename: 'a.jpg' },
+      })
+      .catch((e: unknown) => e)) as Error & { hint?: string };
+    expect(err.message).toMatch(/timed out/);
+    expect(err.hint).toMatch(/before retrying/i);
+  });
+
+  it('a timed-out read is still safe to retry', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'AT';
+    failFetch('TimeoutError');
+    const err = (await new ViboClient().gql(GET_ME).catch((e: unknown) => e)) as Error & { hint?: string };
+    expect(err.message).toMatch(/timed out/);
+    expect(err.hint).toMatch(/retry/i);
+    expect(err.hint).not.toMatch(/before retrying/i);
   });
 });

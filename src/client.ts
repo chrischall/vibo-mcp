@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import {
@@ -58,8 +59,21 @@ interface GraphQLError {
 }
 
 // Error codes Vibo (and conventional GraphQL servers) use for an expired /
-// missing session — these should trigger a token refresh + replay.
-const AUTH_ERROR_CODES = new Set(['UNAUTHORIZED', 'UNAUTHENTICATED', 'FORBIDDEN']);
+// missing session — these should trigger a token refresh + replay. FORBIDDEN
+// is deliberately NOT here: it is a permission denial (a guest removing a
+// user, a section whose host-edit permission is off), and refreshing cannot
+// fix it — see PERMISSION_ERROR_CODES.
+const AUTH_ERROR_CODES = new Set(['UNAUTHORIZED', 'UNAUTHENTICATED']);
+
+// Codes for "you are signed in, but not allowed to do this".
+const PERMISSION_ERROR_CODES = new Set(['FORBIDDEN']);
+
+// Message fallback, consulted ONLY for an error that carries no code. Vibo's
+// expired-session text is "Not authorized. Try to log in"; the patterns are
+// anchored on session/token wording so an unrelated message that merely
+// mentions "login" or "JWT" is not mistaken for an expired session.
+const AUTH_MESSAGE_PATTERN =
+  /not authoriz|unauthoriz|unauthenticated|invalid token|token (has )?expired|expired token|jwt (expired|malformed)|try to log ?in/i;
 interface GraphQLResponse<T> {
   data?: T;
   errors?: GraphQLError[];
@@ -114,6 +128,46 @@ function requestSignal(): AbortSignal | undefined {
   return withAmbientCancellation(AbortSignal.timeout(REQUEST_TIMEOUT_MS));
 }
 
+/** Whether a GraphQL document is a mutation (a write with side effects). */
+function isMutation(query: string): boolean {
+  return /^\s*(?:#[^\n]*\n\s*)*mutation\b/.test(query);
+}
+
+/**
+ * The error for a request that never produced a response (timeout, dropped
+ * connection, caller abort). For a READ that is safely retryable. For a WRITE
+ * the outcome is unknown — Vibo may already have committed it — and a blind
+ * retry repeats the side effect (a second round of invitation emails, a
+ * second exported playlist, a duplicate comment or import); the confirm gate
+ * cannot stop that, because the retry carries confirm:true. So a write says
+ * so, and asks for a state check first.
+ */
+function transportError(what: string, err: unknown, isWrite: boolean): McpToolError {
+  const reason = err instanceof Error && err.name === 'TimeoutError' ? 'timed out' : 'failed';
+  if (isWrite) {
+    return new McpToolError(
+      `${what} ${SERVICE} ${reason} — the change may already have been applied (outcome is unknown).`,
+      {
+        hint:
+          'Do not repeat this write blindly — check the current state before retrying: e.g. ' +
+          'vibo_list_event_users after inviting, vibo_get_section_songs after adding, importing or commenting ' +
+          'on songs, the Spotify/Apple Music account after an export. Retry only if the change is not there.',
+        cause: err,
+      },
+    );
+  }
+  return new McpToolError(`${what} ${SERVICE} ${reason}.`, {
+    hint: 'The Vibo API may be unreachable — check your connection and retry.',
+    cause: err,
+  });
+}
+
+/** One-way fingerprint of a configured token, so session.json never holds a
+ *  second copy of the pasted secret just to record where a session came from. */
+function tokenLineage(token: string): string {
+  return createHash('sha256').update(token).digest('hex').slice(0, 32);
+}
+
 export class ViboClient {
   private readonly apiUrl: string;
   private readonly email: string | null;
@@ -123,6 +177,9 @@ export class ViboClient {
 
   private accessToken: string | null;
   private refreshTokenValue: string | null;
+  // Which configured token pair the current tokens descend from (see
+  // ViboSession.lineage); stamped on every persisted rotation.
+  private sessionLineage: string | null = null;
 
   // The constructor is PURE — it does no filesystem / homedir / async-I/O /
   // random op — so it is safe to run at Worker global scope (where the
@@ -166,6 +223,20 @@ export class ViboClient {
       if (saved) {
         this.accessToken = saved.accessToken;
         this.refreshTokenValue = saved.refreshToken;
+        this.sessionLineage = saved.lineage ?? null;
+      }
+    } else if (this.accessToken && !haveLogin) {
+      // A configured (pasted) token pair. Vibo rotates the refresh token on
+      // every refresh, so after the first refresh the pasted pair is dead and
+      // only the persisted rotated pair works. Resume from it when it descends
+      // from THIS configured pair; a newly pasted pair (different lineage) or a
+      // browser capture (no lineage) never shadows the configured tokens.
+      const lineage = tokenLineage(this.refreshTokenValue ?? this.accessToken);
+      this.sessionLineage = lineage;
+      const saved = loadSession();
+      if (saved?.lineage === lineage) {
+        this.accessToken = saved.accessToken;
+        this.refreshTokenValue = saved.refreshToken;
       }
     }
     const haveToken = Boolean(this.accessToken);
@@ -191,6 +262,7 @@ export class ViboClient {
   setTokens(accessToken: string, refreshToken: string | null): void {
     this.accessToken = accessToken;
     this.refreshTokenValue = refreshToken;
+    this.sessionLineage = null; // a browser capture descends from no configured pair
     this.configError = null;
   }
 
@@ -280,11 +352,8 @@ export class ViboClient {
         signal: requestSignal(),
       });
     } catch (err) {
-      const reason = err instanceof Error && err.name === 'TimeoutError' ? 'timed out' : 'failed';
-      throw new McpToolError(`Upload to ${SERVICE} ${reason}.`, {
-        hint: 'The Vibo API may be unreachable — check your connection and retry.',
-        cause: err,
-      });
+      // An upload is always a write (the multipart path only carries mutations).
+      throw transportError('Upload to', err, true);
     }
 
     let body: GraphQLResponse<T>;
@@ -347,7 +416,11 @@ export class ViboClient {
               // Persist the rotated pair so a captured/pasted session survives
               // a restart (no email/password to re-login with).
               if (this.tokenOnlyMode) {
-                saveSession({ accessToken: this.accessToken, refreshToken: this.refreshTokenValue });
+                saveSession({
+                  accessToken: this.accessToken,
+                  refreshToken: this.refreshTokenValue,
+                  ...(this.sessionLineage ? { lineage: this.sessionLineage } : {}),
+                });
               }
               return this.accessToken;
             }
@@ -384,11 +457,9 @@ export class ViboClient {
         signal: requestSignal(),
       });
     } catch (err) {
-      const reason = err instanceof Error && err.name === 'TimeoutError' ? 'timed out' : 'failed';
-      throw new McpToolError(`Request to ${SERVICE} ${reason}.`, {
-        hint: 'The Vibo API may be unreachable — check your connection and retry.',
-        cause: err,
-      });
+      // signIn / refreshToken are mutations too, but repeating them is harmless.
+      const isWrite = query !== SIGN_IN && query !== REFRESH && isMutation(query);
+      throw transportError('Request to', err, isWrite);
     }
 
     let body: GraphQLResponse<T>;
@@ -400,21 +471,36 @@ export class ViboClient {
     return { status: response.status, body };
   }
 
+  /** An expired / missing session — the only case a refresh + replay can fix. */
   private isAuthError(status: number, errors?: GraphQLError[]): boolean {
-    if (status === 401 || status === 403) return true;
+    if (status === 401) return true;
     if (!errors?.length) return false;
     return errors.some((e) => {
-      const code = e.code ?? e.extensions?.code ?? '';
-      if (AUTH_ERROR_CODES.has(code)) return true;
-      // Message fallback for servers that omit a code. Vibo's text is
-      // "Not authorized. Try to log in".
-      return /not authoriz|unauthor|unauthenticated|invalid token|token expired|expired token|jwt|log ?in/i.test(
-        e.message ?? '',
-      );
+      const code = e.code ?? e.extensions?.code;
+      if (code) return AUTH_ERROR_CODES.has(code);
+      return AUTH_MESSAGE_PATTERN.test(e.message ?? '');
     });
   }
 
+  /** Signed in, but not allowed to do this (HTTP 403 / FORBIDDEN). */
+  private isPermissionError(status: number, errors?: GraphQLError[]): boolean {
+    if (status === 403) return true;
+    return (errors ?? []).some((e) => PERMISSION_ERROR_CODES.has(e.code ?? e.extensions?.code ?? ''));
+  }
+
   private unwrap<T>(status: number, body: GraphQLResponse<T>): T {
+    if (this.isPermissionError(status, body.errors)) {
+      const detail = body.errors?.map((e) => e.message).filter(Boolean).join('; ');
+      throw new McpToolError(
+        `You don't have permission to do this in this ${SERVICE} event${detail ? `: ${truncateErrorMessage(detail)}` : '.'}`,
+        {
+          hint:
+            'This is a permission denial, not an expired session — signing in again will not help. ' +
+            'Your role in the event (e.g. guest vs. host) or the DJ\'s section settings do not allow this change; ' +
+            'ask the event host or DJ.',
+        },
+      );
+    }
     if (body.errors?.length) {
       if (this.isAuthError(status, body.errors)) {
         throw new SessionNotAuthenticatedError(SERVICE, SIGN_IN_HOST);

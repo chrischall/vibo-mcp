@@ -38,7 +38,7 @@ describe('upload tools', () => {
   it('vibo_set_profile_photo resolves a local path and uploads via the multipart path with confirm', async () => {
     gqlUpload.mockResolvedValue({ uploadUserPhoto: { url: 'https://x/y.jpg' } });
     const res = await harness.callTool('vibo_set_profile_photo', { path: '/tmp/me.jpg', confirm: true });
-    expect(resolve).toHaveBeenCalledWith({ path: '/tmp/me.jpg', data: undefined, filename: 'photo.jpg' });
+    expect(resolve).toHaveBeenCalledWith({ path: '/tmp/me.jpg', data: undefined, filename: 'photo.jpg', kind: 'image' });
     expect(gqlUpload).toHaveBeenCalledWith(
       UPLOAD_USER_PHOTO,
       { photo: null },
@@ -50,7 +50,7 @@ describe('upload tools', () => {
   it('vibo_set_profile_photo resolves inline base64 fileData (the no-local-filesystem path)', async () => {
     gqlUpload.mockResolvedValue({ uploadUserPhoto: { url: 'https://x/z.jpg' } });
     await harness.callTool('vibo_set_profile_photo', { fileData: 'aGk=', filename: 'me.png', confirm: true });
-    expect(resolve).toHaveBeenCalledWith({ path: undefined, data: 'aGk=', filename: 'me.png' });
+    expect(resolve).toHaveBeenCalledWith({ path: undefined, data: 'aGk=', filename: 'me.png', kind: 'image' });
     expect(gqlUpload).toHaveBeenCalledWith(UPLOAD_USER_PHOTO, { photo: null }, { 'variables.photo': stubFile });
   });
 
