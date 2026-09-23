@@ -58,8 +58,21 @@ interface GraphQLError {
 }
 
 // Error codes Vibo (and conventional GraphQL servers) use for an expired /
-// missing session — these should trigger a token refresh + replay.
-const AUTH_ERROR_CODES = new Set(['UNAUTHORIZED', 'UNAUTHENTICATED', 'FORBIDDEN']);
+// missing session — these should trigger a token refresh + replay. FORBIDDEN
+// is deliberately NOT here: it is a permission denial (a guest removing a
+// user, a section whose host-edit permission is off), and refreshing cannot
+// fix it — see PERMISSION_ERROR_CODES.
+const AUTH_ERROR_CODES = new Set(['UNAUTHORIZED', 'UNAUTHENTICATED']);
+
+// Codes for "you are signed in, but not allowed to do this".
+const PERMISSION_ERROR_CODES = new Set(['FORBIDDEN']);
+
+// Message fallback, consulted ONLY for an error that carries no code. Vibo's
+// expired-session text is "Not authorized. Try to log in"; the patterns are
+// anchored on session/token wording so an unrelated message that merely
+// mentions "login" or "JWT" is not mistaken for an expired session.
+const AUTH_MESSAGE_PATTERN =
+  /not authoriz|unauthoriz|unauthenticated|invalid token|token (has )?expired|expired token|jwt (expired|malformed)|try to log ?in/i;
 interface GraphQLResponse<T> {
   data?: T;
   errors?: GraphQLError[];
@@ -400,21 +413,36 @@ export class ViboClient {
     return { status: response.status, body };
   }
 
+  /** An expired / missing session — the only case a refresh + replay can fix. */
   private isAuthError(status: number, errors?: GraphQLError[]): boolean {
-    if (status === 401 || status === 403) return true;
+    if (status === 401) return true;
     if (!errors?.length) return false;
     return errors.some((e) => {
-      const code = e.code ?? e.extensions?.code ?? '';
-      if (AUTH_ERROR_CODES.has(code)) return true;
-      // Message fallback for servers that omit a code. Vibo's text is
-      // "Not authorized. Try to log in".
-      return /not authoriz|unauthor|unauthenticated|invalid token|token expired|expired token|jwt|log ?in/i.test(
-        e.message ?? '',
-      );
+      const code = e.code ?? e.extensions?.code;
+      if (code) return AUTH_ERROR_CODES.has(code);
+      return AUTH_MESSAGE_PATTERN.test(e.message ?? '');
     });
   }
 
+  /** Signed in, but not allowed to do this (HTTP 403 / FORBIDDEN). */
+  private isPermissionError(status: number, errors?: GraphQLError[]): boolean {
+    if (status === 403) return true;
+    return (errors ?? []).some((e) => PERMISSION_ERROR_CODES.has(e.code ?? e.extensions?.code ?? ''));
+  }
+
   private unwrap<T>(status: number, body: GraphQLResponse<T>): T {
+    if (this.isPermissionError(status, body.errors)) {
+      const detail = body.errors?.map((e) => e.message).filter(Boolean).join('; ');
+      throw new McpToolError(
+        `You don't have permission to do this in this ${SERVICE} event${detail ? `: ${truncateErrorMessage(detail)}` : '.'}`,
+        {
+          hint:
+            'This is a permission denial, not an expired session — signing in again will not help. ' +
+            'Your role in the event (e.g. guest vs. host) or the DJ\'s section settings do not allow this change; ' +
+            'ask the event host or DJ.',
+        },
+      );
+    }
     if (body.errors?.length) {
       if (this.isAuthError(status, body.errors)) {
         throw new SessionNotAuthenticatedError(SERVICE, SIGN_IN_HOST);

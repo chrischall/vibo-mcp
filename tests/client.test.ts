@@ -139,6 +139,39 @@ describe('ViboClient auth lifecycle', () => {
     expect(calls).toHaveLength(1); // no retry on a non-auth error
   });
 
+  it('treats a FORBIDDEN mutation as a permission denial: no refresh, no replay, no sign-in advice', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'AT0';
+    process.env.VIBO_REFRESH_TOKEN = 'RT0';
+    const calls = installFetch(({ query }) => {
+      if (isOp(query, 'mutation refreshToken')) return { data: { refreshToken: { accessToken: 'AT2', refreshToken: 'RT2' } } };
+      return { errors: [{ code: 'FORBIDDEN', message: 'You do not have permission to remove users' }] };
+    });
+    const client = new ViboClient();
+    const err = await client.gql('mutation removeUser { removeUser }').catch((e: unknown) => e as Error);
+    expect(err).toBeInstanceOf(Error);
+    expect(err.message).toMatch(/permission/i);
+    expect(err.message).not.toMatch(/sign in|not signed in|log in/i);
+    expect(calls).toHaveLength(1); // no refresh-token grant, no replay
+  });
+
+  it('treats an HTTP 403 as a permission denial, not an expired session', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'AT0';
+    process.env.VIBO_REFRESH_TOKEN = 'RT0';
+    const calls = installFetch(() => ({ status: 403 }));
+    const client = new ViboClient();
+    await expect(client.gql('mutation updateSection { x }')).rejects.toThrow(/permission/i);
+    expect(calls).toHaveLength(1);
+  });
+
+  it('does not treat an unrelated error mentioning "login" as an expired session', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'AT0';
+    process.env.VIBO_REFRESH_TOKEN = 'RT0';
+    const calls = installFetch(() => ({ errors: [{ code: 'BAD_USER_INPUT', message: 'Invalid login email for invitee' }] }));
+    const client = new ViboClient();
+    await expect(client.gql('mutation inviteUsers { x }')).rejects.toThrow(/Invalid login email/);
+    expect(calls).toHaveLength(1);
+  });
+
   it('loads a persisted browser-captured session when no env credentials', async () => {
     saveSession({ accessToken: 'SAVED', refreshToken: 'SR' });
     const calls = installFetch(({ token }) =>
