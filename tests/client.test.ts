@@ -366,3 +366,61 @@ describe('cancellation', () => {
     }
   });
 });
+
+/**
+ * A write that times out is an UNKNOWN outcome: Vibo may already have committed
+ * it. Telling the model to "retry" duplicates invitations, exported playlists,
+ * comments and imports — the confirm gate cannot stop it, the retry carries
+ * confirm:true.
+ */
+describe('timeouts and dropped connections', () => {
+  function failFetch(name: string) {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      const err = new Error('boom');
+      err.name = name;
+      throw err;
+    });
+  }
+
+  it('a timed-out mutation says the change may have been applied and to check before retrying', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'AT';
+    failFetch('TimeoutError');
+    const err = (await new ViboClient()
+      .gql('mutation inviteUsers($x: String) { inviteUsers(x: $x) }')
+      .catch((e: unknown) => e)) as Error & { hint?: string };
+    expect(err.message).toMatch(/timed out/);
+    expect(err.message).toMatch(/may (already )?have been applied|outcome is unknown/i);
+    expect(err.hint).toMatch(/before retrying/i);
+    expect(err.hint).not.toMatch(/check your connection and retry/i);
+  });
+
+  it('a dropped connection on a mutation is also an unknown outcome', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'AT';
+    failFetch('TypeError');
+    const err = (await new ViboClient()
+      .gql('  mutation addComment { x }')
+      .catch((e: unknown) => e)) as Error & { hint?: string };
+    expect(err.hint).toMatch(/before retrying/i);
+  });
+
+  it('a timed-out upload (always a write) is an unknown outcome', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'AT';
+    failFetch('TimeoutError');
+    const err = (await new ViboClient()
+      .gqlUpload('mutation uploadUserPhoto($photo: Upload!) { uploadUserPhoto(photo: $photo) }', { photo: null }, {
+        'variables.photo': { blob: new Blob(['x']), filename: 'a.jpg' },
+      })
+      .catch((e: unknown) => e)) as Error & { hint?: string };
+    expect(err.message).toMatch(/timed out/);
+    expect(err.hint).toMatch(/before retrying/i);
+  });
+
+  it('a timed-out read is still safe to retry', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'AT';
+    failFetch('TimeoutError');
+    const err = (await new ViboClient().gql(GET_ME).catch((e: unknown) => e)) as Error & { hint?: string };
+    expect(err.message).toMatch(/timed out/);
+    expect(err.hint).toMatch(/retry/i);
+    expect(err.hint).not.toMatch(/before retrying/i);
+  });
+});

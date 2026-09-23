@@ -128,6 +128,40 @@ function requestSignal(): AbortSignal | undefined {
   return withAmbientCancellation(AbortSignal.timeout(REQUEST_TIMEOUT_MS));
 }
 
+/** Whether a GraphQL document is a mutation (a write with side effects). */
+function isMutation(query: string): boolean {
+  return /^\s*(?:#[^\n]*\n\s*)*mutation\b/.test(query);
+}
+
+/**
+ * The error for a request that never produced a response (timeout, dropped
+ * connection, caller abort). For a READ that is safely retryable. For a WRITE
+ * the outcome is unknown — Vibo may already have committed it — and a blind
+ * retry repeats the side effect (a second round of invitation emails, a
+ * second exported playlist, a duplicate comment or import); the confirm gate
+ * cannot stop that, because the retry carries confirm:true. So a write says
+ * so, and asks for a state check first.
+ */
+function transportError(what: string, err: unknown, isWrite: boolean): McpToolError {
+  const reason = err instanceof Error && err.name === 'TimeoutError' ? 'timed out' : 'failed';
+  if (isWrite) {
+    return new McpToolError(
+      `${what} ${SERVICE} ${reason} — the change may already have been applied (outcome is unknown).`,
+      {
+        hint:
+          'Do not repeat this write blindly — check the current state before retrying: e.g. ' +
+          'vibo_list_event_users after inviting, vibo_get_section_songs after adding, importing or commenting ' +
+          'on songs, the Spotify/Apple Music account after an export. Retry only if the change is not there.',
+        cause: err,
+      },
+    );
+  }
+  return new McpToolError(`${what} ${SERVICE} ${reason}.`, {
+    hint: 'The Vibo API may be unreachable — check your connection and retry.',
+    cause: err,
+  });
+}
+
 /** One-way fingerprint of a configured token, so session.json never holds a
  *  second copy of the pasted secret just to record where a session came from. */
 function tokenLineage(token: string): string {
@@ -318,11 +352,8 @@ export class ViboClient {
         signal: requestSignal(),
       });
     } catch (err) {
-      const reason = err instanceof Error && err.name === 'TimeoutError' ? 'timed out' : 'failed';
-      throw new McpToolError(`Upload to ${SERVICE} ${reason}.`, {
-        hint: 'The Vibo API may be unreachable — check your connection and retry.',
-        cause: err,
-      });
+      // An upload is always a write (the multipart path only carries mutations).
+      throw transportError('Upload to', err, true);
     }
 
     let body: GraphQLResponse<T>;
@@ -426,11 +457,9 @@ export class ViboClient {
         signal: requestSignal(),
       });
     } catch (err) {
-      const reason = err instanceof Error && err.name === 'TimeoutError' ? 'timed out' : 'failed';
-      throw new McpToolError(`Request to ${SERVICE} ${reason}.`, {
-        hint: 'The Vibo API may be unreachable — check your connection and retry.',
-        cause: err,
-      });
+      // signIn / refreshToken are mutations too, but repeating them is harmless.
+      const isWrite = query !== SIGN_IN && query !== REFRESH && isMutation(query);
+      throw transportError('Request to', err, isWrite);
     }
 
     let body: GraphQLResponse<T>;
