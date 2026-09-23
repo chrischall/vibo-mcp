@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import {
@@ -127,6 +128,12 @@ function requestSignal(): AbortSignal | undefined {
   return withAmbientCancellation(AbortSignal.timeout(REQUEST_TIMEOUT_MS));
 }
 
+/** One-way fingerprint of a configured token, so session.json never holds a
+ *  second copy of the pasted secret just to record where a session came from. */
+function tokenLineage(token: string): string {
+  return createHash('sha256').update(token).digest('hex').slice(0, 32);
+}
+
 export class ViboClient {
   private readonly apiUrl: string;
   private readonly email: string | null;
@@ -136,6 +143,9 @@ export class ViboClient {
 
   private accessToken: string | null;
   private refreshTokenValue: string | null;
+  // Which configured token pair the current tokens descend from (see
+  // ViboSession.lineage); stamped on every persisted rotation.
+  private sessionLineage: string | null = null;
 
   // The constructor is PURE — it does no filesystem / homedir / async-I/O /
   // random op — so it is safe to run at Worker global scope (where the
@@ -179,6 +189,20 @@ export class ViboClient {
       if (saved) {
         this.accessToken = saved.accessToken;
         this.refreshTokenValue = saved.refreshToken;
+        this.sessionLineage = saved.lineage ?? null;
+      }
+    } else if (this.accessToken && !haveLogin) {
+      // A configured (pasted) token pair. Vibo rotates the refresh token on
+      // every refresh, so after the first refresh the pasted pair is dead and
+      // only the persisted rotated pair works. Resume from it when it descends
+      // from THIS configured pair; a newly pasted pair (different lineage) or a
+      // browser capture (no lineage) never shadows the configured tokens.
+      const lineage = tokenLineage(this.refreshTokenValue ?? this.accessToken);
+      this.sessionLineage = lineage;
+      const saved = loadSession();
+      if (saved?.lineage === lineage) {
+        this.accessToken = saved.accessToken;
+        this.refreshTokenValue = saved.refreshToken;
       }
     }
     const haveToken = Boolean(this.accessToken);
@@ -204,6 +228,7 @@ export class ViboClient {
   setTokens(accessToken: string, refreshToken: string | null): void {
     this.accessToken = accessToken;
     this.refreshTokenValue = refreshToken;
+    this.sessionLineage = null; // a browser capture descends from no configured pair
     this.configError = null;
   }
 
@@ -360,7 +385,11 @@ export class ViboClient {
               // Persist the rotated pair so a captured/pasted session survives
               // a restart (no email/password to re-login with).
               if (this.tokenOnlyMode) {
-                saveSession({ accessToken: this.accessToken, refreshToken: this.refreshTokenValue });
+                saveSession({
+                  accessToken: this.accessToken,
+                  refreshToken: this.refreshTokenValue,
+                  ...(this.sessionLineage ? { lineage: this.sessionLineage } : {}),
+                });
               }
               return this.accessToken;
             }

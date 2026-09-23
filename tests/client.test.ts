@@ -203,6 +203,58 @@ describe('ViboClient auth lifecycle', () => {
     expect(calls.every((c) => c.token !== 'STALE')).toBe(true);
   });
 
+  it('an env-token session resumes from the rotated pair after a restart', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'AT0';
+    process.env.VIBO_REFRESH_TOKEN = 'RT0';
+    // Vibo rotates on refresh: RT0 is single-use, and AT0 is expired.
+    let rt0Used = false;
+    const calls = installFetch(({ query, variables, token }) => {
+      if (isOp(query, 'mutation refreshToken')) {
+        if (variables.refreshToken === 'RT0' && !rt0Used) {
+          rt0Used = true;
+          return { data: { refreshToken: { accessToken: 'AT2', refreshToken: 'RT2' } } };
+        }
+        return { errors: [{ code: 'UNAUTHORIZED', message: 'Not authorized. Try to log in' }] };
+      }
+      if (token === 'AT2') return { data: { me: { _id: 'u1' } } };
+      return { errors: [{ code: 'UNAUTHORIZED', message: 'Not authorized. Try to log in' }] };
+    });
+
+    await new ViboClient().gql(GET_ME); // refreshes AT0/RT0 -> AT2/RT2
+
+    // Restart: same env, fresh process.
+    calls.length = 0;
+    const data = await new ViboClient().gql<{ me: { _id: string } }>(GET_ME);
+    expect(data.me._id).toBe('u1');
+    expect(calls).toHaveLength(1);
+    expect(calls[0].token).toBe('AT2');
+  });
+
+  it('a NEW pasted env pair wins over a saved session rotated from an older one', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'OLD';
+    process.env.VIBO_REFRESH_TOKEN = 'OLD_RT';
+    installFetch(({ query, token }) => {
+      if (isOp(query, 'mutation refreshToken')) return { data: { refreshToken: { accessToken: 'OLD2', refreshToken: 'OLD_RT2' } } };
+      if (token === 'OLD') return { errors: [{ code: 'UNAUTHORIZED' }] };
+      return { data: { me: { _id: 'u1' } } };
+    });
+    await new ViboClient().gql(GET_ME); // saves OLD2/OLD_RT2 with OLD lineage
+
+    process.env.VIBO_ACCESS_TOKEN = 'NEW';
+    process.env.VIBO_REFRESH_TOKEN = 'NEW_RT';
+    const calls = installFetch(() => ({ data: { me: { _id: 'u2' } } }));
+    await new ViboClient().gql(GET_ME);
+    expect(calls[0].token).toBe('NEW');
+  });
+
+  it('an env token is not shadowed by an unrelated browser-captured session', async () => {
+    saveSession({ accessToken: 'CAPTURED', refreshToken: 'CR' });
+    process.env.VIBO_ACCESS_TOKEN = 'ENV';
+    const calls = installFetch(() => ({ data: { me: { _id: 'u1' } } }));
+    await new ViboClient().gql(GET_ME);
+    expect(calls[0].token).toBe('ENV');
+  });
+
   it('setTokens adopts a captured pair and clears the config error (no persist)', async () => {
     const calls = installFetch(({ token }) =>
       token === 'CAP' ? { data: { me: { _id: 'u2' } } } : { errors: [{ code: 'UNAUTHORIZED' }] },
