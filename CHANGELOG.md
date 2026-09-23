@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.3](https://github.com/chrischall/vibo-mcp/compare/v2.2.2...v2.2.3) (2026-09-23)
+
+
+### Bug Fixes
+
+* vibo auth/permission errors, rotated-token restarts, write-timeout hints and upload-path confinement ([#148](https://github.com/chrischall/vibo-mcp/issues/148)) ([6429c93](https://github.com/chrischall/vibo-mcp/commit/6429c93af63c5dfb619e1ec32a7a3f9b6c15737c))
+
 ## [2.2.2](https://github.com/chrischall/vibo-mcp/compare/v2.2.1...v2.2.2) (2026-09-23)
 
 
