@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.2.2](https://github.com/chrischall/vibo-mcp/compare/v2.2.1...v2.2.2) (2026-09-23)
+
+
+### Bug Fixes
+
+* **deps:** bump dotenv from 17.4.2 to 18.0.1 ([#144](https://github.com/chrischall/vibo-mcp/issues/144)) ([b574ddc](https://github.com/chrischall/vibo-mcp/commit/b574ddc19c2b4ec0499a02769d1ad9734212a34a))
+* **deps:** bump zod in the production-dependencies group ([#143](https://github.com/chrischall/vibo-mcp/issues/143)) ([3f1cb72](https://github.com/chrischall/vibo-mcp/commit/3f1cb728771a7aa4f3d42d28f2d5a19a5810bc18))
+* **deps:** require zod ^4.6.5 to match @chrischall/mcp-utils 2.4.0 ([#147](https://github.com/chrischall/vibo-mcp/issues/147)) ([b1a7e64](https://github.com/chrischall/vibo-mcp/commit/b1a7e648e63f3d4880aa93ab9d2918ff45e56d21))
+* **deps:** upgrade @chrischall/mcp-utils to 2.4.0 and @fetchproxy/* to 3.2.0 ([#146](https://github.com/chrischall/vibo-mcp/issues/146)) ([949f6c5](https://github.com/chrischall/vibo-mcp/commit/949f6c591fde9fa1db3dc3ea083c43dc8a0bf859))
+
 ## [2.2.1](https://github.com/chrischall/vibo-mcp/compare/v2.2.0...v2.2.1) (2026-09-21)
 
 
