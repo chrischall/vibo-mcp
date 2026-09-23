@@ -127,8 +127,8 @@ describe('question tools', () => {
     });
     // JSON path is not used; the upload path carries null placeholders + resolved blobs.
     expect(gql).not.toHaveBeenCalled();
-    expect(resolve).toHaveBeenCalledWith({ path: '/tmp/a.jpg' });
-    expect(resolve).toHaveBeenCalledWith({ path: '/tmp/b.jpg' });
+    expect(resolve).toHaveBeenCalledWith({ path: '/tmp/a.jpg', kind: 'image' });
+    expect(resolve).toHaveBeenCalledWith({ path: '/tmp/b.jpg', kind: 'image' });
     expect(resolve).toHaveBeenCalledWith({ path: '/tmp/c.pdf' });
     expect(gqlUpload).toHaveBeenCalledWith(
       ANSWER_SECTION_QUESTION,

@@ -166,6 +166,9 @@ VIBO_PASSWORD=…
 VIBO_ACCESS_TOKEN=…      # alternative: captured token (SSO accounts)
 VIBO_REFRESH_TOKEN=…
 VIBO_API_URL=…           # optional endpoint override
+VIBO_UPLOAD_DIR=…        # optional; the only dir local-path uploads may read
+                         #   (default ~/Downloads/vibo-mcp; dotfiles, symlinks
+                         #   out of it, and files >25 MiB are refused)
 ```
 
 Loaded via `loadDotenvSafely` from `.env` next to `dist/` (`override: false`, so

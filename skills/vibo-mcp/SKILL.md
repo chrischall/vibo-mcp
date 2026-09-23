@@ -80,7 +80,7 @@ you get a dry-run preview of exactly what would be sent.
 - `vibo_invite_users` / `vibo_change_user_role` / `vibo_remove_user` — manage who's on the event.
 - `vibo_update_section` — edit a section's name, time, or note.
 - `vibo_answer_question` — answer a planning question (text / option ids / link / image+file uploads).
-- `vibo_set_profile_photo` — set your profile photo from a local image.
+- `vibo_set_profile_photo` — set your profile photo from a local image in the upload directory (`VIBO_UPLOAD_DIR`, default `~/Downloads/vibo-mcp`).
 - `vibo_capture_session` — capture your login from a signed-in browser tab (SSO accounts).
 - `vibo_mark_notifications_read`.
 - `vibo_export_event_to_spotify` / `vibo_export_event_to_apple_music`.
