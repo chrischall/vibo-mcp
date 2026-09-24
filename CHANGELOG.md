@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.3.1](https://github.com/chrischall/vibo-mcp/compare/v2.3.0...v2.3.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* **deps:** bump dotenv in the production-dependencies group ([#153](https://github.com/chrischall/vibo-mcp/issues/153)) ([1ab3aee](https://github.com/chrischall/vibo-mcp/commit/1ab3aee35f661c344953c646bf1f241fe42920a4))
+* **vibo_list_event_users:** stop returning other members' emails by default ([#155](https://github.com/chrischall/vibo-mcp/issues/155)) ([db9f7c4](https://github.com/chrischall/vibo-mcp/commit/db9f7c4e71cce1944a66105375ced68cfd9a7089))
+
 ## [2.3.0](https://github.com/chrischall/vibo-mcp/compare/v2.2.3...v2.3.0) (2026-09-24)
 
 
