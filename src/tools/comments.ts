@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/server';
-import { minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
+import { minifiedResult, confirmTokenParam, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import {
   CREATE_SONG_COMMENT,
@@ -8,25 +8,33 @@ import {
   CREATE_SECTION_COMMENT,
   DELETE_SECTION_COMMENT,
 } from '../gql.js';
-import { previewResult } from './shared.js';
+import { confirmWrite, CONFIRM_NOTE } from './shared.js';
 
 export function registerCommentTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
     'vibo_comment_on_song',
     {
-      description: 'Leave a comment / note for the DJ on a specific song. Confirm-gated.',
+      description: 'Leave a comment / note for the DJ on a specific song. ' + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Comment on Vibo song', readOnly: false, destructive: false }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),
         songId: z.string().describe('Song _id (from vibo_get_section_songs).'),
         message: z.string().describe('The comment text.'),
-        confirm: schemaConfirm,
+        confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, sectionId, songId, message, confirm }) => {
+    async ({ eventId, sectionId, songId, message, confirmToken }, ctx) => {
       const vars = { eventId, sectionId, songId, payload: { message } };
-      if (!confirm) return previewResult('createSongComment', vars);
+      const gate = await confirmWrite(ctx, {
+        tool: 'vibo_comment_on_song',
+        mutation: 'createSongComment',
+        message: 'Review and confirm this song comment:',
+        confirmToken,
+        target: songId,
+        willSend: vars,
+      });
+      if (gate) return gate;
       const data = await client.gql<{ createSongComment: unknown }>(CREATE_SONG_COMMENT, vars);
       return minifiedResult(data.createSongComment);
     },
@@ -35,19 +43,27 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
   server.registerTool(
     'vibo_delete_song_comment',
     {
-      description: 'Delete a comment on a song. Confirm-gated.',
+      description: 'Delete a comment on a song. ' + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Delete Vibo song comment', readOnly: false, destructive: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),
         songId: z.string().describe('Song _id (from vibo_get_section_songs).'),
         commentId: z.string().describe('Comment _id to delete.'),
-        confirm: schemaConfirm,
+        confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, sectionId, songId, commentId, confirm }) => {
+    async ({ eventId, sectionId, songId, commentId, confirmToken }, ctx) => {
       const vars = { eventId, sectionId, songId, commentId };
-      if (!confirm) return previewResult('deleteSongComment', vars);
+      const gate = await confirmWrite(ctx, {
+        tool: 'vibo_delete_song_comment',
+        mutation: 'deleteSongComment',
+        message: 'Review and confirm deleting this song comment:',
+        confirmToken,
+        target: commentId,
+        willSend: vars,
+      });
+      if (gate) return gate;
       const data = await client.gql<{ deleteSongComment: unknown }>(DELETE_SONG_COMMENT, vars);
       return minifiedResult(data.deleteSongComment);
     },
@@ -56,18 +72,26 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
   server.registerTool(
     'vibo_comment_on_section',
     {
-      description: 'Leave a comment on a timeline section. Confirm-gated.',
+      description: 'Leave a comment on a timeline section. ' + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Comment on Vibo section', readOnly: false, destructive: false }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id (from vibo_list_sections).'),
         message: z.string().describe('The comment text.'),
-        confirm: schemaConfirm,
+        confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, sectionId, message, confirm }) => {
+    async ({ eventId, sectionId, message, confirmToken }, ctx) => {
       const vars = { eventId, sectionId, payload: { message } };
-      if (!confirm) return previewResult('createSectionComment', vars);
+      const gate = await confirmWrite(ctx, {
+        tool: 'vibo_comment_on_section',
+        mutation: 'createSectionComment',
+        message: 'Review and confirm this section comment:',
+        confirmToken,
+        target: sectionId,
+        willSend: vars,
+      });
+      if (gate) return gate;
       const data = await client.gql<{ createSectionComment: unknown }>(CREATE_SECTION_COMMENT, vars);
       return minifiedResult(data.createSectionComment);
     },
@@ -76,18 +100,26 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
   server.registerTool(
     'vibo_delete_section_comment',
     {
-      description: 'Delete a comment on a timeline section. Confirm-gated.',
+      description: 'Delete a comment on a timeline section. ' + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Delete Vibo section comment', readOnly: false, destructive: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id (from vibo_list_sections).'),
         commentId: z.string().describe('Comment _id to delete.'),
-        confirm: schemaConfirm,
+        confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, sectionId, commentId, confirm }) => {
+    async ({ eventId, sectionId, commentId, confirmToken }, ctx) => {
       const vars = { eventId, sectionId, commentId };
-      if (!confirm) return previewResult('deleteSectionComment', vars);
+      const gate = await confirmWrite(ctx, {
+        tool: 'vibo_delete_section_comment',
+        mutation: 'deleteSectionComment',
+        message: 'Review and confirm deleting this section comment:',
+        confirmToken,
+        target: commentId,
+        willSend: vars,
+      });
+      if (gate) return gate;
       const data = await client.gql<{ deleteSectionComment: unknown }>(DELETE_SECTION_COMMENT, vars);
       return minifiedResult(data.deleteSectionComment);
     },

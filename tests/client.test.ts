@@ -370,8 +370,8 @@ describe('cancellation', () => {
 /**
  * A write that times out is an UNKNOWN outcome: Vibo may already have committed
  * it. Telling the model to "retry" duplicates invitations, exported playlists,
- * comments and imports — the confirm gate cannot stop it, the retry carries
- * confirm:true.
+ * comments and imports — the confirmation gate cannot stop it, a fresh preview
+ * earns a fresh token.
  */
 describe('timeouts and dropped connections', () => {
   function failFetch(name: string) {

@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/server';
-import { McpToolError, minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
+import { McpToolError, minifiedResult, confirmTokenParam, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { GET_NOTIFICATIONS, GET_NOTIFICATIONS_COUNT, MARK_AS_READ } from '../gql.js';
-import { limitSchema, skipSchema, pagination, previewResult } from './shared.js';
+import { limitSchema, skipSchema, pagination, confirmWrite, CONFIRM_NOTE } from './shared.js';
 import { viewArg, viewResponse } from '../view.js';
 
 export function registerNotificationTools(server: McpServer, client: ViboClient): void {
@@ -43,15 +43,15 @@ export function registerNotificationTools(server: McpServer, client: ViboClient)
     'vibo_mark_notifications_read',
     {
       description:
-        'Mark notifications as read — pass specific notificationIds, or readAll:true to clear everything. Confirm-gated.',
+        'Mark notifications as read — pass specific notificationIds, or readAll:true to clear everything. ' + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Mark notifications read', readOnly: false, destructive: false }),
       inputSchema: z.object({
         notificationIds: z.array(z.string()).optional().describe('Specific notification ids to mark read.'),
         readAll: z.boolean().optional().describe('Mark every notification as read.'),
-        confirm: schemaConfirm,
+        confirmToken: confirmTokenParam,
       }),
     },
-    async ({ notificationIds, readAll, confirm }) => {
+    async ({ notificationIds, readAll, confirmToken }, ctx) => {
       if (!notificationIds?.length && !readAll) {
         throw new McpToolError('Provide notificationIds or set readAll:true.', {
           hint: 'Pass an array of notification ids, or readAll:true to clear all.',
@@ -60,7 +60,15 @@ export function registerNotificationTools(server: McpServer, client: ViboClient)
       const variables: Record<string, unknown> = {};
       if (notificationIds?.length) variables.notificationIds = notificationIds;
       if (readAll) variables.readAll = true;
-      if (!confirm) return previewResult('markAsRead', variables);
+      const gate = await confirmWrite(ctx, {
+        tool: 'vibo_mark_notifications_read',
+        mutation: 'markAsRead',
+        message: 'Review and confirm marking these notifications read:',
+        confirmToken,
+        target: '',
+        willSend: variables,
+      });
+      if (gate) return gate;
       const data = await client.gql<{ markAsRead: unknown }>(MARK_AS_READ, variables);
       return minifiedResult({ marked: true, result: data.markAsRead });
     },

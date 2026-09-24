@@ -2,8 +2,8 @@
 
 MCP server for [Vibo](https://vibodj.com). Wraps the Vibo consumer GraphQL API
 (`https://api.vibodj.com/v2/graphql`) and exposes 39 host/couple tools to Claude
-over stdio (15 reads + 24 writes/actions, confirm-gated where they mutate). Built on `@chrischall/mcp-utils`
-(`runMcp`, `textResult`, `toolAnnotations`, `schemaConfirm`, error classes).
+over stdio (15 reads + 24 writes/actions, confirmation-gated where they mutate). Built on `@chrischall/mcp-utils`
+(`runMcp`, `textResult`, `toolAnnotations`, `confirmationFromEnv` / `requireConfirmationWithFallback`, error classes).
 
 ## Commands
 
@@ -55,7 +55,7 @@ src/
     section-edit.ts     # update_section
     uploads.ts          # set_profile_photo
     session.ts          # capture_session (SSO browser token capture)
-    shared.ts           # pagination + confirm-preview helpers
+    shared.ts           # pagination + confirmWrite (confirmation gate) helpers
 ```
 
 Each tool file exports `register<Domain>Tools(server)` calling
@@ -93,11 +93,27 @@ operation docs from `gql.ts`.
   exactly once. Login and refresh are each single-flight so concurrent tool
   calls don't race.
 
-## Writes are confirm-gated
+## Writes are confirmation-gated
 
-Every mutating tool takes `confirm` (`schemaConfirm`). Without `confirm: true`
-it makes **no** network call and returns a dry-run `preview` of the operation +
-variables. See `docs/VIBO-API.md` for the pinned input shapes.
+Every mutating tool (all 23 except `vibo_capture_session`) takes an optional
+`confirmToken` (`confirmTokenParam`) and calls `confirmWrite(ctx, …)` from
+`src/tools/shared.ts` — a thin wrapper over mcp-utils' `confirmationFromEnv` +
+`requireConfirmationWithFallback` — right before the write, after every existing
+validation:
+
+- A client that can show an MCP elicitation prompt (Claude Code) gets the real
+  prompt; nothing is sent unless the user accepts.
+- A client that cannot (claude.ai, Claude Desktop) gets the two-step token flow
+  governed by `MCP_CONFIRM_MODE` (see README): the first call makes **no**
+  network call and returns `status: "confirmation-required"`, a `preview` of the
+  GraphQL operation + the exact variables (`{ action, willSend }`) and a
+  `confirmToken`; only a repeat call with the same arguments plus that token
+  writes. The token is single-use and bound to the tool, the target id and a
+  hash of what will be sent — a changed argument is refused as `DRAFT_CHANGED`,
+  a replay as `TOKEN_REUSED`. Inline upload bytes are bound too (via
+  `payload`), although the preview shows them as `(inline bytes)`.
+
+See `docs/VIBO-API.md` for the pinned input shapes.
 
 ## Verification status
 

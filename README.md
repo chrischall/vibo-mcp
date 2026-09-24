@@ -46,14 +46,30 @@ read local files from the upload directory — `VIBO_UPLOAD_DIR`, default
 Hidden files, symlinks that lead outside the directory, and files over 25 MiB
 are refused, and photo slots need an image file.
 
+### Confirmations
+
+Every write (adding or removing songs, comments, invites, exports, answers,
+uploads, …) is confirmed before anything is sent to Vibo.
+
+| variable | default | |
+|---|---|---|
+| `MCP_CONFIRM_MODE` | `ask-user` | What a write does on a client that cannot show a confirmation prompt (claude.ai, Claude Desktop). `ask-user`: two steps — the first call does nothing and returns a preview plus a token, and the model must get your approval in chat before calling again with it. `auto`: the same two steps, but the model may use the token after reviewing the preview itself. `refuse`: writes are refused on such clients. A client that can show prompts (Claude Code) always gets the real prompt. An unrecognised value is treated as `refuse`. |
+| `MCP_CONFIRM_TTL_SECONDS` | `600` | How long a token stays valid. |
+| `MCP_CONFIRM_SECRET` | random per process | Signing key; set it only if tokens must survive a server restart. |
+
+A token works once, only for the tool and arguments it was previewed with: a
+changed argument or a reused token is refused and nothing is sent.
+
 ## How it works
 
 Vibo's app talks to a GraphQL API at `https://api.vibodj.com/v2/graphql`,
 authenticating with an `x-token` header obtained from an email/password
 `signIn`. This server reuses that same flow server-side (no browser needed) and
-wraps the host/couple operations as MCP tools. Every mutating tool is
-confirm-gated: without `confirm: true` it returns a dry-run preview and makes no
-network call.
+wraps the host/couple operations as MCP tools. Every mutating tool asks you to
+confirm first: a client that can show a confirmation prompt (Claude Code) shows
+one; otherwise the first call makes no network call and returns a preview plus a
+`confirmToken`, and only a repeat call with that token makes the change (see
+[Confirmations](#confirmations)).
 
 See [docs/VIBO-API.md](docs/VIBO-API.md) for the reverse-engineered API notes
 and [skills/vibo-mcp/SKILL.md](skills/vibo-mcp/SKILL.md) for the full tool list.

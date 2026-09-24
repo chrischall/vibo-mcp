@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import { client } from '../../src/client.js';
 import { registerNotificationTools } from '../../src/tools/notifications.js';
 import { GET_NOTIFICATIONS, GET_NOTIFICATIONS_COUNT, MARK_AS_READ } from '../../src/gql.js';
-import { createTestHarness } from '../helpers.js';
+import { createTestHarness, confirmCall } from '../helpers.js';
 import { parseToolResult } from '@chrischall/mcp-utils/test';
 
 const gql = vi.spyOn(client, 'gql').mockResolvedValue(undefined as never);
@@ -38,16 +38,16 @@ describe('notification tools', () => {
   it('vibo_mark_notifications_read previews then marks specific ids', async () => {
     const preview = await harness.callTool('vibo_mark_notifications_read', { notificationIds: ['n1'] });
     expect(gql).not.toHaveBeenCalled();
-    expect(parseToolResult<{ preview: boolean }>(preview).preview).toBe(true);
+    expect(parseToolResult<{ status: string }>(preview).status).toBe('confirmation-required');
 
     gql.mockResolvedValue({ markAsRead: true });
-    await harness.callTool('vibo_mark_notifications_read', { notificationIds: ['n1'], confirm: true });
+    await confirmCall(harness, 'vibo_mark_notifications_read', { notificationIds: ['n1'] }, gql);
     expect(gql).toHaveBeenCalledWith(MARK_AS_READ, { notificationIds: ['n1'] });
   });
 
   it('vibo_mark_notifications_read supports readAll', async () => {
     gql.mockResolvedValue({ markAsRead: true });
-    await harness.callTool('vibo_mark_notifications_read', { readAll: true, confirm: true });
+    await confirmCall(harness, 'vibo_mark_notifications_read', { readAll: true }, gql);
     expect(gql).toHaveBeenCalledWith(MARK_AS_READ, { readAll: true });
   });
 

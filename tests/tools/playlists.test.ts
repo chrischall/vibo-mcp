@@ -7,7 +7,7 @@ import {
   EXPORT_EVENT_TO_SPOTIFY,
   EXPORT_EVENT_TO_APPLE_MUSIC,
 } from '../../src/gql.js';
-import { createTestHarness } from '../helpers.js';
+import { createTestHarness, confirmCall } from '../helpers.js';
 import { parseToolResult } from '@chrischall/mcp-utils/test';
 
 const gql = vi.spyOn(client, 'gql').mockResolvedValue(undefined as never);
@@ -41,10 +41,10 @@ describe('playlist tools', () => {
     const args = { eventId: 'e1', sectionIds: ['s1', 's2'], title: 'My Set' };
     const preview = await harness.callTool('vibo_export_event_to_spotify', args);
     expect(gql).not.toHaveBeenCalled();
-    expect(parseToolResult<{ preview: boolean }>(preview).preview).toBe(true);
+    expect(parseToolResult<{ status: string }>(preview).status).toBe('confirmation-required');
 
     gql.mockResolvedValue({ exportEventToSpotify: { playlistUrl: 'https://open.spotify/x' } });
-    const res = await harness.callTool('vibo_export_event_to_spotify', { ...args, confirm: true });
+    const res = await confirmCall(harness, 'vibo_export_event_to_spotify', args, gql);
     expect(gql).toHaveBeenCalledWith(EXPORT_EVENT_TO_SPOTIFY, {
       eventId: 'e1',
       sectionIds: ['s1', 's2'],
@@ -53,11 +53,11 @@ describe('playlist tools', () => {
     expect(parseToolResult<{ playlistUrl: string }>(res).playlistUrl).toContain('spotify');
   });
 
-  it('vibo_export_event_to_apple_music is confirm-gated', async () => {
+  it('vibo_export_event_to_apple_music is confirmation-gated', async () => {
     await harness.callTool('vibo_export_event_to_apple_music', { eventId: 'e1', sectionIds: ['s1'] });
     expect(gql).not.toHaveBeenCalled();
     gql.mockResolvedValue({ exportEventToAppleMusic: { playlistUrl: 'https://music.apple/x' } });
-    await harness.callTool('vibo_export_event_to_apple_music', { eventId: 'e1', sectionIds: ['s1'], confirm: true });
+    await confirmCall(harness, 'vibo_export_event_to_apple_music', { eventId: 'e1', sectionIds: ['s1'] }, gql);
     expect(gql).toHaveBeenCalledWith(EXPORT_EVENT_TO_APPLE_MUSIC, { eventId: 'e1', sectionIds: ['s1'] });
   });
 });

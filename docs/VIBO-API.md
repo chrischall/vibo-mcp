@@ -62,7 +62,7 @@ Reads: `getMe`, `upcomingEvents`, `historyEvents`, `event`, `sections`,
 `getSectionSongs`, `getSongs` (search), `getEventSectionQuestionsV2`,
 `getPlaylists`, `getPlaylistSongs`, `getNotifications`, `getNotificationsCount`.
 
-Writes (confirm-gated): `addSongToSection`, `toggleLike`, `joinEventViaDeepLink`
+Writes (confirmation-gated — see README "Confirmations"): `addSongToSection`, `toggleLike`, `joinEventViaDeepLink`
 / `joinEventByHash`, `leaveEvent`, `createEventContact`,
 `answerEventSectionQuestionV2`, `exportEventToSpotify`,
 `exportEventToAppleMusic`, `markAsRead`.

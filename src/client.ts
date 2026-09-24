@@ -138,9 +138,9 @@ function isMutation(query: string): boolean {
  * connection, caller abort). For a READ that is safely retryable. For a WRITE
  * the outcome is unknown — Vibo may already have committed it — and a blind
  * retry repeats the side effect (a second round of invitation emails, a
- * second exported playlist, a duplicate comment or import); the confirm gate
- * cannot stop that, because the retry carries confirm:true. So a write says
- * so, and asks for a state check first.
+ * second exported playlist, a duplicate comment or import); the confirmation
+ * gate cannot stop that, because a fresh preview earns a fresh approval and
+ * token. So a write says so, and asks for a state check first.
  */
 function transportError(what: string, err: unknown, isWrite: boolean): McpToolError {
   const reason = err instanceof Error && err.name === 'TimeoutError' ? 'timed out' : 'failed';

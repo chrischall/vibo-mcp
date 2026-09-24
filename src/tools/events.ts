@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/server';
-import { McpToolError, minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
+import { McpToolError, minifiedResult, confirmTokenParam, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import {
   LIST_UPCOMING_EVENTS,
@@ -11,7 +11,7 @@ import {
   LEAVE_EVENT,
   CREATE_EVENT_CONTACT,
 } from '../gql.js';
-import { limitSchema, skipSchema, pagination, previewResult } from './shared.js';
+import { limitSchema, skipSchema, pagination, confirmWrite, CONFIRM_NOTE } from './shared.js';
 
 export function registerEventTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
@@ -58,20 +58,26 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
     'vibo_join_event',
     {
       description:
-        "Join an event you were invited to, via its share link or hash (e.g. a vibodj.app.link/... URL someone sent you). Returns the joined event's id. Confirm-gated.",
+        "Join an event you were invited to, via its share link or hash (e.g. a vibodj.app.link/... URL someone sent you). Returns the joined event's id. " + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Join Vibo event', readOnly: false, destructive: false }),
       inputSchema: z.object({
         link: z
           .string()
           .describe('The full event share URL (vibodj.app.link/... or web.vibodj.com/...) or the bare join hash.'),
-        confirm: schemaConfirm,
+        confirmToken: confirmTokenParam,
       }),
     },
-    async ({ link, confirm }) => {
+    async ({ link, confirmToken }, ctx) => {
       const isUrl = /^https?:\/\//i.test(link);
-      if (!confirm) {
-        return previewResult('joinEvent', isUrl ? { deepLink: link } : { hash: link });
-      }
+      const gate = await confirmWrite(ctx, {
+        tool: 'vibo_join_event',
+        mutation: 'joinEvent',
+        message: 'Review and confirm joining this event:',
+        confirmToken,
+        target: link,
+        willSend: isUrl ? { deepLink: link } : { hash: link },
+      });
+      if (gate) return gate;
       if (isUrl) {
         const data = await client.gql<{ joinEventViaDeepLink: { _id: string } }>(JOIN_EVENT_BY_DEEP_LINK, {
           deepLink: link,
@@ -86,15 +92,23 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
   server.registerTool(
     'vibo_leave_event',
     {
-      description: 'Leave an event you previously joined. Confirm-gated.',
+      description: 'Leave an event you previously joined. ' + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Leave Vibo event', readOnly: false, destructive: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id to leave.'),
-        confirm: schemaConfirm,
+        confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, confirm }) => {
-      if (!confirm) return previewResult('leaveEvent', { eventId });
+    async ({ eventId, confirmToken }, ctx) => {
+      const gate = await confirmWrite(ctx, {
+        tool: 'vibo_leave_event',
+        mutation: 'leaveEvent',
+        message: 'Review and confirm leaving this event:',
+        confirmToken,
+        target: eventId,
+        willSend: { eventId },
+      });
+      if (gate) return gate;
       const data = await client.gql<{ leaveEvent: unknown }>(LEAVE_EVENT, { eventId });
       return minifiedResult({ left: true, eventId, result: data.leaveEvent });
     },
@@ -104,7 +118,7 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
     'vibo_create_event_contact',
     {
       description:
-        'Add a contact (host or guest) to an event with their name/email/phone. Confirm-gated.',
+        'Add a contact (host or guest) to an event with their name/email/phone. ' + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Add Vibo event contact', readOnly: false, destructive: false }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
@@ -114,10 +128,10 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
         lastName: z.string().optional(),
         phoneCode: z.string().optional().describe('Country calling code, e.g. "1".'),
         phoneNumber: z.string().optional(),
-        confirm: schemaConfirm,
+        confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, role, email, firstName, lastName, phoneCode, phoneNumber, confirm }) => {
+    async ({ eventId, role, email, firstName, lastName, phoneCode, phoneNumber, confirmToken }, ctx) => {
       const payload: Record<string, unknown> = { role, email };
       if (firstName !== undefined) payload.firstName = firstName;
       if (lastName !== undefined) payload.lastName = lastName;
@@ -128,7 +142,15 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
           hint: 'Pass phoneCode (e.g. "1") alongside phoneNumber.',
         });
       }
-      if (!confirm) return previewResult('createEventContact', { eventId, payload });
+      const gate = await confirmWrite(ctx, {
+        tool: 'vibo_create_event_contact',
+        mutation: 'createEventContact',
+        message: 'Review and confirm adding this event contact:',
+        confirmToken,
+        target: eventId,
+        willSend: { eventId, payload },
+      });
+      if (gate) return gate;
       const data = await client.gql<{ createEventContact: unknown }>(CREATE_EVENT_CONTACT, { eventId, payload });
       return minifiedResult(data.createEventContact);
     },
