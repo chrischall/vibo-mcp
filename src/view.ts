@@ -19,6 +19,11 @@ import { minifiedResult, resolveView, stripMediaUrls, viewParam, type View } fro
  * When a real payload can be captured, a field projection belongs here beside
  * this one and will save considerably more. Until then this is the honest
  * ceiling, and this docblock says so rather than implying a shape was checked.
+ *
+ * One exception: `vibo_list_event_users` projects its members to
+ * `{_id, firstName, lastName, role}` on compact, because its document's field
+ * list is fixed by the query and the dropped `email` is third-party PII
+ * (fleet-audit #1136). See `membersForView` in `tools/collaboration.ts`.
  */
 export const VIBO_VIEWS = ['compact', 'full'] as const;
 
