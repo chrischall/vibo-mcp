@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/server';
-import { minifiedResult, schemaConfirm, toolAnnotations } from '@chrischall/mcp-utils';
+import { minifiedResult, confirmTokenParam, toolAnnotations } from '@chrischall/mcp-utils';
 import { viewArg, viewResponse } from '../view.js';
 import type { ViboClient } from '../client.js';
 import { GET_SECTION_SONGS, SEARCH_SONGS, ADD_SONG_TO_SECTION, TOGGLE_LIKE } from '../gql.js';
 import { annotateSearchResults, type SearchSong } from '../song-search.js';
-import { limitSchema, skipSchema, pagination, previewResult } from './shared.js';
+import { limitSchema, skipSchema, pagination, confirmWrite, CONFIRM_NOTE } from './shared.js';
 
 export function registerSongTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
@@ -111,7 +111,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         'include viboSongId/title/artist when known). Before adding, check that result\'s ' +
         '`quality.confidence`: adding a `likely-not-original` result puts a cover, karaoke ' +
         'track or junk-metadata re-upload in front of a live DJ. If nothing looks original, ' +
-        'report the closest matches back rather than adding a best guess. Confirm-gated.',
+        'report the closest matches back rather than adding a best guess. ' + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Add song to Vibo section', readOnly: false, destructive: false }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
@@ -120,16 +120,24 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         viboSongId: z.string().optional().describe("The song's viboSongId from search, when available."),
         title: z.string().optional(),
         artist: z.string().optional(),
-        confirm: schemaConfirm,
+        confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, sectionId, songUrl, viboSongId, title, artist, confirm }) => {
+    async ({ eventId, sectionId, songUrl, viboSongId, title, artist, confirmToken }, ctx) => {
       const song: Record<string, unknown> = { songUrl };
       if (viboSongId !== undefined) song.viboSongId = viboSongId;
       if (title !== undefined) song.title = title;
       if (artist !== undefined) song.artist = artist;
       const payload = { song };
-      if (!confirm) return previewResult('addSongToSection', { eventId, sectionId, payload });
+      const gate = await confirmWrite(ctx, {
+        tool: 'vibo_add_song_to_section',
+        mutation: 'addSongToSection',
+        message: 'Review and confirm adding this song:',
+        confirmToken,
+        target: sectionId,
+        willSend: { eventId, sectionId, payload },
+      });
+      if (gate) return gate;
       const data = await client.gql<{ addSongToSection: unknown }>(ADD_SONG_TO_SECTION, {
         eventId,
         sectionId,
@@ -142,18 +150,26 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
     'vibo_toggle_song_like',
     {
-      description: 'Like or unlike a song in a section. Confirm-gated.',
+      description: 'Like or unlike a song in a section. ' + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Like/unlike Vibo song', readOnly: false, destructive: false }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),
         songId: z.string().describe('Song _id (from vibo_get_section_songs).'),
         liked: z.boolean().describe('true to like, false to unlike.'),
-        confirm: schemaConfirm,
+        confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, sectionId, songId, liked, confirm }) => {
-      if (!confirm) return previewResult('toggleLike', { eventId, sectionId, songId, liked });
+    async ({ eventId, sectionId, songId, liked, confirmToken }, ctx) => {
+      const gate = await confirmWrite(ctx, {
+        tool: 'vibo_toggle_song_like',
+        mutation: 'toggleLike',
+        message: 'Review and confirm this like/unlike:',
+        confirmToken,
+        target: songId,
+        willSend: { eventId, sectionId, songId, liked },
+      });
+      if (gate) return gate;
       const data = await client.gql<{ toggleLike: { liked: boolean } }>(TOGGLE_LIKE, {
         eventId,
         sectionId,

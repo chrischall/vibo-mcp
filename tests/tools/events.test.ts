@@ -10,7 +10,7 @@ import {
   LEAVE_EVENT,
   CREATE_EVENT_CONTACT,
 } from '../../src/gql.js';
-import { createTestHarness } from '../helpers.js';
+import { createTestHarness, confirmCall } from '../helpers.js';
 import { parseToolResult } from '@chrischall/mcp-utils/test';
 
 const gql = vi.spyOn(client, 'gql').mockResolvedValue(undefined as never);
@@ -47,41 +47,41 @@ describe('event tools', () => {
     expect(gql).toHaveBeenCalledWith(GET_EVENT, { eventId: 'e1' });
   });
 
-  it('vibo_join_event previews without confirm (no network)', async () => {
+  it('vibo_join_event previews without a token (no network)', async () => {
     const res = await harness.callTool('vibo_join_event', { link: 'https://vibodj.app.link/abc' });
     expect(gql).not.toHaveBeenCalled();
-    expect(parseToolResult<{ preview: boolean }>(res).preview).toBe(true);
+    expect(parseToolResult<{ status: string }>(res).status).toBe('confirmation-required');
   });
 
   it('vibo_join_event treats a URL as a deep link', async () => {
     gql.mockResolvedValue({ joinEventViaDeepLink: { _id: 'e9' } });
-    const res = await harness.callTool('vibo_join_event', { link: 'https://vibodj.app.link/abc', confirm: true });
+    const res = await confirmCall(harness, 'vibo_join_event', { link: 'https://vibodj.app.link/abc' }, gql);
     expect(gql).toHaveBeenCalledWith(JOIN_EVENT_BY_DEEP_LINK, { deepLink: 'https://vibodj.app.link/abc' });
     expect(parseToolResult(res)).toEqual({ joined: true, eventId: 'e9' });
   });
 
   it('vibo_join_event treats a bare token as a hash', async () => {
     gql.mockResolvedValue({ joinEventByHash: { _id: 'e9' } });
-    await harness.callTool('vibo_join_event', { link: 'dl4V2lOe03b', confirm: true });
+    await confirmCall(harness, 'vibo_join_event', { link: 'dl4V2lOe03b' }, gql);
     expect(gql).toHaveBeenCalledWith(JOIN_EVENT_BY_HASH, { hash: 'dl4V2lOe03b' });
   });
 
-  it('vibo_leave_event is confirm-gated', async () => {
+  it('vibo_leave_event is confirmation-gated', async () => {
     await harness.callTool('vibo_leave_event', { eventId: 'e1' });
     expect(gql).not.toHaveBeenCalled();
     gql.mockResolvedValue({ leaveEvent: true });
-    await harness.callTool('vibo_leave_event', { eventId: 'e1', confirm: true });
+    await confirmCall(harness, 'vibo_leave_event', { eventId: 'e1' }, gql);
     expect(gql).toHaveBeenCalledWith(LEAVE_EVENT, { eventId: 'e1' });
   });
 
-  it('vibo_create_event_contact builds the payload and is confirm-gated', async () => {
+  it('vibo_create_event_contact builds the payload and is confirmation-gated', async () => {
     const args = { eventId: 'e1', role: 'guest', email: 'g@example.com', firstName: 'Sam' };
     const preview = await harness.callTool('vibo_create_event_contact', args);
     expect(gql).not.toHaveBeenCalled();
-    expect(parseToolResult<{ preview: boolean }>(preview).preview).toBe(true);
+    expect(parseToolResult<{ status: string }>(preview).status).toBe('confirmation-required');
 
     gql.mockResolvedValue({ createEventContact: { _id: 'c1' } });
-    await harness.callTool('vibo_create_event_contact', { ...args, confirm: true });
+    await confirmCall(harness, 'vibo_create_event_contact', args, gql);
     expect(gql).toHaveBeenCalledWith(CREATE_EVENT_CONTACT, {
       eventId: 'e1',
       payload: { role: 'guest', email: 'g@example.com', firstName: 'Sam' },
@@ -94,7 +94,6 @@ describe('event tools', () => {
       role: 'host',
       email: 'h@example.com',
       phoneNumber: '5551234',
-      confirm: true,
     });
     expect(res.isError).toBeTruthy();
     expect(gql).not.toHaveBeenCalled();

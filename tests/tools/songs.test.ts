@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import { client } from '../../src/client.js';
 import { registerSongTools } from '../../src/tools/songs.js';
 import { GET_SECTION_SONGS, SEARCH_SONGS, ADD_SONG_TO_SECTION, TOGGLE_LIKE } from '../../src/gql.js';
-import { createTestHarness } from '../helpers.js';
+import { createTestHarness, confirmCall } from '../helpers.js';
 import { parseToolResult } from '@chrischall/mcp-utils/test';
 
 const gql = vi.spyOn(client, 'gql').mockResolvedValue(undefined as never);
@@ -177,10 +177,10 @@ describe('song tools', () => {
     const args = { eventId: 'e1', sectionId: 's1', songUrl: 'https://x/y', viboSongId: 'v1', title: 'T', artist: 'A' };
     const preview = await harness.callTool('vibo_add_song_to_section', args);
     expect(gql).not.toHaveBeenCalled();
-    expect(parseToolResult<{ preview: boolean }>(preview).preview).toBe(true);
+    expect(parseToolResult<{ status: string }>(preview).status).toBe('confirmation-required');
 
     gql.mockResolvedValue({ addSongToSection: { added: true } });
-    await harness.callTool('vibo_add_song_to_section', { ...args, confirm: true });
+    await confirmCall(harness, 'vibo_add_song_to_section', args, gql);
     expect(gql).toHaveBeenCalledWith(ADD_SONG_TO_SECTION, {
       eventId: 'e1',
       sectionId: 's1',
@@ -188,12 +188,12 @@ describe('song tools', () => {
     });
   });
 
-  it('vibo_toggle_song_like is confirm-gated', async () => {
+  it('vibo_toggle_song_like is confirmation-gated', async () => {
     const args = { eventId: 'e1', sectionId: 's1', songId: 'so1', liked: true };
     await harness.callTool('vibo_toggle_song_like', args);
     expect(gql).not.toHaveBeenCalled();
     gql.mockResolvedValue({ toggleLike: { liked: true } });
-    await harness.callTool('vibo_toggle_song_like', { ...args, confirm: true });
+    await confirmCall(harness, 'vibo_toggle_song_like', args, gql);
     expect(gql).toHaveBeenCalledWith(TOGGLE_LIKE, args);
   });
 

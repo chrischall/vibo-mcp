@@ -64,9 +64,16 @@ config error only appears on the first tool call.
 - `vibo_list_notifications` / `vibo_get_notifications_count`.
 - `vibo_healthcheck` — confirm connectivity + auth.
 
-### Writes (confirm-gated)
-Each mutating tool makes **no** network call unless `confirm: true`; without it
-you get a dry-run preview of exactly what would be sent.
+### Writes (confirmation-gated)
+Each mutating tool asks the user to confirm before anything is sent. Where the
+client can show a confirmation prompt, it does. Otherwise the first call makes
+**no** network call and returns `status: "confirmation-required"` with a preview
+of exactly what would be sent (`preview.action` + `preview.willSend`) and a
+`confirmToken`. Show that preview to the user, and only after they approve in
+chat call the tool again with the **same arguments** plus `confirmToken`. A
+token works once; changing any argument is refused as `DRAFT_CHANGED` (with a
+fresh preview and token to re-approve), and a reused one as `TOKEN_REUSED`.
+`MCP_CONFIRM_MODE` (`ask-user` default / `auto` / `refuse`) controls this flow.
 
 - `vibo_add_song_to_section` — add a searched song to a section.
 - `vibo_remove_song_from_section` / `vibo_move_song` / `vibo_reorder_songs`.
@@ -125,8 +132,8 @@ would silently alias one that exists.
 
 ### The other 33 tools have no `view`
 
-- **The 24 mutating tools** (every confirm-gated write, plus
-  `vibo_capture_session`) answer with a dry-run preview or a receipt — an id,
+- **The 24 mutating tools** (every confirmation-gated write, plus
+  `vibo_capture_session`) answer with a confirmation preview or a receipt — an id,
   a count, a status. Nothing in a receipt is decoration, and slimming one is
   how you lose the field that says what actually happened.
 - **`vibo_healthcheck`** answers with a connectivity/auth diagnostic. It runs
@@ -145,4 +152,5 @@ the table above rather than assuming.
 1. `vibo_list_events` → pick an event id.
 2. `vibo_list_sections` → pick a section id.
 3. `vibo_search_songs` → get a song's `songUrl`/`viboSongId`.
-4. `vibo_add_song_to_section` (with `confirm: true`).
+4. `vibo_add_song_to_section` — show the user the preview it returns, then call
+   again with the `confirmToken` once they approve.

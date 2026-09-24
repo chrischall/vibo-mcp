@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import { client } from '../../src/client.js';
 import { registerSectionEditTools } from '../../src/tools/section-edit.js';
 import { UPDATE_SECTION } from '../../src/gql.js';
-import { createTestHarness } from '../helpers.js';
+import { createTestHarness, confirmCall } from '../helpers.js';
 import { parseToolResult } from '@chrischall/mcp-utils/test';
 
 const gql = vi.spyOn(client, 'gql').mockResolvedValue(undefined as never);
@@ -17,25 +17,24 @@ describe('section edit tools', () => {
   });
 
   it('vibo_update_section errors when no fields are provided', async () => {
-    const res = await harness.callTool('vibo_update_section', { eventId: 'e1', sectionId: 's1', confirm: true });
+    const res = await harness.callTool('vibo_update_section', { eventId: 'e1', sectionId: 's1' });
     expect(res.isError).toBeTruthy();
     expect(gql).not.toHaveBeenCalled();
   });
 
-  it('vibo_update_section previews without confirm (no network)', async () => {
+  it('vibo_update_section previews without a token (no network)', async () => {
     const res = await harness.callTool('vibo_update_section', { eventId: 'e1', sectionId: 's1', name: 'Cocktails' });
     expect(gql).not.toHaveBeenCalled();
-    expect(parseToolResult<{ preview: boolean }>(res).preview).toBe(true);
+    expect(parseToolResult<{ status: string }>(res).status).toBe('confirmation-required');
   });
 
-  it('vibo_update_section builds the payload from only provided fields and is confirm-gated', async () => {
+  it('vibo_update_section builds the payload from only provided fields and is confirmation-gated', async () => {
     gql.mockResolvedValue({ updateSection: { _id: 's1' } });
-    await harness.callTool('vibo_update_section', {
+    await confirmCall(harness, 'vibo_update_section', {
       eventId: 'e1',
       sectionId: 's1',
       note: 'Play something upbeat',
-      confirm: true,
-    });
+    }, gql);
     expect(gql).toHaveBeenCalledWith(UPDATE_SECTION, {
       eventId: 'e1',
       sectionId: 's1',

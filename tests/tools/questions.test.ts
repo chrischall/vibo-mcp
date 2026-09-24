@@ -3,7 +3,7 @@ import { client } from '../../src/client.js';
 import { registerQuestionTools } from '../../src/tools/questions.js';
 import { LIST_SECTION_QUESTIONS, ANSWER_SECTION_QUESTION } from '../../src/gql.js';
 import type { UploadFile, FileRef } from '../../src/upload-source.js';
-import { createTestHarness } from '../helpers.js';
+import { createTestHarness, confirmCall } from '../helpers.js';
 import { parseToolResult } from '@chrischall/mcp-utils/test';
 
 const gql = vi.spyOn(client, 'gql').mockResolvedValue(undefined as never);
@@ -52,15 +52,14 @@ describe('question tools', () => {
     expect(gql).not.toHaveBeenCalled();
   });
 
-  it('vibo_answer_question sends a link answer with confirm', async () => {
+  it('vibo_answer_question sends a link answer after confirmation', async () => {
     gql.mockResolvedValue({ answerEventSectionQuestionV2: { progress: 0.25 } });
-    await harness.callTool('vibo_answer_question', {
+    await confirmCall(harness, 'vibo_answer_question', {
       eventId: 'e1',
       sectionId: 's1',
       questionId: 'q3',
       link: ['https://youtu.be/abc'],
-      confirm: true,
-    });
+    }, gql, gqlUpload);
     expect(gql).toHaveBeenCalledWith(ANSWER_SECTION_QUESTION, {
       eventId: 'e1',
       sectionId: 's1',
@@ -69,7 +68,7 @@ describe('question tools', () => {
     });
   });
 
-  it('vibo_answer_question previews a text answer without confirm', async () => {
+  it('vibo_answer_question previews a text answer without a token', async () => {
     const res = await harness.callTool('vibo_answer_question', {
       eventId: 'e1',
       sectionId: 's1',
@@ -77,18 +76,17 @@ describe('question tools', () => {
       text: 'Navy and gold',
     });
     expect(gql).not.toHaveBeenCalled();
-    expect(parseToolResult<{ preview: boolean }>(res).preview).toBe(true);
+    expect(parseToolResult<{ status: string }>(res).status).toBe('confirmation-required');
   });
 
-  it('vibo_answer_question sends a text answer with confirm', async () => {
+  it('vibo_answer_question sends a text answer after confirmation', async () => {
     gql.mockResolvedValue({ answerEventSectionQuestionV2: { progress: 0.5 } });
-    await harness.callTool('vibo_answer_question', {
+    await confirmCall(harness, 'vibo_answer_question', {
       eventId: 'e1',
       sectionId: 's1',
       questionId: 'q1',
       text: 'Navy and gold',
-      confirm: true,
-    });
+    }, gql, gqlUpload);
     expect(gql).toHaveBeenCalledWith(ANSWER_SECTION_QUESTION, {
       eventId: 'e1',
       sectionId: 's1',
@@ -99,14 +97,13 @@ describe('question tools', () => {
 
   it('vibo_answer_question sends selectedOptions for a radio/checkbox answer', async () => {
     gql.mockResolvedValue({ answerEventSectionQuestionV2: { progress: 1 } });
-    await harness.callTool('vibo_answer_question', {
+    await confirmCall(harness, 'vibo_answer_question', {
       eventId: 'e1',
       sectionId: 's1',
       questionId: 'q2',
       selectedOptions: ['optA', 'optB'],
       otherOptionTitle: 'Surprise me',
-      confirm: true,
-    });
+    }, gql, gqlUpload);
     expect(gql).toHaveBeenCalledWith(ANSWER_SECTION_QUESTION, {
       eventId: 'e1',
       sectionId: 's1',
@@ -117,14 +114,13 @@ describe('question tools', () => {
 
   it('vibo_answer_question routes local-path image/file answers through the multipart upload path', async () => {
     gqlUpload.mockResolvedValue({ answerEventSectionQuestionV2: { progress: 1 } });
-    await harness.callTool('vibo_answer_question', {
+    await confirmCall(harness, 'vibo_answer_question', {
       eventId: 'e1',
       sectionId: 's1',
       questionId: 'q3',
       imagePaths: ['/tmp/a.jpg', '/tmp/b.jpg'],
       filePaths: ['/tmp/c.pdf'],
-      confirm: true,
-    });
+    }, gql, gqlUpload);
     // JSON path is not used; the upload path carries null placeholders + resolved blobs.
     expect(gql).not.toHaveBeenCalled();
     expect(resolve).toHaveBeenCalledWith({ path: '/tmp/a.jpg', kind: 'image' });
@@ -148,13 +144,12 @@ describe('question tools', () => {
 
   it('vibo_answer_question routes inline base64 image answers (the no-local-filesystem path)', async () => {
     gqlUpload.mockResolvedValue({ answerEventSectionQuestionV2: { progress: 1 } });
-    await harness.callTool('vibo_answer_question', {
+    await confirmCall(harness, 'vibo_answer_question', {
       eventId: 'e1',
       sectionId: 's1',
       questionId: 'q3',
       images: [{ data: 'aGk=', filename: 'a.png' }],
-      confirm: true,
-    });
+    }, gql, gqlUpload);
     expect(gql).not.toHaveBeenCalled();
     expect(resolve).toHaveBeenCalledWith({ data: 'aGk=', filename: 'a.png' });
     expect(gqlUpload).toHaveBeenCalledWith(
@@ -179,6 +174,6 @@ describe('question tools', () => {
     expect(resolve).not.toHaveBeenCalled();
     expect(gqlUpload).not.toHaveBeenCalled();
     expect(gql).not.toHaveBeenCalled();
-    expect(parseToolResult<{ preview: boolean }>(res).preview).toBe(true);
+    expect(parseToolResult<{ status: string }>(res).status).toBe('confirmation-required');
   });
 });

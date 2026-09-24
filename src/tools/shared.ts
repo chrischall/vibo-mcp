@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { minifiedResult } from '@chrischall/mcp-utils';
+import type { ServerContext } from '@modelcontextprotocol/server';
+import { confirmationFromEnv, requireConfirmationWithFallback } from '@chrischall/mcp-utils';
 
 /** Pagination knobs shared by the list tools (maps to Vibo's PaginationInput). */
 export const limitSchema = z
@@ -33,15 +34,54 @@ export const inlineFileSchema = z.object({
 });
 
 /**
- * Dry-run response for a confirm-gated write. Returned WITHOUT making any
- * network call when `confirm` is not `true`, so the caller can see exactly what
- * would be sent before committing.
+ * The sentence every gated tool's description ends with, so the model knows a
+ * first call may only preview.
  */
-export function previewResult(action: string, willSend: Record<string, unknown>) {
-  return minifiedResult({
-    preview: true,
-    action,
-    willSend,
-    note: 'No changes were made. Re-run with confirm: true to execute.',
-  });
+export const CONFIRM_NOTE =
+  'Asks the user to confirm first: a confirmation prompt where the client supports one; otherwise the first ' +
+  'call returns a preview and a confirmToken, and only a repeat call with that token proceeds (see MCP_CONFIRM_MODE).';
+
+export interface ConfirmWriteOptions {
+  /** The tool name the confirmation is bound to, e.g. `vibo_leave_event`. */
+  tool: string;
+  /** The GraphQL operation the write runs — shown to the user. */
+  mutation: string;
+  /** The prompt line shown above the preview. */
+  message: string;
+  /** The phase-2 token from the tool's input, or undefined. */
+  confirmToken?: string;
+  /** The primary id acted on, or '' when there is none. */
+  target: string;
+  /** What the write sends, as the user should see it. */
+  willSend: Record<string, unknown>;
+  /**
+   * What is hashed into the token, when it must hold more than `willSend`
+   * shows (inline upload bytes the preview summarises). Defaults to `willSend`.
+   */
+  payload?: unknown;
+}
+
+/**
+ * Gate a write behind a confirmation: an elicitation prompt where the client
+ * can show one, else the two-phase confirm-token flow (MCP_CONFIRM_MODE).
+ * `undefined` means proceed; anything else is the result to return unchanged.
+ * Nothing here makes a network call, so phase 1 never writes.
+ */
+export function confirmWrite(ctx: ServerContext, options: ConfirmWriteOptions) {
+  const preview = { action: options.mutation, willSend: options.willSend };
+  return requireConfirmationWithFallback(
+    ctx,
+    confirmationFromEnv({
+      action: options.tool.replace(/^vibo_/, 'vibo.'),
+      message: options.message,
+      details: preview,
+      tool: options.tool,
+      confirmToken: options.confirmToken,
+      subject: () => ({
+        target: options.target,
+        payload: options.payload ?? options.willSend,
+        preview,
+      }),
+    }),
+  );
 }

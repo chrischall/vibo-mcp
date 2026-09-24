@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import { client } from '../../src/client.js';
 import { registerCollaborationTools } from '../../src/tools/collaboration.js';
 import { LIST_EVENT_USERS, INVITE_USERS, CHANGE_USER_ROLE, REMOVE_USER } from '../../src/gql.js';
-import { createTestHarness } from '../helpers.js';
+import { createTestHarness, confirmCall } from '../helpers.js';
 import { parseToolResult } from '@chrischall/mcp-utils/test';
 
 const gql = vi.spyOn(client, 'gql').mockResolvedValue(undefined as never);
@@ -44,7 +44,7 @@ describe('collaboration tools', () => {
     expect(parseToolResult(res)).toEqual({ users: [{ _id: 'u1' }], totalCount: 1, usersType: 'host' });
   });
 
-  it('vibo_invite_users previews without confirm (no network)', async () => {
+  it('vibo_invite_users previews without a token (no network)', async () => {
     const res = await harness.callTool('vibo_invite_users', {
       eventId: 'e1',
       type: 'guest',
@@ -52,18 +52,17 @@ describe('collaboration tools', () => {
       emails: ['a@example.com'],
     });
     expect(gql).not.toHaveBeenCalled();
-    expect(parseToolResult<{ preview: boolean }>(res).preview).toBe(true);
+    expect(parseToolResult<{ status: string }>(res).status).toBe('confirmation-required');
   });
 
-  it('vibo_invite_users sends the mutation with confirm', async () => {
+  it('vibo_invite_users sends the mutation after confirmation', async () => {
     gql.mockResolvedValue({ inviteUserViaEmail: true });
-    await harness.callTool('vibo_invite_users', {
+    await confirmCall(harness, 'vibo_invite_users', {
       eventId: 'e1',
       type: 'guest',
       text: 'Join us!',
       emails: ['a@example.com', 'b@example.com'],
-      confirm: true,
-    });
+    }, gql);
     expect(gql).toHaveBeenCalledWith(INVITE_USERS, {
       eventId: 'e1',
       type: 'guest',
@@ -72,36 +71,35 @@ describe('collaboration tools', () => {
     });
   });
 
-  it('vibo_change_user_role previews without confirm (no network)', async () => {
+  it('vibo_change_user_role previews without a token (no network)', async () => {
     const res = await harness.callTool('vibo_change_user_role', {
       eventId: 'e1',
       userId: 'u1',
       type: 'host',
     });
     expect(gql).not.toHaveBeenCalled();
-    expect(parseToolResult<{ preview: boolean }>(res).preview).toBe(true);
+    expect(parseToolResult<{ status: string }>(res).status).toBe('confirmation-required');
   });
 
-  it('vibo_change_user_role sends the mutation with confirm', async () => {
+  it('vibo_change_user_role sends the mutation after confirmation', async () => {
     gql.mockResolvedValue({ changeUserTypeInEvent: true });
-    await harness.callTool('vibo_change_user_role', {
+    await confirmCall(harness, 'vibo_change_user_role', {
       eventId: 'e1',
       userId: 'u1',
       type: 'host',
-      confirm: true,
-    });
+    }, gql);
     expect(gql).toHaveBeenCalledWith(CHANGE_USER_ROLE, { eventId: 'e1', userId: 'u1', type: 'host' });
   });
 
-  it('vibo_remove_user previews without confirm (no network)', async () => {
+  it('vibo_remove_user previews without a token (no network)', async () => {
     const res = await harness.callTool('vibo_remove_user', { eventId: 'e1', userId: 'u1' });
     expect(gql).not.toHaveBeenCalled();
-    expect(parseToolResult<{ preview: boolean }>(res).preview).toBe(true);
+    expect(parseToolResult<{ status: string }>(res).status).toBe('confirmation-required');
   });
 
-  it('vibo_remove_user sends the mutation with confirm', async () => {
+  it('vibo_remove_user sends the mutation after confirmation', async () => {
     gql.mockResolvedValue({ removeUserFromEvent: true });
-    await harness.callTool('vibo_remove_user', { eventId: 'e1', userId: 'u1', confirm: true });
+    await confirmCall(harness, 'vibo_remove_user', { eventId: 'e1', userId: 'u1' }, gql);
     expect(gql).toHaveBeenCalledWith(REMOVE_USER, { eventId: 'e1', userId: 'u1' });
   });
 

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import { client } from '../../src/client.js';
 import { registerImportTools } from '../../src/tools/imports.js';
 import { IMPORT_PLAYLIST_TO_SECTION } from '../../src/gql.js';
-import { createTestHarness } from '../helpers.js';
+import { createTestHarness, confirmCall } from '../helpers.js';
 import { parseToolResult } from '@chrischall/mcp-utils/test';
 
 const gql = vi.spyOn(client, 'gql').mockResolvedValue(undefined as never);
@@ -25,19 +25,18 @@ describe('import tools', () => {
       tracksToAdd: ['t1', 't2'],
     });
     expect(gql).not.toHaveBeenCalled();
-    expect(parseToolResult<{ preview: boolean }>(preview).preview).toBe(true);
+    expect(parseToolResult<{ status: string }>(preview).status).toBe('confirmation-required');
   });
 
-  it('vibo_import_playlist_to_section imports with confirm', async () => {
+  it('vibo_import_playlist_to_section imports after confirmation', async () => {
     gql.mockResolvedValue({ importPlaylistToSectionWeb: { added: 2, existing: 0, ignored: 0 } });
-    await harness.callTool('vibo_import_playlist_to_section', {
+    await confirmCall(harness, 'vibo_import_playlist_to_section', {
       eventId: 'e1',
       sectionId: 's1',
       source: 'spotify',
       playlistId: 'p1',
       tracksToAdd: ['t1', 't2'],
-      confirm: true,
-    });
+    }, gql);
     expect(gql).toHaveBeenCalledWith(IMPORT_PLAYLIST_TO_SECTION, {
       eventId: 'e1',
       sectionId: 's1',
