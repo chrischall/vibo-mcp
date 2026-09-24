@@ -140,6 +140,8 @@ See `docs/VIBO-API.md` for the pinned input shapes.
   each in earnest.
 - `eventUsers` returns nothing unless `usersType` is set, so
   `vibo_list_event_users` queries host+guest and merges when no filter is given.
+  Its compact (default) rung projects members to `{_id, firstName, lastName,
+  role}`; other members' emails come back only on `view: 'full'`.
 
 ## Song search is adversarial
 
