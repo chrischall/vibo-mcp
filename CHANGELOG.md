@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/chrischall/vibo-mcp/compare/v2.2.3...v2.3.0) (2026-09-24)
+
+
+### Features
+
+* confirm writes with a preview token instead of confirm: true ([#150](https://github.com/chrischall/vibo-mcp/issues/150)) ([708c9cc](https://github.com/chrischall/vibo-mcp/commit/708c9cc575ad93ac7bc031fdb11676e97ac17ec0))
+
 ## [2.2.3](https://github.com/chrischall/vibo-mcp/compare/v2.2.2...v2.2.3) (2026-09-23)
 
 
