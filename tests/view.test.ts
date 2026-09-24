@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFile } from 'node:fs/promises';
-import { VIBO_VIEWS, viewArg, viewResponse } from '../src/view.js';
+import { VIBO_VIEWS, eventUsersViewArg, viewArg, viewResponse } from '../src/view.js';
 import { registerProfileTools } from '../src/tools/profile.js';
 import { registerSongTools } from '../src/tools/songs.js';
 import { registerNotificationTools } from '../src/tools/notifications.js';
@@ -125,6 +125,14 @@ describe('viewArg', () => {
     // `.describe()` applied to the inner enum leaves the wrapper's description
     // blank — a parameter documented to nobody.
     expect(viewArg().description).toContain('compact');
+  });
+
+  it("vibo_list_event_users' view note owns its projection instead of denying one (fleet-audit #1136)", () => {
+    const d = eventUsersViewArg().description ?? '';
+    expect(d).not.toContain('No field projection');
+    expect(d).toContain('email');
+    expect(eventUsersViewArg().parse('full')).toBe('full');
+    expect(() => eventUsersViewArg().parse('raw')).toThrow();
   });
 });
 

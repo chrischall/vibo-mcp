@@ -32,8 +32,20 @@ const NOTE =
   'No field projection: this server has no verified record of which Vibo fields matter, and inventing ' +
   'one would risk dropping a field a caller needs.';
 
+const EVENT_USERS_NOTE =
+  'compact (default) returns each member as {_id, firstName, lastName, role} only — no email addresses or ' +
+  'avatar URLs; "full" returns Vibo\'s payload untouched, emails included. This document\'s field list is ' +
+  'fixed by its query, so the projection cannot drop an unknown field.';
+
 /** The `view` parameter every read tool in this server takes. */
 export const viewArg = (): ReturnType<typeof viewParam> => viewParam(VIBO_VIEWS, { note: NOTE });
+
+/**
+ * `vibo_list_event_users`' `view` parameter — the one exception to NOTE's
+ * "no field projection" (see the docblock above), so its schema says so.
+ */
+export const eventUsersViewArg = (): ReturnType<typeof viewParam> =>
+  viewParam(VIBO_VIEWS, { note: EVENT_USERS_NOTE });
 
 /**
  * Answer in the requested rung.

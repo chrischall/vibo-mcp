@@ -4,7 +4,7 @@ import { minifiedResult, confirmTokenParam, resolveView, toolAnnotations } from 
 import type { ViboClient } from '../client.js';
 import { LIST_EVENT_USERS, INVITE_USERS, CHANGE_USER_ROLE, REMOVE_USER } from '../gql.js';
 import { limitSchema, skipSchema, pagination, confirmWrite, CONFIRM_NOTE } from './shared.js';
-import { viewArg, viewResponse, VIBO_VIEWS } from '../view.js';
+import { eventUsersViewArg, viewResponse, VIBO_VIEWS } from '../view.js';
 
 /**
  * Compact rung for event members. Unlike the rest of this server, the shape
@@ -34,7 +34,7 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         usersType: z.enum(['host', 'guest']).optional().describe('Filter to only hosts or only guests.'),
-        view: viewArg(),
+        view: eventUsersViewArg(),
         limit: limitSchema.describe('Max items to return (default 20). Applies per group when usersType is omitted.'),
         skip: skipSchema,
       }),

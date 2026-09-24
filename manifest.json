@@ -203,7 +203,7 @@
     },
     {
       "name": "vibo_list_event_users",
-      "description": "List the hosts and guests on an event"
+      "description": "List the hosts and guests on an event (emails only with view:'full')"
     },
     {
       "name": "vibo_invite_users",
