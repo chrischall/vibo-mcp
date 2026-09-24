@@ -104,7 +104,7 @@ They are exactly the six reads whose GraphQL document asks Vibo for media:
 | `vibo_search_songs` | `thumbnails { s180x180 original }` per track |
 | `vibo_get_section_songs` | `thumbnails { s180x180 original }` per song |
 | `vibo_list_song_ideas_songs` | `thumbnails { s180x180 original }` per song |
-| `vibo_list_event_users` | `imageUrl` per person (both exits — merged and filtered) |
+| `vibo_list_event_users` | `email` + `imageUrl` per person — projected to `_id`/`firstName`/`lastName`/`role` on both exits (merged and filtered); `view: "full"` for emails |
 | `vibo_list_notifications` | `imageUrl` per notification |
 | `vibo_get_me` | `imageUrl` |
 
@@ -116,6 +116,11 @@ the roster of `view`-taking tools matches. Add a seventh selection and it fails.
 writes no field list, because this repo holds no captured Vibo payload to
 derive one from honestly; instead it removes keys whose value is a picture,
 which is subtractive and so cannot drop a field nobody knew about.
+
+The one exception is `vibo_list_event_users`: its query fixes the member field
+list, so compact projects each member to `_id`/`firstName`/`lastName`/`role`
+and keeps other people's email addresses out of the default answer (fleet-audit
+#1136). Ask for `view: "full"` only when an email is actually needed.
 
 What compact does **not** touch is the point of these tools: `songUrl`, the
 `links` block (`spotify` / `youtube` / `appleMusic`) and the `quality` verdict

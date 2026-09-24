@@ -19,6 +19,11 @@ import { minifiedResult, resolveView, stripMediaUrls, viewParam, type View } fro
  * When a real payload can be captured, a field projection belongs here beside
  * this one and will save considerably more. Until then this is the honest
  * ceiling, and this docblock says so rather than implying a shape was checked.
+ *
+ * One exception: `vibo_list_event_users` projects its members to
+ * `{_id, firstName, lastName, role}` on compact, because its document's field
+ * list is fixed by the query and the dropped `email` is third-party PII
+ * (fleet-audit #1136). See `membersForView` in `tools/collaboration.ts`.
  */
 export const VIBO_VIEWS = ['compact', 'full'] as const;
 
@@ -27,8 +32,20 @@ const NOTE =
   'No field projection: this server has no verified record of which Vibo fields matter, and inventing ' +
   'one would risk dropping a field a caller needs.';
 
+const EVENT_USERS_NOTE =
+  'compact (default) returns each member as {_id, firstName, lastName, role} only — no email addresses or ' +
+  'avatar URLs; "full" returns Vibo\'s payload untouched, emails included. This document\'s field list is ' +
+  'fixed by its query, so the projection cannot drop an unknown field.';
+
 /** The `view` parameter every read tool in this server takes. */
 export const viewArg = (): ReturnType<typeof viewParam> => viewParam(VIBO_VIEWS, { note: NOTE });
+
+/**
+ * `vibo_list_event_users`' `view` parameter — the one exception to NOTE's
+ * "no field projection" (see the docblock above), so its schema says so.
+ */
+export const eventUsersViewArg = (): ReturnType<typeof viewParam> =>
+  viewParam(VIBO_VIEWS, { note: EVENT_USERS_NOTE });
 
 /**
  * Answer in the requested rung.

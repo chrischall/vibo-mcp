@@ -44,6 +44,43 @@ describe('collaboration tools', () => {
     expect(parseToolResult(res)).toEqual({ users: [{ _id: 'u1' }], totalCount: 1, usersType: 'host' });
   });
 
+  // PRIV-1 (fleet-audit #1136): every member's email is third-party PII the
+  // "who is a host / guest" question never needs. Compact (the default) drops
+  // it on BOTH exits; view:'full' still returns Vibo's payload untouched.
+  const member = (id: string) => ({
+    _id: id, firstName: 'Test', lastName: 'Person', email: `${id}@example.test`, role: 'guest', imageUrl: 'https://img.example.test/a.png',
+  });
+
+  it('vibo_list_event_users omits member emails by default (merged listing)', async () => {
+    gql.mockResolvedValueOnce({ eventUsers: { users: [member('h1')], totalCount: 1 } });
+    gql.mockResolvedValueOnce({ eventUsers: { users: [member('g1')], totalCount: 1 } });
+    const res = await harness.callTool('vibo_list_event_users', { eventId: 'e1' });
+    expect(parseToolResult(res)).toEqual({
+      hosts: [{ _id: 'h1', firstName: 'Test', lastName: 'Person', role: 'guest' }],
+      guests: [{ _id: 'g1', firstName: 'Test', lastName: 'Person', role: 'guest' }],
+      hostsCount: 1,
+      guestsCount: 1,
+    });
+  });
+
+  it('vibo_list_event_users omits member emails by default (filtered listing)', async () => {
+    gql.mockResolvedValue({ eventUsers: { users: [member('u1')], totalCount: 1 } });
+    const res = await harness.callTool('vibo_list_event_users', { eventId: 'e1', usersType: 'guest' });
+    expect(JSON.stringify(parseToolResult(res))).not.toContain('@example.test');
+    expect(parseToolResult(res)).toEqual({
+      users: [{ _id: 'u1', firstName: 'Test', lastName: 'Person', role: 'guest' }],
+      totalCount: 1,
+      usersType: 'guest',
+    });
+  });
+
+  it("vibo_list_event_users returns emails only on view:'full'", async () => {
+    gql.mockResolvedValueOnce({ eventUsers: { users: [member('h1')], totalCount: 1 } });
+    gql.mockResolvedValueOnce({ eventUsers: { users: [], totalCount: 0 } });
+    const res = await harness.callTool('vibo_list_event_users', { eventId: 'e1', view: 'full' });
+    expect(parseToolResult<{ hosts: unknown[] }>(res).hosts).toEqual([member('h1')]);
+  });
+
   it('vibo_invite_users previews without a token (no network)', async () => {
     const res = await harness.callTool('vibo_invite_users', {
       eventId: 'e1',
