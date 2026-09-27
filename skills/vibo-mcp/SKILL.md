@@ -40,7 +40,8 @@ Pick one:
 - **Captured token (for Apple/Google/Facebook accounts):** set
   `VIBO_ACCESS_TOKEN` (and `VIBO_REFRESH_TOKEN`) with values captured from a
   signed-in `web.vibodj.com` session — no password needed.
-- **Browser capture (SSO, automatic):** with the fetchproxy browser extension
+- **Browser capture (SSO, automatic):** with the ContextMint Bridge browser extension
+  (https://github.com/nullnet-app/contextmint-bridge/releases)
   installed and yourself signed into https://web.vibodj.com, run
   `vibo_capture_session` once — it grabs the token from your tab (approve the
   pair code), saves it to `~/.vibo-mcp/session.json`, and reuses it thereafter.
