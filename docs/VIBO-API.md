@@ -161,7 +161,9 @@ introspection, and **round-tripped live on 2026-09-27** on throwaway sections.
 - `reorderSongsBatch(eventId, sectionId, sourceSongIds, targetSongId)` is what
   the web app's song drag sends (section-song `_id`s). A host is refused with
   "Action is not allowed for user" (no code) when the section's
-  `canHostsOrderSongs` is off — verified live. The single `reorderSongs` doc is
+  `canHostsOrderSongs` is off — verified live. Where it is on, a host's
+  reorder succeeds with the same after-target / `null` = top semantics as
+  sections (verified live, then reverted). The single `reorderSongs` doc is
   in the bundle but unused.
 - Event-level host permissions: `event.settings { canHostCreateSections,
   canHostReorderSections }`, plus `event.isLocked`.

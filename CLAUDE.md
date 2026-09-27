@@ -155,9 +155,10 @@ See `docs/VIBO-API.md` for the pinned input shapes.
 - **Reorder semantics (measured live):** the source lands DIRECTLY AFTER
   `target`; `target: null` puts it first. (An earlier reading of the web app's
   drag code suggested "takes the target's slot" — wrong; moves up landed one
-  slot late.) Song reorder uses the same `reorderSongsBatch` as the web app and
-  is assumed to share the semantics — not live-tested, since a host can't
-  reorder in sections it can create (next point) and real songs were off-limits.
+  slot late.) Song reorder (`reorderSongsBatch`) has the same semantics —
+  verified live as a host in a DJ-made section ("Must Play List", ordering
+  on): to the top with `null`, a move up and a move down, each reverted, and
+  the section's order confirmed identical afterwards.
 - **Host-created sections get `canHostsOrderSongs: false`**, whatever
   `createSection` sends, and a host's `updateSection` to turn it on is accepted
   and IGNORED. In those sections Vibo answers a host's reorder with "Action is
@@ -173,7 +174,7 @@ See `docs/VIBO-API.md` for the pinned input shapes.
   `success: true` for ids that aren't in the section, and `addSongToSection` has
   answered `added: true` without adding. The tools validate ids first, and
   re-read the section (up to 3 tries over ~2s) after an add.
-- **Not yet live-round-tripped:** `move_song`, a successful `reorder_songs`,
+- **Not yet live-round-tripped:** `move_song`,
   `import_playlist_to_section`, invite/role/remove user, a valid-image upload
   success. They share the proven auth path; verify with a re-read before
   trusting each in earnest.
