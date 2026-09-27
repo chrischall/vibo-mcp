@@ -46,9 +46,17 @@ browser extension. Install it from
 
 - **Chrome:** download the Chrome zip, unzip it, and load it unpacked at
   `chrome://extensions` (Developer mode → Load unpacked).
-- **Safari:** ContextMint Bridge ships inside the ContextMint app.
+- **Safari:** not available yet — it will ship inside the ContextMint app,
+  which has no public download. Use Chrome for now.
 
 Approve the pair code the extension shows on first use.
+
+ContextMint Bridge is the fetchproxy browser extension under its new name, from
+the same maintainer — fetchproxy's own README
+(https://github.com/chrischall/fetchproxy#extension) points to it. Its source is
+public at https://github.com/nullnet-app/contextmint-bridge: build it yourself,
+or check a release zip against the `.sha256` file published beside it
+(`shasum -a 256 -c contextmint-bridge-chrome-<version>.zip.sha256`).
 
 ### Uploads
 
