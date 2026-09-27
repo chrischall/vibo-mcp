@@ -70,9 +70,11 @@ const PERMISSION_ERROR_CODES = new Set(['FORBIDDEN']);
 
 // Vibo's permission denial for a host acting where the DJ's settings forbid it
 // ("Action is not allowed for user", e.g. reordering songs in a section with
-// host ordering off — verified live) arrives without a FORBIDDEN code. Matched only when the
+// host ordering off — verified live) arrives without a FORBIDDEN code. Anchored
+// on Vibo's exact wording so a validation error that merely says "not allowed"
+// keeps its own message. Matched only when the
 // error carries no auth code, so an expired session is never mistaken for it.
-const PERMISSION_MESSAGE_PATTERN = /\bnot allowed\b/i;
+const PERMISSION_MESSAGE_PATTERN = /\bnot allowed for user\b/i;
 
 // Message fallback, consulted ONLY for an error that carries no code. Vibo's
 // expired-session text is "Not authorized. Try to log in"; the patterns are

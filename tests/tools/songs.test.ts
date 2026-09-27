@@ -217,6 +217,16 @@ describe('song tools', () => {
     expect(parseToolResult<{ verified: boolean }>(res).verified).toBe(true);
   });
 
+  it('vibo_add_song_to_section reports unverified (not a failure) when there is no id to match on', async () => {
+    const { writes } = fakeAdd({ addSongToSection: { added: true, songId: null } });
+    const args = { eventId: 'e1', sectionId: 's1', songUrl: 'https://x/y' };
+    const { confirmToken } = await previewCall(harness, 'vibo_add_song_to_section', args);
+    const res = await harness.callTool('vibo_add_song_to_section', { ...args, confirmToken });
+    expect(res.isError).toBeFalsy();
+    expect(parseToolResult<{ verified: boolean }>(res).verified).toBe(false);
+    expect(writes).toHaveBeenCalledTimes(1);
+  });
+
   it('vibo_add_song_to_section surfaces added:false as an error', async () => {
     fakeAdd({ addSongToSection: { added: false } });
     const { confirmToken } = await previewCall(harness, 'vibo_add_song_to_section', addArgs);

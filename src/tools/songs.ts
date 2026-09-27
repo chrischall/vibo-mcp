@@ -171,6 +171,15 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         });
       }
       // Don't trust added:true alone — confirm the song is really in the section.
+      // With no id to match on, say so rather than claim a failure: a false
+      // "NOT added" invites a retry that would add the song twice.
+      if (!res.songId && !viboSongId) {
+        return minifiedResult({
+          ...res,
+          verified: false,
+          note: 'Vibo returned no songId and no viboSongId was passed, so the add could not be checked by re-reading. Check with vibo_get_section_songs before retrying.',
+        });
+      }
       const isOurs = (s: SectionSongRef) =>
         (!!res.songId && s._id === res.songId) || (!!viboSongId && s.viboSongId === viboSongId);
       let found: SectionSongRef | undefined;

@@ -165,6 +165,16 @@ describe('ViboClient auth lifecycle', () => {
     expect(calls).toHaveLength(1); // no refresh, no replay
   });
 
+  it('leaves an uncoded validation error that merely says "not allowed" as a plain API error', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'AT0';
+    process.env.VIBO_REFRESH_TOKEN = 'RT0';
+    installFetch(() => ({ errors: [{ message: 'Links are not allowed in comments' }] }));
+    const client = new ViboClient();
+    const err = await client.gql('mutation x { x }').catch((e: unknown) => e as Error);
+    expect(err.message).toContain('Links are not allowed in comments');
+    expect(err.message).not.toMatch(/permission/i);
+  });
+
   it('never mistakes an expired session for a permission denial, whatever its message', async () => {
     process.env.VIBO_ACCESS_TOKEN = 'AT0';
     process.env.VIBO_REFRESH_TOKEN = 'RT0';
