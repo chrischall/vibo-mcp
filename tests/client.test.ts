@@ -154,6 +154,39 @@ describe('ViboClient auth lifecycle', () => {
     expect(calls).toHaveLength(1); // no refresh-token grant, no replay
   });
 
+  it('treats Vibo\'s uncoded "Action is not allowed for user" as a permission denial with a hint', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'AT0';
+    process.env.VIBO_REFRESH_TOKEN = 'RT0';
+    const calls = installFetch(() => ({ errors: [{ message: 'Action is not allowed for user' }] }));
+    const client = new ViboClient();
+    const err = await client.gql('mutation reorderSongsBatch { x }').catch((e: unknown) => e as Error & { hint?: string });
+    expect(err.message).toMatch(/permission/i);
+    expect(err.message).toContain('Action is not allowed for user');
+    expect(calls).toHaveLength(1); // no refresh, no replay
+  });
+
+  it('leaves an uncoded validation error that merely says "not allowed" as a plain API error', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'AT0';
+    process.env.VIBO_REFRESH_TOKEN = 'RT0';
+    installFetch(() => ({ errors: [{ message: 'Links are not allowed in comments' }] }));
+    const client = new ViboClient();
+    const err = await client.gql('mutation x { x }').catch((e: unknown) => e as Error);
+    expect(err.message).toContain('Links are not allowed in comments');
+    expect(err.message).not.toMatch(/permission/i);
+  });
+
+  it('never mistakes an expired session for a permission denial, whatever its message', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'AT0';
+    process.env.VIBO_REFRESH_TOKEN = 'RT0';
+    let n = 0;
+    installFetch(({ query }) => {
+      if (isOp(query, 'mutation refreshToken')) return { data: { refreshToken: { accessToken: 'AT2', refreshToken: 'RT2' } } };
+      return n++ === 0 ? { errors: [{ code: 'UNAUTHORIZED', message: 'Not allowed: token expired' }] } : { data: { ok: true } };
+    });
+    const client = new ViboClient();
+    await expect(client.gql('query q { ok }')).resolves.toEqual({ ok: true });
+  });
+
   it('treats an HTTP 403 as a permission denial, not an expired session', async () => {
     process.env.VIBO_ACCESS_TOKEN = 'AT0';
     process.env.VIBO_REFRESH_TOKEN = 'RT0';

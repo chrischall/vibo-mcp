@@ -112,7 +112,7 @@ All shapes pinned via authenticated introspection; every document live-validated
 
 **Song management:** `removeSectionSongsV2(eventId, sectionId, songIds:[ID!]!)`,
 `updateSectionSongs(..., payload: UpdateSectionSongInput{isMustPlay, isFlagged, comment})`,
-`moveSectionSongsV2`, `reorderSongsBatch(..., sourceSongIds, targetSongId)`.
+`moveSectionSongsV2`, `reorderSongsBatch(..., sourceSongIds, targetSongId)` (target semantics: see Section management).
 
 **Comments:** `createSongComment` / `createSectionComment(payload: CreateCommentInput{message})`,
 `deleteSongComment` / `deleteSectionComment`.
@@ -132,6 +132,43 @@ unless `usersType` is set**, so the tool queries host+guest and merges. `inviteU
 
 **Dropped (DJ-only / not host-usable):** `generatePlaylist` (requires a `computerId` scanner),
 prep-mode, templates/favorites, child-DJ/scanner management.
+
+## Section management (create / delete / reorder)
+
+Documents come from the web.vibodj.com bundle (Timeline "+" → Add section, the
+section "…" menu → Delete, the timeline drag handler), checked against
+introspection, and **round-tripped live on 2026-09-27** on throwaway sections.
+
+- `createSection(eventId, payload: CreateSectionInput!) → Section`.
+  `CreateSectionInput { name!, time, type: simple|headline, description,
+  sectionImage, settings: SectionSettingsInput, insertBeforeSectionId, headlineColor }`.
+  - **Placement:** `insertBeforeSectionId` — honoured live; omitted = append.
+  - **Visibility** is settings, not a field: host ("Me and DJ") =
+    `{visibleForGuests:false, visibleForHosts:true}`, public ("Guests") =
+    `{visibleForGuests:true, visibleForHosts:true}`. Both verified live.
+  - `time` as `"hh:mm am/pm"` — stored as sent.
+  - **`description` is dropped for a host** (create and update both reply
+    null). No `note` field: set it with `updateSection` (works).
+  - **`canHostsOrderSongs` is forced false** on a host-created section, and a
+    host's `updateSection({settings:{canHostsOrderSongs:true}})` is accepted but
+    ignored.
+  - Name: the web UI caps it at 45; the API stored 60.
+- `removeSection(eventId, sectionId) → Boolean`. `Section.canRemove` says
+  whether the caller may delete it (the DJ's "who can delete section").
+- `reorderSections(eventId, sourceSectionId, targetSectionId) → Boolean`:
+  **source lands directly after target; `null` = first** (measured: up, down,
+  start).
+- `reorderSongsBatch(eventId, sectionId, sourceSongIds, targetSongId)` is what
+  the web app's song drag sends (section-song `_id`s). A host is refused with
+  "Action is not allowed for user" (no code) when the section's
+  `canHostsOrderSongs` is off — verified live. Where it is on, a host's
+  reorder succeeds with the same after-target / `null` = top semantics as
+  sections (verified live, then reverted). The single `reorderSongs` doc is
+  in the bundle but unused.
+- Event-level host permissions: `event.settings { canHostCreateSections,
+  canHostReorderSections }`, plus `event.isLocked`.
+- Song comment: ≤ 90 characters (UTF-16 units); 91 → "Comment should be less
+  then 90 characters".
 
 ## Uploads (the `Upload` scalar)
 

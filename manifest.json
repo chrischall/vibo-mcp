@@ -163,7 +163,7 @@
     },
     {
       "name": "vibo_update_song",
-      "description": "Set must-play / do-not-play / comment on songs"
+      "description": "Set must-play / do-not-play / comment (max 90 characters) on songs"
     },
     {
       "name": "vibo_move_song",
@@ -220,6 +220,18 @@
     {
       "name": "vibo_update_section",
       "description": "Edit a section's name, time, note, or description"
+    },
+    {
+      "name": "vibo_create_section",
+      "description": "Create a timeline section and place it (name max 45 characters)"
+    },
+    {
+      "name": "vibo_delete_section",
+      "description": "Delete a timeline section (previews its songs and answers)"
+    },
+    {
+      "name": "vibo_reorder_sections",
+      "description": "Move timeline sections to after another section or the start"
     },
     {
       "name": "vibo_set_profile_photo",

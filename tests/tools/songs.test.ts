@@ -1,14 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import { client } from '../../src/client.js';
-import { registerSongTools } from '../../src/tools/songs.js';
+import { registerSongTools, addVerifyDelaysMs } from '../../src/tools/songs.js';
 import { GET_SECTION_SONGS, SEARCH_SONGS, ADD_SONG_TO_SECTION, TOGGLE_LIKE } from '../../src/gql.js';
-import { createTestHarness, confirmCall } from '../helpers.js';
+import { createTestHarness, confirmCall, previewCall } from '../helpers.js';
+import { installFakeVibo, section } from '../fake-vibo.js';
+
+addVerifyDelaysMs.fill(0);
 import { parseToolResult } from '@chrischall/mcp-utils/test';
 
 const gql = vi.spyOn(client, 'gql').mockResolvedValue(undefined as never);
 let harness: Awaited<ReturnType<typeof createTestHarness>>;
 
-beforeEach(() => gql.mockClear());
+beforeEach(() => { gql.mockClear(); gql.mockImplementation((async () => undefined) as never); });
 afterAll(async () => { if (harness) await harness.close(); });
 
 describe('song tools', () => {
@@ -173,19 +176,62 @@ describe('song tools', () => {
     });
   });
 
-  it('vibo_add_song_to_section previews then sends the song payload', async () => {
-    const args = { eventId: 'e1', sectionId: 's1', songUrl: 'https://x/y', viboSongId: 'v1', title: 'T', artist: 'A' };
-    const preview = await harness.callTool('vibo_add_song_to_section', args);
-    expect(gql).not.toHaveBeenCalled();
-    expect(parseToolResult<{ status: string }>(preview).status).toBe('confirmation-required');
+  const fakeAdd = (replies?: Record<string, unknown>) =>
+    installFakeVibo(gql, { event: { _id: 'e1' }, sections: [section('s1')], songs: { s1: [] }, replies });
+  const addArgs = { eventId: 'e1', sectionId: 's1', songUrl: 'https://x/y', viboSongId: 'v1', title: 'T', artist: 'A' };
 
-    gql.mockResolvedValue({ addSongToSection: { added: true } });
-    await confirmCall(harness, 'vibo_add_song_to_section', args, gql);
-    expect(gql).toHaveBeenCalledWith(ADD_SONG_TO_SECTION, {
+  it('vibo_add_song_to_section previews, sends the song payload, and confirms it landed', async () => {
+    const { writes } = fakeAdd();
+    const res = await confirmCall(harness, 'vibo_add_song_to_section', addArgs, writes);
+    expect(writes).toHaveBeenCalledWith(ADD_SONG_TO_SECTION, {
       eventId: 'e1',
       sectionId: 's1',
       payload: { song: { songUrl: 'https://x/y', viboSongId: 'v1', title: 'T', artist: 'A' } },
     });
+    expect(parseToolResult<{ verified: boolean }>(res).verified).toBe(true);
+  });
+
+  it('vibo_add_song_to_section reports failure when added:true but the song is not in the section', async () => {
+    const { writes, state } = fakeAdd({ addSongToSection: { added: true, songId: 'ss9', totalCount: 0 } });
+    const { confirmToken } = await previewCall(harness, 'vibo_add_song_to_section', addArgs);
+    const res = await harness.callTool('vibo_add_song_to_section', { ...addArgs, confirmToken });
+    expect(writes).toHaveBeenCalledTimes(1);
+    expect(res.isError).toBe(true);
+    expect(JSON.stringify(res)).toContain('NOT added');
+    expect(state.songs.s1).toHaveLength(0);
+    // It re-read more than once before concluding (re-reads can be stale).
+    const reads = gql.mock.calls.filter(([doc]) => doc !== ADD_SONG_TO_SECTION);
+    expect(reads.length).toBe(addVerifyDelaysMs.length);
+  });
+
+  it('vibo_add_song_to_section accepts a late-appearing song (stale first re-read)', async () => {
+    const { state } = fakeAdd({ addSongToSection: { added: true, songId: 'ss9' } });
+    let reads = 0;
+    const real = gql.getMockImplementation()!;
+    gql.mockImplementation((async (doc: string, vars: Record<string, unknown>) => {
+      if (doc !== ADD_SONG_TO_SECTION && ++reads === 2) state.songs.s1.push({ _id: 'ss9', viboSongId: 'v1' });
+      return real(doc, vars);
+    }) as never);
+    const { confirmToken } = await previewCall(harness, 'vibo_add_song_to_section', addArgs);
+    const res = await harness.callTool('vibo_add_song_to_section', { ...addArgs, confirmToken });
+    expect(parseToolResult<{ verified: boolean }>(res).verified).toBe(true);
+  });
+
+  it('vibo_add_song_to_section reports unverified (not a failure) when there is no id to match on', async () => {
+    const { writes } = fakeAdd({ addSongToSection: { added: true, songId: null } });
+    const args = { eventId: 'e1', sectionId: 's1', songUrl: 'https://x/y' };
+    const { confirmToken } = await previewCall(harness, 'vibo_add_song_to_section', args);
+    const res = await harness.callTool('vibo_add_song_to_section', { ...args, confirmToken });
+    expect(res.isError).toBeFalsy();
+    expect(parseToolResult<{ verified: boolean }>(res).verified).toBe(false);
+    expect(writes).toHaveBeenCalledTimes(1);
+  });
+
+  it('vibo_add_song_to_section surfaces added:false as an error', async () => {
+    fakeAdd({ addSongToSection: { added: false } });
+    const { confirmToken } = await previewCall(harness, 'vibo_add_song_to_section', addArgs);
+    const res = await harness.callTool('vibo_add_song_to_section', { ...addArgs, confirmToken });
+    expect(res.isError).toBe(true);
   });
 
   it('vibo_toggle_song_like is confirmation-gated', async () => {

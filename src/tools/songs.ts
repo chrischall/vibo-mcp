@@ -1,11 +1,28 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/server';
-import { minifiedResult, confirmTokenParam, toolAnnotations } from '@chrischall/mcp-utils';
+import { McpToolError, minifiedResult, confirmTokenParam, toolAnnotations } from '@chrischall/mcp-utils';
 import { viewArg, viewResponse } from '../view.js';
 import type { ViboClient } from '../client.js';
 import { GET_SECTION_SONGS, SEARCH_SONGS, ADD_SONG_TO_SECTION, TOGGLE_LIKE } from '../gql.js';
 import { annotateSearchResults, type SearchSong } from '../song-search.js';
 import { limitSchema, skipSchema, pagination, confirmWrite, CONFIRM_NOTE } from './shared.js';
+import { fetchSectionSongs, type SectionSongRef } from './lookups.js';
+
+/**
+ * Waits before each post-add re-read. Vibo's re-reads can be briefly stale
+ * (CLAUDE.md, "Write-verification re-reads can be cached"), so one miss is not
+ * proof; three spread over ~2s is. Exported so tests can zero them.
+ */
+export const addVerifyDelaysMs = [0, 700, 1500];
+
+const sleep = (ms: number) => (ms > 0 ? new Promise((r) => setTimeout(r, ms)) : Promise.resolve());
+
+interface AddSongResponse {
+  added?: boolean;
+  songId?: string | null;
+  totalCount?: number;
+  [key: string]: unknown;
+}
 
 export function registerSongTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
@@ -111,7 +128,9 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         'include viboSongId/title/artist when known). Before adding, check that result\'s ' +
         '`quality.confidence`: adding a `likely-not-original` result puts a cover, karaoke ' +
         'track or junk-metadata re-upload in front of a live DJ. If nothing looks original, ' +
-        'report the closest matches back rather than adding a best guess. ' + CONFIRM_NOTE,
+        'report the closest matches back rather than adding a best guess. After adding, re-reads the section and ' +
+        'reports an error if the song is not actually there (Vibo has answered added:true without adding). ' +
+        CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Add song to Vibo section', readOnly: false, destructive: false }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
@@ -138,12 +157,48 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         willSend: { eventId, sectionId, payload },
       });
       if (gate) return gate;
-      const data = await client.gql<{ addSongToSection: unknown }>(ADD_SONG_TO_SECTION, {
+      const data = await client.gql<{ addSongToSection: AddSongResponse }>(ADD_SONG_TO_SECTION, {
         eventId,
         sectionId,
         payload,
       });
-      return minifiedResult(data.addSongToSection);
+      const res = data.addSongToSection ?? {};
+      if (res.added === false) {
+        throw new McpToolError('Vibo did not add the song (added: false).', {
+          hint:
+            'It may already be in this section, be on the do-not-play list, or the section may be full. ' +
+            'Check with vibo_get_section_songs.',
+        });
+      }
+      // Don't trust added:true alone — confirm the song is really in the section.
+      // With no id to match on, say so rather than claim a failure: a false
+      // "NOT added" invites a retry that would add the song twice.
+      if (!res.songId && !viboSongId) {
+        return minifiedResult({
+          ...res,
+          verified: false,
+          note: 'Vibo returned no songId and no viboSongId was passed, so the add could not be checked by re-reading. Check with vibo_get_section_songs before retrying.',
+        });
+      }
+      const isOurs = (s: SectionSongRef) =>
+        (!!res.songId && s._id === res.songId) || (!!viboSongId && s.viboSongId === viboSongId);
+      let found: SectionSongRef | undefined;
+      for (const delay of addVerifyDelaysMs) {
+        await sleep(delay);
+        found = (await fetchSectionSongs(client, eventId, sectionId)).find(isOurs);
+        if (found) break;
+      }
+      if (!found) {
+        throw new McpToolError(
+          'Vibo answered added:true, but the song is not in the section when re-read, so it was NOT added.',
+          {
+            hint:
+              'Retry once; if it still fails, add it in the Vibo app. Details: ' +
+              JSON.stringify({ songId: res.songId ?? null, viboSongId: viboSongId ?? null, totalCount: res.totalCount }),
+          },
+        );
+      }
+      return minifiedResult({ ...res, verified: true, song: found });
     },
   );
 

@@ -12,6 +12,7 @@ import { registerIdeasTools } from '../src/tools/ideas.js';
 import { registerImportTools } from '../src/tools/imports.js';
 import { registerCollaborationTools } from '../src/tools/collaboration.js';
 import { registerSectionEditTools } from '../src/tools/section-edit.js';
+import { registerSectionManageTools } from '../src/tools/section-manage.js';
 import { registerUploadTools } from '../src/tools/uploads.js';
 import { registerSessionTools } from '../src/tools/session.js';
 import { client } from '../src/client.js';
@@ -21,7 +22,7 @@ describe('tool registry', () => {
   let harness: Awaited<ReturnType<typeof createTestHarness>>;
   afterAll(async () => { if (harness) await harness.close(); });
 
-  it('registers exactly the expected 39 tools', async () => {
+  it('registers exactly the expected 42 tools', async () => {
     harness = await createTestHarness((server) => {
       registerProfileTools(server, client);
       registerEventTools(server, client);
@@ -36,6 +37,7 @@ describe('tool registry', () => {
       registerImportTools(server, client);
       registerCollaborationTools(server, client);
       registerSectionEditTools(server, client);
+      registerSectionManageTools(server, client);
       registerUploadTools(server, client);
       registerSessionTools(server, client);
     });
@@ -85,6 +87,10 @@ describe('tool registry', () => {
       'vibo_remove_user',
       // v3 — section editing
       'vibo_update_section',
+      // section management
+      'vibo_create_section',
+      'vibo_delete_section',
+      'vibo_reorder_sections',
       // uploads
       'vibo_set_profile_photo',
       // SSO session capture
@@ -121,6 +127,9 @@ describe('tool registry', () => {
       'vibo_change_user_role',
       'vibo_remove_user',
       'vibo_update_section',
+      'vibo_create_section',
+      'vibo_delete_section',
+      'vibo_reorder_sections',
       'vibo_set_profile_photo',
       'vibo_capture_session',
     ]);
@@ -143,6 +152,7 @@ describe('tool registry', () => {
     // Reaches another person, or spends something with no inverse here.
     const destructive = new Set([
       'vibo_change_user_role',
+      'vibo_delete_section',
       'vibo_delete_section_comment',
       'vibo_delete_song_comment',
       'vibo_invite_users',

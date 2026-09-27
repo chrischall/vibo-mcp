@@ -1,8 +1,8 @@
 # vibo-mcp
 
 MCP server for [Vibo](https://vibodj.com). Wraps the Vibo consumer GraphQL API
-(`https://api.vibodj.com/v2/graphql`) and exposes 39 host/couple tools to Claude
-over stdio (15 reads + 24 writes/actions, confirmation-gated where they mutate). Built on `@chrischall/mcp-utils`
+(`https://api.vibodj.com/v2/graphql`) and exposes 42 host/couple tools to Claude
+over stdio (15 reads + 27 writes/actions, confirmation-gated where they mutate). Built on `@chrischall/mcp-utils`
 (`runMcp`, `textResult`, `toolAnnotations`, `confirmationFromEnv` / `requireConfirmationWithFallback`, error classes).
 
 ## Commands
@@ -36,6 +36,8 @@ src/
   auth.ts         # captureViboSession() — fetchproxy browser-bridge token capture (SSO)
   session-store.ts# persist {accessToken,refreshToken} to ~/.vibo-mcp/session.json (0600)
   gql.ts          # all GraphQL operation documents (selections from introspection)
+  reorder.ts      # planMoves() — "move these after X" as single-item reorder
+                  #   calls (Vibo: source lands after target; null = first)
   song-search.ts  # pure search-quality heuristics — parseSearchQuery, assessSong,
                   #   annotateSearchResults; grades each search hit
                   #   likely-original / uncertain / likely-not-original
@@ -53,6 +55,9 @@ src/
     imports.ts          # import_playlist_to_section
     collaboration.ts    # list_event_users, invite_users, change_user_role, remove_user
     section-edit.ts     # update_section
+    section-manage.ts   # create_section, delete_section, reorder_sections
+    lookups.ts          # read-before-write helpers (sections, event perms,
+                        #   section song ids, id validation)
     uploads.ts          # set_profile_photo
     session.ts          # capture_session (SSO browser token capture)
     shared.ts           # pagination + confirmWrite (confirmation gate) helpers
@@ -95,7 +100,7 @@ operation docs from `gql.ts`.
 
 ## Writes are confirmation-gated
 
-Every mutating tool (all 23 except `vibo_capture_session`) takes an optional
+Every mutating tool (all 26 except `vibo_capture_session`) takes an optional
 `confirmToken` (`confirmTokenParam`) and calls `confirmWrite(ctx, …)` from
 `src/tools/shared.ts` — a thin wrapper over mcp-utils' `confirmationFromEnv` +
 `requireConfirmationWithFallback` — right before the write, after every existing
@@ -104,14 +109,21 @@ validation:
 - A client that can show an MCP elicitation prompt (Claude Code) gets the real
   prompt; nothing is sent unless the user accepts.
 - A client that cannot (claude.ai, Claude Desktop) gets the two-step token flow
-  governed by `MCP_CONFIRM_MODE` (see README): the first call makes **no**
-  network call and returns `status: "confirmation-required"`, a `preview` of the
+  governed by `MCP_CONFIRM_MODE` (see README): the first call makes **no
+  write** and returns `status: "confirmation-required"`, a `preview` of the
   GraphQL operation + the exact variables (`{ action, willSend }`) and a
   `confirmToken`; only a repeat call with the same arguments plus that token
   writes. The token is single-use and bound to the tool, the target id and a
   hash of what will be sent — a changed argument is refused as `DRAFT_CHANGED`,
   a replay as `TOKEN_REUSED`. Inline upload bytes are bound too (via
   `payload`), although the preview shows them as `(inline bytes)`.
+
+Some tools READ before the gate — to refuse ids that aren't in the section
+(`remove_song_from_section`, `reorder_songs`, `reorder_sections`), to resolve
+placement (`create_section`), or to show what a delete destroys
+(`delete_section`, via `confirmWrite`'s `context`). Phase 1 may read; it never
+writes. Tests for these use `tests/fake-vibo.ts`, whose `writes` spy counts
+mutations only.
 
 See `docs/VIBO-API.md` for the pinned input shapes.
 
@@ -134,10 +146,38 @@ See `docs/VIBO-API.md` for the pinned input shapes.
   were **wrong in the first SSO ship** (the obfuscated bundle suggested
   `token`/`refreshToken`; the real keys are `x-token`/`x-refresh-token`, found by
   reading the live tab) — fixed here.
-- **Not yet live-round-tripped:** `move_song`, `reorder_songs`,
+- **Section tools verified live (2026-09-27)** on throwaway "ZZ TEST" sections
+  (all deleted after; real sections never sent as sources): create with
+  `afterSectionId` / `position` / append, public visibility + time + note;
+  `reorder_sections` up, down, as a block, and to the start; `delete_section`
+  preview counts and the `dontPlay` refusal; `add_song_to_section` verification;
+  the comment limit; `remove_song_from_section` id validation.
+- **Reorder semantics (measured live):** the source lands DIRECTLY AFTER
+  `target`; `target: null` puts it first. (An earlier reading of the web app's
+  drag code suggested "takes the target's slot" — wrong; moves up landed one
+  slot late.) Song reorder (`reorderSongsBatch`) has the same semantics —
+  verified live as a host in a DJ-made section ("Must Play List", ordering
+  on): to the top with `null`, a move up and a move down, each reverted, and
+  the section's order confirmed identical afterwards.
+- **Host-created sections get `canHostsOrderSongs: false`**, whatever
+  `createSection` sends, and a host's `updateSection` to turn it on is accepted
+  and IGNORED. In those sections Vibo answers a host's reorder with "Action is
+  not allowed for user" (uncoded; `client.ts` maps it to the permission error).
+  `reorder_songs` checks the setting first and says so.
+- **`description` is silently dropped** for a host by both `createSection` and
+  `updateSection` (null on the reply and on re-read), so `create_section`
+  doesn't take it. (`update_section` still offers it; it's a no-op for hosts.)
+- **Limits (measured live):** song comment ≤ 90 (91 → "Comment should be less
+  then 90 characters"), counted in UTF-16 units. Section name: the API stored
+  60, so 45 is the web UI's limit, enforced here to match it.
+- **Vibo's write replies can be wrong:** `removeSectionSongsV2` answers
+  `success: true` for ids that aren't in the section, and `addSongToSection` has
+  answered `added: true` without adding. The tools validate ids first, and
+  re-read the section (up to 3 tries over ~2s) after an add.
+- **Not yet live-round-tripped:** `move_song`,
   `import_playlist_to_section`, invite/role/remove user, a valid-image upload
-  success. They share the proven auth path; verify with a re-read before trusting
-  each in earnest.
+  success. They share the proven auth path; verify with a re-read before
+  trusting each in earnest.
 - `eventUsers` returns nothing unless `usersType` is set, so
   `vibo_list_event_users` queries host+guest and merges when no filter is given.
   Its compact (default) rung projects members to `{_id, firstName, lastName,
