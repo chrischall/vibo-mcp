@@ -36,7 +36,7 @@ export interface CaptureDeps {
 /**
  * Capture the signed-in user's Vibo token pair from their browser via the
  * fetchproxy bridge and return it (the caller persists after verifying).
- * Preconditions: the fetchproxy browser
+ * Preconditions: the ContextMint Bridge browser
  * extension is installed and the user is signed into https://web.vibodj.com.
  */
 export async function captureViboSession(deps: CaptureDeps = {}): Promise<ViboSession> {
@@ -66,8 +66,12 @@ export async function captureViboSession(deps: CaptureDeps = {}): Promise<ViboSe
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    // @fetchproxy errors that know their own remedy (FetchproxyHintedError —
+    // e.g. capability_unavailable: this browser can't do that) carry a `hint`;
+    // keep it rather than telling the user to (re)install the extension.
+    const bridgeHint = (err as { hint?: unknown } | null)?.hint;
     throw new McpToolError(`Vibo browser token capture failed: ${msg}`, {
-      hint: 'Install the fetchproxy browser extension, sign into https://web.vibodj.com, approve the pair code, then retry.',
+      hint: typeof bridgeHint === 'string' && bridgeHint ? bridgeHint : 'Install the ContextMint Bridge browser extension (https://github.com/nullnet-app/contextmint-bridge/releases), sign into https://web.vibodj.com, approve the pair code, then retry.',
       cause: err,
     });
   }
@@ -76,7 +80,7 @@ export async function captureViboSession(deps: CaptureDeps = {}): Promise<ViboSe
   const refreshToken = session.localStorage?.['x-refresh-token'] ?? null;
   if (!accessToken) {
     throw new McpToolError('No Vibo token found in the signed-in browser tab.', {
-      hint: 'Make sure you are signed into https://web.vibodj.com in the browser with the fetchproxy extension, then retry.',
+      hint: 'Make sure you are signed into https://web.vibodj.com in the browser with ContextMint Bridge, then retry.',
     });
   }
 

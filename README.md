@@ -33,10 +33,22 @@ Choose one method:
 |--------|----------|------|
 | Email + password (recommended) | `VIBO_EMAIL`, `VIBO_PASSWORD` | You sign in to Vibo with an email/password. |
 | Captured token | `VIBO_ACCESS_TOKEN` (+ `VIBO_REFRESH_TOKEN`) | Your account uses Apple/Google/Facebook sign-in (no password). Capture `x-token`/`x-refresh-token` from a signed-in `web.vibodj.com` session. |
-| Browser capture (SSO) | run `vibo_capture_session` | With the fetchproxy browser extension installed and signed into `web.vibodj.com`, capture the token automatically (saved to `~/.vibo-mcp/session.json`). |
+| Browser capture (SSO) | run `vibo_capture_session` | With the [ContextMint Bridge](#contextmint-bridge-for-sso-capture) browser extension installed and signed into `web.vibodj.com`, capture the token automatically (saved to `~/.vibo-mcp/session.json`). |
 
 The server boots without credentials; the config error only surfaces on the
 first tool call.
+
+### ContextMint Bridge (for SSO capture)
+
+`vibo_capture_session` reads your signed-in tab through the ContextMint Bridge
+browser extension. Install it from
+[github.com/nullnet-app/contextmint-bridge/releases](https://github.com/nullnet-app/contextmint-bridge/releases):
+
+- **Chrome:** download the Chrome zip, unzip it, and load it unpacked at
+  `chrome://extensions` (Developer mode → Load unpacked).
+- **Safari:** ContextMint Bridge ships inside the ContextMint app.
+
+Approve the pair code the extension shows on first use.
 
 ### Uploads
 

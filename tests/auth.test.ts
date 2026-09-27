@@ -80,4 +80,25 @@ describe('captureViboSession', () => {
     await expect(captureViboSession({ bootstrap })).rejects.toThrow(/capture failed: pairing required/);
     expect(existsSync(process.env.VIBO_SESSION_FILE as string)).toBe(false);
   });
+
+  it('points at ContextMint Bridge in the generic bridge-failure hint', async () => {
+    const bootstrap = vi.fn().mockRejectedValue(new Error('pairing required'));
+    await expect(captureViboSession({ bootstrap })).rejects.toMatchObject({
+      hint: expect.stringContaining('ContextMint Bridge'),
+    });
+  });
+
+  it("keeps the bridge's own hint (e.g. capability_unavailable) instead of blaming a missing install", async () => {
+    const err = Object.assign(new Error('this browser cannot read localStorage'), {
+      name: 'FetchproxyCapabilityUnavailableError',
+      kind: 'capability_unavailable',
+      hint: 'Safari cannot serve this capability; use Chrome with ContextMint Bridge.',
+    });
+    const bootstrap = vi.fn().mockRejectedValue(err);
+    const rejection = captureViboSession({ bootstrap });
+    await expect(rejection).rejects.toThrow(/capture failed: this browser cannot read localStorage/);
+    await expect(rejection).rejects.toMatchObject({
+      hint: 'Safari cannot serve this capability; use Chrome with ContextMint Bridge.',
+    });
+  });
 });
