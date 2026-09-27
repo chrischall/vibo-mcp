@@ -135,40 +135,38 @@ prep-mode, templates/favorites, child-DJ/scanner management.
 
 ## Section management (create / delete / reorder)
 
-Source: the web.vibodj.com bundle's own documents and handlers (Timeline "+" →
-Add section, the section "…" menu → Delete, the timeline drag handler), checked
-against live introspection. Each document was sent unauthenticated and got
-`UNAUTHORIZED`, not a validation error.
+Documents come from the web.vibodj.com bundle (Timeline "+" → Add section, the
+section "…" menu → Delete, the timeline drag handler), checked against
+introspection, and **round-tripped live on 2026-09-27** on throwaway sections.
 
 - `createSection(eventId, payload: CreateSectionInput!) → Section`.
   `CreateSectionInput { name!, time, type: simple|headline, description,
   sectionImage, settings: SectionSettingsInput, insertBeforeSectionId, headlineColor }`.
-  There's no `note`: set it afterwards with `updateSection`.
-  **Placement:** `insertBeforeSectionId` (the web app's "add in the middle"
-  button); omitted means append.
-  **Visibility** is not a field. The UI's "Who will see this section" maps to
-  settings: host ("Me and DJ") = `{visibleForGuests:false, visibleForHosts:true}`,
-  public ("Guests") = `{visibleForGuests:true, visibleForHosts:true}`.
-  The UI's other create defaults: `timeEnabled, songsEnabled, notesEnabled,
-  canHostsOrderSongs, canHostDeleteSection, notesVisibleForHosts,
-  canHostChangeSectionName, canHostChangeSectionTime` all `true`, plus
-  `songsLimit`/`mustPlayLimit` from the event's `settings.sectionSongsLimit` /
-  `sectionMustPlayLimit`.
-  **Name limit:** 45 (the bundle constant behind `nameMustBeCharactersOrLess`).
+  - **Placement:** `insertBeforeSectionId` — honoured live; omitted = append.
+  - **Visibility** is settings, not a field: host ("Me and DJ") =
+    `{visibleForGuests:false, visibleForHosts:true}`, public ("Guests") =
+    `{visibleForGuests:true, visibleForHosts:true}`. Both verified live.
+  - `time` as `"hh:mm am/pm"` — stored as sent.
+  - **`description` is dropped for a host** (create and update both reply
+    null). No `note` field: set it with `updateSection` (works).
+  - **`canHostsOrderSongs` is forced false** on a host-created section, and a
+    host's `updateSection({settings:{canHostsOrderSongs:true}})` is accepted but
+    ignored.
+  - Name: the web UI caps it at 45; the API stored 60.
 - `removeSection(eventId, sectionId) → Boolean`. `Section.canRemove` says
-  whether the caller may delete it; the DJ sets "who can delete section".
-- `reorderSections(eventId, sourceSectionId, targetSectionId) → Boolean`. The
-  drag handler sends `targetSectionId = list[addedIndex]` from the pre-drag
-  list: the source takes the target's slot.
+  whether the caller may delete it (the DJ's "who can delete section").
+- `reorderSections(eventId, sourceSectionId, targetSectionId) → Boolean`:
+  **source lands directly after target; `null` = first** (measured: up, down,
+  start).
 - `reorderSongsBatch(eventId, sectionId, sourceSongIds, targetSongId)` is what
-  the song drag handler sends, with section-song `_id`s and the same
-  `list[addedIndex]` target rule. A host can drag only when
-  `section.settings.canHostsOrderSongs` is on. The single `reorderSongs` doc
-  exists in the bundle but is unused.
+  the web app's song drag sends (section-song `_id`s). A host is refused with
+  "Action is not allowed for user" (no code) when the section's
+  `canHostsOrderSongs` is off — verified live. The single `reorderSongs` doc is
+  in the bundle but unused.
 - Event-level host permissions: `event.settings { canHostCreateSections,
   canHostReorderSections }`, plus `event.isLocked`.
-- Song comment limit: Vibo rejects 90+ characters (observed; the bundle also
-  has a 90 constant).
+- Song comment: ≤ 90 characters (UTF-16 units); 91 → "Comment should be less
+  then 90 characters".
 
 ## Uploads (the `Upload` scalar)
 

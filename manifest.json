@@ -163,7 +163,7 @@
     },
     {
       "name": "vibo_update_song",
-      "description": "Set must-play / do-not-play / comment (under 90 characters) on songs"
+      "description": "Set must-play / do-not-play / comment (max 90 characters) on songs"
     },
     {
       "name": "vibo_move_song",

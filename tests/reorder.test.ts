@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { planMoves, missingIds } from '../src/reorder.js';
 
-/** Vibo's reorder semantics as the web app's drag handler implies: the source takes the target's slot. */
-function replay(order: string[], moves: { source: string; target: string }[]): string[] {
+/** Vibo's reorder semantics, measured live: the source lands directly after target; null = first. */
+function replay(order: string[], moves: { source: string; target: string | null }[]): string[] {
   let list = [...order];
   for (const { source, target } of moves) {
     const rest = list.filter((x) => x !== source);
-    const to = list.indexOf(target);
+    const to = target === null ? 0 : rest.indexOf(target) + 1;
     list = [...rest.slice(0, to), source, ...rest.slice(to)];
   }
   return list;
@@ -22,17 +22,20 @@ function wanted(order: string[], sources: string[], after: string | null): strin
 const ABCD = ['A', 'B', 'C', 'D'];
 
 describe('planMoves', () => {
-  it('moving down sends the drop-slot occupant as target (lands after it)', () => {
+  it('targets the item the source should follow, moving down or up', () => {
     expect(planMoves(ABCD, ['A'], 'D')).toEqual({ moves: [{ source: 'A', target: 'D' }], finalOrder: ['B', 'C', 'D', 'A'] });
+    expect(planMoves(ABCD, ['D'], 'A').moves).toEqual([{ source: 'D', target: 'A' }]);
   });
 
-  it('moving up targets the slot it takes, not the "after" section — the old vibo_reorder_songs bug', () => {
-    // "D after A" must send target B (D takes B's slot); sending A would land D before A.
-    expect(planMoves(ABCD, ['D'], 'A').moves).toEqual([{ source: 'D', target: 'B' }]);
+  it('moving to the start sends target null', () => {
+    expect(planMoves(ABCD, ['C'], null).moves).toEqual([{ source: 'C', target: null }]);
   });
 
-  it('moving to the start targets the current first item, never null', () => {
-    expect(planMoves(ABCD, ['C'], null).moves).toEqual([{ source: 'C', target: 'A' }]);
+  it('chains a block: each later source follows the one before it', () => {
+    expect(planMoves(ABCD, ['D', 'A'], 'B').moves).toEqual([
+      { source: 'D', target: 'B' },
+      { source: 'A', target: 'D' },
+    ]);
   });
 
   it('skips items already in place', () => {

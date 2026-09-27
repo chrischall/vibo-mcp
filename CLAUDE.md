@@ -36,8 +36,8 @@ src/
   auth.ts         # captureViboSession() — fetchproxy browser-bridge token capture (SSO)
   session-store.ts# persist {accessToken,refreshToken} to ~/.vibo-mcp/session.json (0600)
   gql.ts          # all GraphQL operation documents (selections from introspection)
-  reorder.ts      # planMoves() — turns "move X after Y" into the web app's own
-                  #   drag payloads (target = item at the drop slot)
+  reorder.ts      # planMoves() — "move these after X" as single-item reorder
+                  #   calls (Vibo: source lands after target; null = first)
   song-search.ts  # pure search-quality heuristics — parseSearchQuery, assessSong,
                   #   annotateSearchResults; grades each search hit
                   #   likely-original / uncertain / likely-not-original
@@ -146,29 +146,37 @@ See `docs/VIBO-API.md` for the pinned input shapes.
   were **wrong in the first SSO ship** (the obfuscated bundle suggested
   `token`/`refreshToken`; the real keys are `x-token`/`x-refresh-token`, found by
   reading the live tab) — fixed here.
-- **Not yet live-round-tripped:** `move_song`, `reorder_songs`,
-  `import_playlist_to_section`, invite/role/remove user, a valid-image upload
-  success, and the section tools `create_section` / `delete_section` /
-  `reorder_sections`. Their documents are copied from the web app's bundle and
-  live-validated, but no authenticated round trip has run yet — test them on
-  throwaway "ZZ TEST …" sections first.
-- **Reorder semantics come from the web app's drag handler, not a live test.**
-  It sends `target = list[dropIndex]` from the pre-drag list, so the source
-  takes the target's slot (lands after it when moving down, before it when
-  moving up). `src/reorder.ts` replays that per item. The old `reorder_songs`
-  passed "after" ids straight through, which would land a move-up one slot
-  early.
-- **`reorderSongsBatch` is what the web app uses too**, with the same section-song
-  `_id`s — so a host's "Action is not allowed for user" is a permission denial,
-  not a wrong endpoint. The web app shows song drag handles to a host only when
-  the section's `settings.canHostsOrderSongs` is on (and no sort or filter is
-  applied). `reorder_songs` checks that setting first. `client.ts` maps the
-  uncoded "not allowed" message to the permission-denial error.
+- **Section tools verified live (2026-09-27)** on throwaway "ZZ TEST" sections
+  (all deleted after; real sections never sent as sources): create with
+  `afterSectionId` / `position` / append, public visibility + time + note;
+  `reorder_sections` up, down, as a block, and to the start; `delete_section`
+  preview counts and the `dontPlay` refusal; `add_song_to_section` verification;
+  the comment limit; `remove_song_from_section` id validation.
+- **Reorder semantics (measured live):** the source lands DIRECTLY AFTER
+  `target`; `target: null` puts it first. (An earlier reading of the web app's
+  drag code suggested "takes the target's slot" — wrong; moves up landed one
+  slot late.) Song reorder uses the same `reorderSongsBatch` as the web app and
+  is assumed to share the semantics — not live-tested, since a host can't
+  reorder in sections it can create (next point) and real songs were off-limits.
+- **Host-created sections get `canHostsOrderSongs: false`**, whatever
+  `createSection` sends, and a host's `updateSection` to turn it on is accepted
+  and IGNORED. In those sections Vibo answers a host's reorder with "Action is
+  not allowed for user" (uncoded; `client.ts` maps it to the permission error).
+  `reorder_songs` checks the setting first and says so.
+- **`description` is silently dropped** for a host by both `createSection` and
+  `updateSection` (null on the reply and on re-read), so `create_section`
+  doesn't take it. (`update_section` still offers it; it's a no-op for hosts.)
+- **Limits (measured live):** song comment ≤ 90 (91 → "Comment should be less
+  then 90 characters"), counted in UTF-16 units. Section name: the API stored
+  60, so 45 is the web UI's limit, enforced here to match it.
 - **Vibo's write replies can be wrong:** `removeSectionSongsV2` answers
   `success: true` for ids that aren't in the section, and `addSongToSection` has
   answered `added: true` without adding. The tools validate ids first, and
-  re-read the section (up to 3 tries over ~2s) after an add. They share the proven auth path; verify with a re-read before trusting
-  each in earnest.
+  re-read the section (up to 3 tries over ~2s) after an add.
+- **Not yet live-round-tripped:** `move_song`, a successful `reorder_songs`,
+  `import_playlist_to_section`, invite/role/remove user, a valid-image upload
+  success. They share the proven auth path; verify with a re-read before
+  trusting each in earnest.
 - `eventUsers` returns nothing unless `usersType` is set, so
   `vibo_list_event_users` queries host+guest and merges when no filter is given.
   Its compact (default) rung projects members to `{_id, firstName, lastName,

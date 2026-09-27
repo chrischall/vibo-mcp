@@ -104,29 +104,30 @@ describe('song management tools', () => {
     expect(gql).toHaveBeenCalledWith(MOVE_SECTION_SONGS, args);
   });
 
-  it('vibo_update_song refuses a comment of 90+ characters before the confirmation step', async () => {
+  it('vibo_update_song refuses a comment over 90 characters before the confirmation step', async () => {
     const base = { eventId: 'e1', sectionId: 's1', songIds: ['so1'] };
-    const res = await harness.callTool('vibo_update_song', { ...base, comment: 'x'.repeat(90) });
+    const res = await harness.callTool('vibo_update_song', { ...base, comment: 'x'.repeat(91) });
     expect(res.isError).toBe(true);
-    expect(JSON.stringify(res)).toContain('90 characters');
+    expect(JSON.stringify(res)).toContain('at most 90');
+    // Emoji count double, as Vibo counts them (46 emoji = 92 units was refused live).
+    expect((await harness.callTool('vibo_update_song', { ...base, comment: '😀'.repeat(46) })).isError).toBe(true);
     expect(gql).not.toHaveBeenCalled();
-    // 89 is the longest accepted — it reaches the confirmation preview.
-    const ok = await harness.callTool('vibo_update_song', { ...base, comment: 'x'.repeat(89) });
+    // 90 is the longest Vibo stores (measured live) — it reaches the confirmation preview.
+    const ok = await harness.callTool('vibo_update_song', { ...base, comment: 'x'.repeat(90) });
     expect(parseToolResult<{ status: string }>(ok).status).toBe('confirmation-required');
   });
 
-  it('vibo_reorder_songs places songs AFTER the target, sending the UI drag payload per song', async () => {
+  it('vibo_reorder_songs places songs AFTER the target, one call per moved song', async () => {
     const { writes, state } = fakeWith();
-    // Moving so4 up to after so1: the web app would send target so2 (the slot it takes).
     const args = { eventId: 'e1', sectionId: 's1', sourceSongIds: ['so4'], targetSongId: 'so1' };
     const { preview } = await previewCall(harness, 'vibo_reorder_songs', args);
     expect(preview.willSend).toEqual({
       eventId: 'e1',
       sectionId: 's1',
-      calls: [{ sourceSongIds: ['so4'], targetSongId: 'so2' }],
+      calls: [{ sourceSongIds: ['so4'], targetSongId: 'so1' }],
     });
     await confirmCall(harness, 'vibo_reorder_songs', args, writes);
-    expect(writes).toHaveBeenCalledWith(REORDER_SONGS, { eventId: 'e1', sectionId: 's1', sourceSongIds: ['so4'], targetSongId: 'so2' });
+    expect(writes).toHaveBeenCalledWith(REORDER_SONGS, { eventId: 'e1', sectionId: 's1', sourceSongIds: ['so4'], targetSongId: 'so1' });
     expect(songOrder(state, 's1')).toEqual(['so1', 'so4', 'so2', 'so3']);
   });
 

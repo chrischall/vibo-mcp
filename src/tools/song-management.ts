@@ -14,8 +14,12 @@ import {
   isHost,
 } from './lookups.js';
 
-/** Vibo rejects a song comment of 90 characters or more. */
-export const SONG_COMMENT_MAX = 89;
+/**
+ * Vibo's song-comment limit, measured live: 90 is stored, 91 is refused with
+ * "Comment should be less then 90 characters". Counted in UTF-16 units (an
+ * emoji is 2), which is what String#length gives.
+ */
+export const SONG_COMMENT_MAX = 90;
 
 export function registerSongManagementTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
@@ -66,7 +70,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
     {
       description:
         'Update songs in a section: mark must-play, flag as do-not-play, and/or set a comment. Provide at least one field. ' +
-        `A comment must be under 90 characters (Vibo rejects longer ones; checked before anything is sent). ` +
+        `A comment can be at most ${SONG_COMMENT_MAX} characters (Vibo's limit; emoji count double; checked before anything is sent). ` +
         CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Update Vibo section songs', readOnly: false, destructive: false }),
       inputSchema: z.object({
@@ -94,7 +98,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
       }
       if (comment !== undefined && comment.length > SONG_COMMENT_MAX) {
         throw new McpToolError(
-          `Comment is ${comment.length} characters; Vibo rejects song comments of 90 characters or more. Nothing was sent.`,
+          `Comment is ${comment.length} characters; Vibo allows at most ${SONG_COMMENT_MAX}. Nothing was sent.`,
           { hint: `Shorten it to ${SONG_COMMENT_MAX} characters or fewer, or put the longer text in a section note.` },
         );
       }
@@ -151,8 +155,9 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
       description:
         'Reorder songs within a section: move sourceSongIds (in the given order) to directly after targetSongId, ' +
         'or to the top when it is omitted. Checks the ids against the section and, for a host, that the DJ allows ' +
-        "hosts to order this section's songs (the web app hides drag handles when not). Sends one reorderSongsBatch " +
-        'call per song that actually moves, exactly as a drag in the web app does. ' +
+        "hosts to order this section's songs. That setting is OFF for every section a host creates and only the " +
+        'DJ can turn it on, so a host usually cannot reorder songs in sections they added. Sends one ' +
+        'reorderSongsBatch call per song that actually moves. ' +
         CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Reorder Vibo section songs', readOnly: false, destructive: false }),
       inputSchema: z.object({
@@ -184,16 +189,17 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
         fetchSectionSongs(client, eventId, sectionId),
       ]);
       const section = findSection(sections, sectionId);
-      // The web app lets a host drag songs only when the DJ has left the
-      // section's "hosts can order songs" setting on; otherwise Vibo refuses
-      // the same request with "Action is not allowed for user".
+      // Vibo refuses a host's reorder with "Action is not allowed for user" when
+      // the section's "hosts can order songs" is off — which it is for every
+      // section a host creates (measured live; a host's attempt to turn it on
+      // is accepted and ignored). The web app hides drag handles there too.
       if (isHost(perms) && section.settings?.canHostsOrderSongs === false) {
         throw new McpToolError(
           `The DJ has turned off host song ordering for "${section.name}", so Vibo refuses reorders from hosts there. Nothing was sent.`,
           {
             hint:
-              "It's the section's canHostsOrderSongs setting, which only the DJ can change (the web app hides the drag " +
-              'handles in this section too). Ask the DJ, or leave a comment on the song instead.',
+              "It's the section's canHostsOrderSongs setting. Vibo turns it off for sections a host creates, and only the DJ " +
+              'can turn it on (a host update is ignored). Ask the DJ, or leave a comment on the song instead.',
           },
         );
       }

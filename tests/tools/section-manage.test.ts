@@ -89,14 +89,14 @@ describe('section management tools', () => {
       expect(writes).not.toHaveBeenCalled();
       const res = await harness.callTool('vibo_create_section', { ...args, confirmToken });
       expect(writes).toHaveBeenCalledTimes(2);
-      expect(writes).toHaveBeenCalledWith(REORDER_SECTIONS, { eventId: 'e1', sourceSectionId: 'new1', targetSectionId: 'B' });
+      expect(writes).toHaveBeenCalledWith(REORDER_SECTIONS, { eventId: 'e1', sourceSectionId: 'new1', targetSectionId: 'A' });
       expect(sectionOrder(state)).toEqual(['A', 'new1', 'B', 'C', 'D']);
       expect(parseToolResult<{ placement: string }>(res).placement).toBe('fixed-by-reorder');
     });
 
-    it('maps visibility "public", normalises time, and sets the note with a follow-up updateSection', async () => {
+    it('maps visibility "public", normalises time, and sets the note with a follow-up updateSection (no description: Vibo drops it)', async () => {
       const { writes } = installFakeVibo(gql, { event: hostEvent(), sections: [section('A')], songs: {} });
-      const args = { eventId: 'e1', name: 'ZZ TEST', visibility: 'public', time: '5:30 PM', description: 'd', note: 'n' };
+      const args = { eventId: 'e1', name: 'ZZ TEST', visibility: 'public', time: '5:30 PM', note: 'n' };
       const { preview } = await previewCall(harness, 'vibo_create_section', args);
       expect(preview.action).toBe('createSection, then updateSection (note)');
       expect(writes).not.toHaveBeenCalled();
@@ -104,7 +104,8 @@ describe('section management tools', () => {
       await harness.callTool('vibo_create_section', { ...args, confirmToken });
       const payload = writes.mock.calls[0][1].payload;
       expect(payload.settings).toMatchObject({ visibleForGuests: true, visibleForHosts: true });
-      expect(payload).toMatchObject({ time: '05:30 pm', description: 'd' });
+      expect(payload).toMatchObject({ time: '05:30 pm' });
+      expect(payload).not.toHaveProperty('description');
       expect(writes).toHaveBeenCalledWith(UPDATE_SECTION, { eventId: 'e1', sectionId: 'new1', payload: { note: 'n' } });
     });
 
@@ -202,7 +203,7 @@ describe('section management tools', () => {
       const { writes, state } = fresh();
       const args = { eventId: 'e1', sourceSectionIds: ['D'], targetSectionId: 'A' };
       const { preview } = await previewCall(harness, 'vibo_reorder_sections', args);
-      expect(preview.willSend).toEqual({ eventId: 'e1', calls: [{ sourceSectionId: 'D', targetSectionId: 'B' }] });
+      expect(preview.willSend).toEqual({ eventId: 'e1', calls: [{ sourceSectionId: 'D', targetSectionId: 'A' }] });
       const res = await confirmCall(harness, 'vibo_reorder_sections', args, writes);
       expect(sectionOrder(state)).toEqual(['A', 'D', 'B', 'C']);
       expect(parseToolResult<{ newPositions: { index: number }[] }>(res).newPositions[0].index).toBe(1);

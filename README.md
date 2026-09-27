@@ -62,13 +62,18 @@ Vibo's limits, checked before anything is sent:
 
 | What | Limit |
 |---|---|
-| Section name | 45 characters |
-| Song comment (`vibo_update_song`) | under 90 characters (89 max) |
+| Section name | 45 characters (the web app's limit) |
+| Song comment (`vibo_update_song`) | 90 characters (an emoji counts as 2) |
 
 A host can only do some things when the DJ's settings allow it: adding or
 reordering sections (event settings), or reordering one section's songs (that
-section's "hosts can order songs"). When a setting blocks you, the tool says
-which one instead of returning Vibo's bare "Action is not allowed for user".
+section's "hosts can order songs"). Vibo turns "hosts can order songs" **off**
+for every section a host creates, and only the DJ can turn it on. When a
+setting blocks you, the tool says which one instead of returning Vibo's bare
+"Action is not allowed for user".
+
+Vibo doesn't store a section description set by a host, so
+`vibo_create_section` takes a note (for the DJ) instead.
 
 ### Confirmations
 

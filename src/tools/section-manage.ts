@@ -14,7 +14,11 @@ import {
   type SectionInfo,
 } from './lookups.js';
 
-/** Vibo's section-name limit (the web app's `nameMustBeCharactersOrLess`, count 45). */
+/**
+ * The web app's section-name limit (`nameMustBeCharactersOrLess`, count 45).
+ * Vibo's API stores longer names (60 was accepted live), so this keeps names
+ * the web UI can still edit.
+ */
 export const SECTION_NAME_MAX = 45;
 
 /**
@@ -74,7 +78,8 @@ export function registerSectionManageTools(server: McpServer, client: ViboClient
         `Create a new timeline section. Name is required, max ${SECTION_NAME_MAX} characters (Vibo's limit, checked ` +
         'before anything is sent). Place it with afterSectionId (directly after that section) or position ' +
         '(0-based index; 0 = first); with neither it goes at the end of the timeline, like the web app. ' +
-        'visibility "host" (default) = "Me and DJ", "public" = visible to guests too. Returns the new section _id. ' +
+        'visibility "host" (default) = "Me and DJ", "public" = visible to guests too. Vibo gives a section a host ' +
+        "creates \"hosts can order songs\" = off, which only the DJ can turn on. Returns the new section _id. " +
         CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Create Vibo section', readOnly: false, destructive: false }),
       inputSchema: z.object({
@@ -85,7 +90,6 @@ export function registerSectionManageTools(server: McpServer, client: ViboClient
           .optional()
           .describe('"host" (default) = Me and DJ only; "public" = guests can see it too.'),
         time: z.string().optional().describe('Scheduled time as "hh:mm am/pm", e.g. "05:30 pm".'),
-        description: z.string().optional().describe('Section description shown under the name.'),
         note: z.string().optional().describe('Note to the DJ (set right after creating, via updateSection).'),
         afterSectionId: z.string().optional().describe('Put the new section directly after this section _id.'),
         position: z
@@ -97,7 +101,7 @@ export function registerSectionManageTools(server: McpServer, client: ViboClient
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, name, visibility, time, description, note, afterSectionId, position, confirmToken }, ctx) => {
+    async ({ eventId, name, visibility, time, note, afterSectionId, position, confirmToken }, ctx) => {
       const trimmed = name.trim();
       if (!trimmed) {
         throw new McpToolError('Section name is empty.', { hint: 'Pass a name of 1–45 characters.' });
@@ -149,7 +153,6 @@ export function registerSectionManageTools(server: McpServer, client: ViboClient
         },
       };
       if (normalizedTime) payload.time = normalizedTime;
-      if (description !== undefined) payload.description = description;
       if (insertBefore) payload.insertBeforeSectionId = insertBefore._id;
 
       const willSend: Record<string, unknown> = { eventId, payload };
@@ -179,9 +182,9 @@ export function registerSectionManageTools(server: McpServer, client: ViboClient
         })).updateSection?.note;
       }
 
-      // Belt and braces: if Vibo ignored insertBeforeSectionId, move it into place
-      // with the same drag request the web app sends. A stale re-read that doesn't
-      // show the new section yet is reported, not guessed at.
+      // Belt and braces: if Vibo ever ignores insertBeforeSectionId (it honoured
+      // it live), move the section into place. A stale re-read that doesn't show
+      // the new section yet is reported, not guessed at.
       let placement: 'as-requested' | 'fixed-by-reorder' | 'unverified' = 'unverified';
       const after = await fetchSections(client, eventId);
       const order = after.map((s) => s._id);
@@ -266,7 +269,7 @@ export function registerSectionManageTools(server: McpServer, client: ViboClient
       description:
         'Move one or more timeline sections to directly after targetSectionId (omit it to move them to the start), ' +
         'keeping the given order. Mirrors vibo_reorder_songs. Sends one reorderSections call per section that ' +
-        'actually moves, exactly as a drag in the web app does. ' +
+        'actually moves. ' +
         CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Reorder Vibo sections', readOnly: false, destructive: false }),
       inputSchema: z.object({

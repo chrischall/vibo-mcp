@@ -77,8 +77,8 @@ fresh preview and token to re-approve), and a reused one as `TOKEN_REUSED`.
 
 - `vibo_add_song_to_section` — add a searched song to a section.
 - `vibo_remove_song_from_section` — every id is checked against the section first; unknown ids are listed and nothing is sent.
-- `vibo_move_song` / `vibo_reorder_songs` — reorder places `sourceSongIds` directly after `targetSongId` (omit it for the top). A host needs the section's "hosts can order songs" setting on.
-- `vibo_update_song` — mark must-play / do-not-play, or set a comment (under 90 characters; Vibo rejects longer ones).
+- `vibo_move_song` / `vibo_reorder_songs` — reorder places `sourceSongIds` directly after `targetSongId` (omit it for the top). A host needs the section's "hosts can order songs" setting on — Vibo turns it off for sections a host creates, and only the DJ can turn it on.
+- `vibo_update_song` — mark must-play / do-not-play, or set a comment (at most 90 characters; an emoji counts as 2).
 - `vibo_add_song_to_section` re-reads the section after adding and errors if the song isn't actually there.
 - `vibo_toggle_song_like` — like/unlike a song.
 - `vibo_comment_on_song` / `vibo_comment_on_section` (+ delete) — leave the DJ notes.
@@ -88,7 +88,7 @@ fresh preview and token to re-approve), and a reused one as `TOKEN_REUSED`.
 - `vibo_create_event_contact` — add a host/guest contact.
 - `vibo_invite_users` / `vibo_change_user_role` / `vibo_remove_user` — manage who's on the event.
 - `vibo_update_section` — edit a section's name, time, or note.
-- `vibo_create_section` — add a section (name ≤ 45 characters; `visibility` host/public; optional time, description, note) and place it with `afterSectionId` or `position`. Returns the new `_id`.
+- `vibo_create_section` — add a section (name ≤ 45 characters; `visibility` host/public; optional time and note — Vibo drops a host's description) and place it with `afterSectionId` or `position`. Returns the new `_id`.
 - `vibo_delete_section` — delete a section; the preview shows its name, song count and answered questions. `dontPlay`/`headline` sections need `force: true`.
 - `vibo_reorder_sections` — move sections to directly after `targetSectionId` (omit for the start).
 - `vibo_answer_question` — answer a planning question (text / option ids / link / image+file uploads).

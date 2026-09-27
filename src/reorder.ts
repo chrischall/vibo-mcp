@@ -1,22 +1,16 @@
 /**
- * Plan a "move these items to after that one" request as the sequence of
- * single drags the Vibo web app itself would send.
+ * Plan a "move these items to after that one" request as single-item calls to
+ * Vibo's reorder mutations (`reorderSections`, `reorderSongsBatch`).
  *
- * Vibo's reorder mutations (`reorderSections`, `reorderSongsBatch`) take a
- * source and a `target`, and the web app's drag handler — read from the
- * web.vibodj.com bundle — fills `target` with the item that currently sits at
- * the DROP INDEX in the pre-drag list (`target = list[addedIndex]`). So the
- * source takes the target's slot: dragging down lands it just after the target,
- * dragging up lands it just before. That is not "after target", which is what
- * the old `vibo_reorder_songs` passed straight through (a move up landed one
- * slot early).
- *
- * Replaying the UI's own payload per item keeps us on the one request shape the
- * server is known to accept, and never needs the ambiguous `target: null`.
+ * Semantics, measured live on throwaway sections (moves up, down, and to the
+ * start): the source lands DIRECTLY AFTER `target`, and `target: null` puts it
+ * first. So the plan is simply "each source after the previous one", skipping
+ * any that already sit there.
  */
 export interface PlannedMove {
   source: string;
-  target: string;
+  /** The item the source goes directly after; null = the start. */
+  target: string | null;
 }
 
 export interface MovePlan {
@@ -40,7 +34,7 @@ export function planMoves(order: readonly string[], sources: readonly string[], 
     const rest = current.filter((id) => id !== source);
     const to = anchor === null ? 0 : rest.indexOf(anchor) + 1;
     if (to !== from) {
-      moves.push({ source, target: current[to] });
+      moves.push({ source, target: anchor });
       current = [...rest.slice(0, to), source, ...rest.slice(to)];
     }
     anchor = source;

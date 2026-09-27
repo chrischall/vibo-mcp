@@ -17,15 +17,11 @@ export interface FakeState {
   honorsInsertBefore?: boolean;
 }
 
-/**
- * Take-the-target's-slot, the semantics the web app's drag handler implies
- * (it sends target = list[dropIndex]).
- */
+/** Vibo's reorder semantics, measured live: the source lands directly after target; null = first. */
 function applyMove<T>(list: T[], idOf: (t: T) => string, source: string, target: string | null): T[] {
-  const from = list.findIndex((x) => idOf(x) === source);
-  const item = list[from];
-  const to = target === null ? 0 : list.findIndex((x) => idOf(x) === target);
-  const rest = list.filter((_, i) => i !== from);
+  const item = list.find((x) => idOf(x) === source)!;
+  const rest = list.filter((x) => idOf(x) !== source);
+  const to = target === null ? 0 : rest.findIndex((x) => idOf(x) === target) + 1;
   return [...rest.slice(0, to), item, ...rest.slice(to)];
 }
 
