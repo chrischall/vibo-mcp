@@ -112,7 +112,7 @@ All shapes pinned via authenticated introspection; every document live-validated
 
 **Song management:** `removeSectionSongsV2(eventId, sectionId, songIds:[ID!]!)`,
 `updateSectionSongs(..., payload: UpdateSectionSongInput{isMustPlay, isFlagged, comment})`,
-`moveSectionSongsV2`, `reorderSongsBatch(..., sourceSongIds, targetSongId)`.
+`moveSectionSongsV2`, `reorderSongsBatch(..., sourceSongIds, targetSongId)` (target semantics: see Section management).
 
 **Comments:** `createSongComment` / `createSectionComment(payload: CreateCommentInput{message})`,
 `deleteSongComment` / `deleteSectionComment`.
@@ -132,6 +132,43 @@ unless `usersType` is set**, so the tool queries host+guest and merges. `inviteU
 
 **Dropped (DJ-only / not host-usable):** `generatePlaylist` (requires a `computerId` scanner),
 prep-mode, templates/favorites, child-DJ/scanner management.
+
+## Section management (create / delete / reorder)
+
+Source: the web.vibodj.com bundle's own documents and handlers (Timeline "+" →
+Add section, the section "…" menu → Delete, the timeline drag handler), checked
+against live introspection. Each document was sent unauthenticated and got
+`UNAUTHORIZED`, not a validation error.
+
+- `createSection(eventId, payload: CreateSectionInput!) → Section`.
+  `CreateSectionInput { name!, time, type: simple|headline, description,
+  sectionImage, settings: SectionSettingsInput, insertBeforeSectionId, headlineColor }`.
+  There's no `note`: set it afterwards with `updateSection`.
+  **Placement:** `insertBeforeSectionId` (the web app's "add in the middle"
+  button); omitted means append.
+  **Visibility** is not a field. The UI's "Who will see this section" maps to
+  settings: host ("Me and DJ") = `{visibleForGuests:false, visibleForHosts:true}`,
+  public ("Guests") = `{visibleForGuests:true, visibleForHosts:true}`.
+  The UI's other create defaults: `timeEnabled, songsEnabled, notesEnabled,
+  canHostsOrderSongs, canHostDeleteSection, notesVisibleForHosts,
+  canHostChangeSectionName, canHostChangeSectionTime` all `true`, plus
+  `songsLimit`/`mustPlayLimit` from the event's `settings.sectionSongsLimit` /
+  `sectionMustPlayLimit`.
+  **Name limit:** 45 (the bundle constant behind `nameMustBeCharactersOrLess`).
+- `removeSection(eventId, sectionId) → Boolean`. `Section.canRemove` says
+  whether the caller may delete it; the DJ sets "who can delete section".
+- `reorderSections(eventId, sourceSectionId, targetSectionId) → Boolean`. The
+  drag handler sends `targetSectionId = list[addedIndex]` from the pre-drag
+  list: the source takes the target's slot.
+- `reorderSongsBatch(eventId, sectionId, sourceSongIds, targetSongId)` is what
+  the song drag handler sends, with section-song `_id`s and the same
+  `list[addedIndex]` target rule. A host can drag only when
+  `section.settings.canHostsOrderSongs` is on. The single `reorderSongs` doc
+  exists in the bundle but is unused.
+- Event-level host permissions: `event.settings { canHostCreateSections,
+  canHostReorderSections }`, plus `event.isLocked`.
+- Song comment limit: Vibo rejects 90+ characters (observed; the bundle also
+  has a 90 constant).
 
 ## Uploads (the `Upload` scalar)
 

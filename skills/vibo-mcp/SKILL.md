@@ -76,8 +76,10 @@ fresh preview and token to re-approve), and a reused one as `TOKEN_REUSED`.
 `MCP_CONFIRM_MODE` (`ask-user` default / `auto` / `refuse`) controls this flow.
 
 - `vibo_add_song_to_section` — add a searched song to a section.
-- `vibo_remove_song_from_section` / `vibo_move_song` / `vibo_reorder_songs`.
-- `vibo_update_song` — mark must-play / do-not-play, or set a comment.
+- `vibo_remove_song_from_section` — every id is checked against the section first; unknown ids are listed and nothing is sent.
+- `vibo_move_song` / `vibo_reorder_songs` — reorder places `sourceSongIds` directly after `targetSongId` (omit it for the top). A host needs the section's "hosts can order songs" setting on.
+- `vibo_update_song` — mark must-play / do-not-play, or set a comment (under 90 characters; Vibo rejects longer ones).
+- `vibo_add_song_to_section` re-reads the section after adding and errors if the song isn't actually there.
 - `vibo_toggle_song_like` — like/unlike a song.
 - `vibo_comment_on_song` / `vibo_comment_on_section` (+ delete) — leave the DJ notes.
 - `vibo_import_playlist_to_section` — pull tracks from a connected Spotify/Apple playlist.
@@ -86,6 +88,9 @@ fresh preview and token to re-approve), and a reused one as `TOKEN_REUSED`.
 - `vibo_create_event_contact` — add a host/guest contact.
 - `vibo_invite_users` / `vibo_change_user_role` / `vibo_remove_user` — manage who's on the event.
 - `vibo_update_section` — edit a section's name, time, or note.
+- `vibo_create_section` — add a section (name ≤ 45 characters; `visibility` host/public; optional time, description, note) and place it with `afterSectionId` or `position`. Returns the new `_id`.
+- `vibo_delete_section` — delete a section; the preview shows its name, song count and answered questions. `dontPlay`/`headline` sections need `force: true`.
+- `vibo_reorder_sections` — move sections to directly after `targetSectionId` (omit for the start).
 - `vibo_answer_question` — answer a planning question (text / option ids / link / image+file uploads).
 - `vibo_set_profile_photo` — set your profile photo from a local image in the upload directory (`VIBO_UPLOAD_DIR`, default `~/Downloads/vibo-mcp`).
 - `vibo_capture_session` — capture your login from a signed-in browser tab (SSO accounts).
@@ -94,7 +99,7 @@ fresh preview and token to re-approve), and a reused one as `TOKEN_REUSED`.
 
 ## Response shape (`view`)
 
-**Six of this server's 39 tools take `view: "compact" | "full"`**, and on every
+**Six of this server's 42 tools take `view: "compact" | "full"`**, and on every
 one of them **`compact` is the DEFAULT**. You get the slim rung without asking.
 
 They are exactly the six reads whose GraphQL document asks Vibo for media:

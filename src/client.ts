@@ -68,6 +68,12 @@ const AUTH_ERROR_CODES = new Set(['UNAUTHORIZED', 'UNAUTHENTICATED']);
 // Codes for "you are signed in, but not allowed to do this".
 const PERMISSION_ERROR_CODES = new Set(['FORBIDDEN']);
 
+// Vibo's permission denial for a host acting where the DJ's settings forbid it
+// ("Action is not allowed for user", e.g. reordering songs in a section with
+// host ordering off) arrives without a FORBIDDEN code. Matched only when the
+// error carries no auth code, so an expired session is never mistaken for it.
+const PERMISSION_MESSAGE_PATTERN = /\bnot allowed\b/i;
+
 // Message fallback, consulted ONLY for an error that carries no code. Vibo's
 // expired-session text is "Not authorized. Try to log in"; the patterns are
 // anchored on session/token wording so an unrelated message that merely
@@ -485,7 +491,11 @@ export class ViboClient {
   /** Signed in, but not allowed to do this (HTTP 403 / FORBIDDEN). */
   private isPermissionError(status: number, errors?: GraphQLError[]): boolean {
     if (status === 403) return true;
-    return (errors ?? []).some((e) => PERMISSION_ERROR_CODES.has(e.code ?? e.extensions?.code ?? ''));
+    return (errors ?? []).some((e) => {
+      const code = e.code ?? e.extensions?.code ?? '';
+      if (PERMISSION_ERROR_CODES.has(code)) return true;
+      return !AUTH_ERROR_CODES.has(code) && PERMISSION_MESSAGE_PATTERN.test(e.message ?? '');
+    });
   }
 
   private unwrap<T>(status: number, body: GraphQLResponse<T>): T {

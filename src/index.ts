@@ -15,6 +15,7 @@ import { registerIdeasTools } from './tools/ideas.js';
 import { registerImportTools } from './tools/imports.js';
 import { registerCollaborationTools } from './tools/collaboration.js';
 import { registerSectionEditTools } from './tools/section-edit.js';
+import { registerSectionManageTools } from './tools/section-manage.js';
 import { registerUploadTools } from './tools/uploads.js';
 import { registerSessionTools } from './tools/session.js';
 
@@ -46,6 +47,7 @@ await runMcp({
     registerImportTools,
     registerCollaborationTools,
     registerSectionEditTools,
+    registerSectionManageTools,
     registerUploadTools,
     registerSessionTools,
   ],

@@ -139,7 +139,7 @@ describe('viewArg', () => {
 /**
  * The coverage guard.
  *
- * `view` reaching only one of 39 tools was the actual defect in #107 — not a
+ * `view` reaching only one of 39 tools (then) was the actual defect in #107 — not a
  * missing feature but an unnoticed gap, because nothing tied the wire surface
  * to the tool wiring. `gql.ts` ASKS Vibo for media in six documents; every
  * response those calls produce therefore carries image URLs a model cannot see

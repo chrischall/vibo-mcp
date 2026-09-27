@@ -101,6 +101,51 @@ export const LIST_SECTIONS = `
   }
 `;
 
+// Section management (create / delete / reorder). Captured from the web app's
+// own documents in the web.vibodj.com bundle (Timeline "+" -> Add section,
+// the section "..." -> Delete, and the timeline drag handler) and checked
+// against live introspection. Read-before-write lookups use the lean
+// SECTIONS_FOR_WRITE / EVENT_PERMISSIONS documents so vibo_list_sections'
+// output stays unchanged.
+
+export const SECTIONS_FOR_WRITE = `
+  query sectionsForWrite($eventId: ID!) {
+    sections(eventId: $eventId) {
+      _id name type songsCount questionsCount answeredCount canRemove visibility
+      settings { canHostsOrderSongs canHostDeleteSection }
+    }
+  }
+`;
+
+export const EVENT_PERMISSIONS = `
+  query eventPermissions($eventId: ID!) {
+    event(eventId: $eventId) {
+      _id role isLocked
+      settings { canHostCreateSections canHostReorderSections sectionSongsLimit sectionMustPlayLimit }
+    }
+  }
+`;
+
+export const CREATE_SECTION = `
+  mutation createSection($eventId: ID!, $payload: CreateSectionInput!) {
+    createSection(eventId: $eventId, payload: $payload) {
+      _id name type time description visibility
+    }
+  }
+`;
+
+export const REMOVE_SECTION = `
+  mutation removeSection($eventId: ID!, $sectionId: ID!) {
+    removeSection(eventId: $eventId, sectionId: $sectionId)
+  }
+`;
+
+export const REORDER_SECTIONS = `
+  mutation reorderSections($eventId: ID!, $sourceSectionId: ID!, $targetSectionId: ID) {
+    reorderSections(eventId: $eventId, sourceSectionId: $sourceSectionId, targetSectionId: $targetSectionId)
+  }
+`;
+
 // ---- Songs ------------------------------------------------------------------
 
 export const GET_SECTION_SONGS = `
@@ -113,6 +158,18 @@ export const GET_SECTION_SONGS = `
         ${THUMBS}
         ${SONG_LINKS}
       }
+      next { skip limit }
+      totalCount
+    }
+  }
+`;
+
+// The section's songs in their manual (unsorted) order, ids only — used to
+// validate ids before a remove/reorder and to confirm an add landed.
+export const SECTION_SONG_IDS = `
+  query sectionSongIds($eventId: ID!, $sectionId: ID!, $pagination: PaginationInput) {
+    getSectionSongs(eventId: $eventId, sectionId: $sectionId, pagination: $pagination) {
+      songs { _id viboSongId artist title }
       next { skip limit }
       totalCount
     }

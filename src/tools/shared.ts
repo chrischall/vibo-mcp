@@ -59,16 +59,27 @@ export interface ConfirmWriteOptions {
    * shows (inline upload bytes the preview summarises). Defaults to `willSend`.
    */
   payload?: unknown;
+  /**
+   * Read-only facts shown beside `willSend` so the user can judge the write
+   * (e.g. how many songs a section being deleted holds). Bound into the token
+   * too, so a change between preview and confirm is refused as DRAFT_CHANGED.
+   */
+  context?: Record<string, unknown>;
 }
 
 /**
  * Gate a write behind a confirmation: an elicitation prompt where the client
  * can show one, else the two-phase confirm-token flow (MCP_CONFIRM_MODE).
  * `undefined` means proceed; anything else is the result to return unchanged.
- * Nothing here makes a network call, so phase 1 never writes.
+ * Nothing here makes a network call, so phase 1 never writes (a tool may READ
+ * before calling this, to validate ids or fill `context`).
  */
 export function confirmWrite(ctx: ServerContext, options: ConfirmWriteOptions) {
-  const preview = { action: options.mutation, willSend: options.willSend };
+  const preview = {
+    action: options.mutation,
+    willSend: options.willSend,
+    ...(options.context ? { context: options.context } : {}),
+  };
   return requireConfirmationWithFallback(
     ctx,
     confirmationFromEnv({
@@ -79,7 +90,7 @@ export function confirmWrite(ctx: ServerContext, options: ConfirmWriteOptions) {
       confirmToken: options.confirmToken,
       subject: () => ({
         target: options.target,
-        payload: options.payload ?? options.willSend,
+        payload: options.payload ?? (options.context ? { willSend: options.willSend, context: options.context } : options.willSend),
         preview,
       }),
     }),

@@ -46,6 +46,30 @@ read local files from the upload directory — `VIBO_UPLOAD_DIR`, default
 Hidden files, symlinks that lead outside the directory, and files over 25 MiB
 are refused, and photo slots need an image file.
 
+### Timeline sections and limits
+
+- `vibo_create_section` adds a section and can place it (`afterSectionId` or a
+  0-based `position`). The web app only appends new sections to the end.
+  Visibility is `host` (default, "Me and DJ") or `public` (guests too).
+- `vibo_delete_section` previews the section's name, its song count and its
+  answered questions before deleting. It refuses the DJ's do-not-play list
+  (`dontPlay`) and timeline dividers (`headline`) unless you pass `force: true`.
+- `vibo_reorder_sections` moves one or more sections to directly after another
+  section, or to the start. `vibo_reorder_songs` does the same for songs within
+  a section.
+
+Vibo's limits, checked before anything is sent:
+
+| What | Limit |
+|---|---|
+| Section name | 45 characters |
+| Song comment (`vibo_update_song`) | under 90 characters (89 max) |
+
+A host can only do some things when the DJ's settings allow it: adding or
+reordering sections (event settings), or reordering one section's songs (that
+section's "hosts can order songs"). When a setting blocks you, the tool says
+which one instead of returning Vibo's bare "Action is not allowed for user".
+
 ### Confirmations
 
 Every write (adding or removing songs, comments, invites, exports, answers,

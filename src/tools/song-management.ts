@@ -3,13 +3,27 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { McpToolError, minifiedResult, confirmTokenParam, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { REMOVE_SECTION_SONGS, UPDATE_SECTION_SONGS, MOVE_SECTION_SONGS, REORDER_SONGS } from '../gql.js';
+import { planMoves } from '../reorder.js';
 import { confirmWrite, CONFIRM_NOTE } from './shared.js';
+import {
+  fetchSections,
+  fetchEventPermissions,
+  fetchSectionSongs,
+  findSection,
+  assertSongsInSection,
+  isHost,
+} from './lookups.js';
+
+/** Vibo rejects a song comment of 90 characters or more. */
+export const SONG_COMMENT_MAX = 89;
 
 export function registerSongManagementTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
     'vibo_remove_song_from_section',
     {
-      description: 'Remove one or more songs from a section. ' + CONFIRM_NOTE,
+      description:
+        'Remove one or more songs from a section. Every id is checked against the section first; if any is not ' +
+        'there, nothing is sent and the missing ids are listed. ' + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Remove songs from Vibo section', readOnly: false, destructive: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
@@ -22,6 +36,10 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
       }),
     },
     async ({ eventId, sectionId, songIds, confirmToken }, ctx) => {
+      // Vibo answers success:true for ids that aren't in the section and removes
+      // nothing, so check them ourselves before asking the user to confirm.
+      const songs = await fetchSectionSongs(client, eventId, sectionId);
+      assertSongsInSection(songIds, songs);
       const vars = { eventId, sectionId, songIds };
       const gate = await confirmWrite(ctx, {
         tool: 'vibo_remove_song_from_section',
@@ -30,6 +48,12 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
         confirmToken,
         target: sectionId,
         willSend: vars,
+        context: {
+          songs: songIds.map((id) => {
+            const s = songs.find((x) => x._id === id)!;
+            return `${s.title ?? '?'} — ${s.artist ?? '?'}`;
+          }),
+        },
       });
       if (gate) return gate;
       const data = await client.gql<{ removeSectionSongsV2: unknown }>(REMOVE_SECTION_SONGS, vars);
@@ -41,7 +65,9 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
     'vibo_update_song',
     {
       description:
-        'Update songs in a section: mark must-play, flag as do-not-play, and/or set a comment. Provide at least one field. ' + CONFIRM_NOTE,
+        'Update songs in a section: mark must-play, flag as do-not-play, and/or set a comment. Provide at least one field. ' +
+        `A comment must be under 90 characters (Vibo rejects longer ones; checked before anything is sent). ` +
+        CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Update Vibo section songs', readOnly: false, destructive: false }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
@@ -52,7 +78,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
           .describe('Song _ids from vibo_get_section_songs.'),
         isMustPlay: z.boolean().optional(),
         isFlagged: z.boolean().optional().describe('mark do-not-play / flagged'),
-        comment: z.string().optional(),
+        comment: z.string().optional().describe(`Comment for the DJ, at most ${SONG_COMMENT_MAX} characters.`),
         confirmToken: confirmTokenParam,
       }),
     },
@@ -65,6 +91,12 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
         throw new McpToolError('Provide at least one of isMustPlay, isFlagged, or comment.', {
           hint: 'Pass isMustPlay, isFlagged, and/or comment to update the songs.',
         });
+      }
+      if (comment !== undefined && comment.length > SONG_COMMENT_MAX) {
+        throw new McpToolError(
+          `Comment is ${comment.length} characters; Vibo rejects song comments of 90 characters or more. Nothing was sent.`,
+          { hint: `Shorten it to ${SONG_COMMENT_MAX} characters or fewer, or put the longer text in a section note.` },
+        );
       }
       const vars = { eventId, sectionId, songIds, payload };
       const gate = await confirmWrite(ctx, {
@@ -116,7 +148,12 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
   server.registerTool(
     'vibo_reorder_songs',
     {
-      description: 'Reorder songs within a section. ' + CONFIRM_NOTE,
+      description:
+        'Reorder songs within a section: move sourceSongIds (in the given order) to directly after targetSongId, ' +
+        'or to the top when it is omitted. Checks the ids against the section and, for a host, that the DJ allows ' +
+        "hosts to order this section's songs (the web app hides drag handles when not). Sends one reorderSongsBatch " +
+        'call per song that actually moves, exactly as a drag in the web app does. ' +
+        CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Reorder Vibo section songs', readOnly: false, destructive: false }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
@@ -124,27 +161,62 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
         sourceSongIds: z
           .array(z.string())
           .min(1)
-          .describe('Song _ids from vibo_get_section_songs.'),
+          .describe('Song _ids from vibo_get_section_songs, in the order they should end up.'),
         targetSongId: z
           .string()
           .optional()
-          .describe('place the moved songs after this song _id; omit for start'),
+          .describe('place the moved songs directly after this song _id; omit for the top'),
         confirmToken: confirmTokenParam,
       }),
     },
     async ({ eventId, sectionId, sourceSongIds, targetSongId, confirmToken }, ctx) => {
-      const vars = { eventId, sectionId, sourceSongIds, targetSongId: targetSongId ?? null };
+      if (new Set(sourceSongIds).size !== sourceSongIds.length) {
+        throw new McpToolError('sourceSongIds contains a duplicate.', { hint: 'List each song once.' });
+      }
+      if (targetSongId !== undefined && sourceSongIds.includes(targetSongId)) {
+        throw new McpToolError('targetSongId is also one of the songs being moved.', {
+          hint: 'Pick a target outside sourceSongIds.',
+        });
+      }
+      const [perms, sections, songs] = await Promise.all([
+        fetchEventPermissions(client, eventId),
+        fetchSections(client, eventId),
+        fetchSectionSongs(client, eventId, sectionId),
+      ]);
+      const section = findSection(sections, sectionId);
+      // The web app lets a host drag songs only when the DJ has left the
+      // section's "hosts can order songs" setting on; otherwise Vibo refuses
+      // the same request with "Action is not allowed for user".
+      if (isHost(perms) && section.settings?.canHostsOrderSongs === false) {
+        throw new McpToolError(
+          `The DJ has turned off host song ordering for "${section.name}", so Vibo refuses reorders from hosts there. Nothing was sent.`,
+          {
+            hint:
+              "It's the section's canHostsOrderSongs setting, which only the DJ can change (the web app hides the drag " +
+              'handles in this section too). Ask the DJ, or leave a comment on the song instead.',
+          },
+        );
+      }
+      assertSongsInSection([...sourceSongIds, ...(targetSongId ? [targetSongId] : [])], songs);
+
+      const { moves } = planMoves(songs.map((s) => s._id), sourceSongIds, targetSongId ?? null);
+      if (moves.length === 0) {
+        return minifiedResult({ changed: false, message: 'Those songs are already in that order.' });
+      }
+      const calls = moves.map((m) => ({ sourceSongIds: [m.source], targetSongId: m.target }));
       const gate = await confirmWrite(ctx, {
         tool: 'vibo_reorder_songs',
         mutation: 'reorderSongsBatch',
         message: 'Review and confirm this reorder:',
         confirmToken,
         target: sectionId,
-        willSend: vars,
+        willSend: { eventId, sectionId, calls },
       });
       if (gate) return gate;
-      const data = await client.gql<{ reorderSongsBatch: unknown }>(REORDER_SONGS, vars);
-      return minifiedResult(data.reorderSongsBatch);
+      for (const c of calls) {
+        await client.gql<{ reorderSongsBatch: unknown }>(REORDER_SONGS, { eventId, sectionId, ...c });
+      }
+      return minifiedResult({ changed: true, callsSent: calls.length });
     },
   );
 }
