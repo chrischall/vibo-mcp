@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.4.0](https://github.com/chrischall/vibo-mcp/compare/v2.3.1...v2.4.0) (2026-09-27)
+
+
+### Features
+
+* add section create/delete/reorder tools; fix song reorder, remove, add and comment validation ([#156](https://github.com/chrischall/vibo-mcp/issues/156)) ([35ee056](https://github.com/chrischall/vibo-mcp/commit/35ee0566f946304d5d9e0ca3c4af12edc8328c73))
+
+
+### Bug Fixes
+
+* **deps:** move to [@fetchproxy](https://github.com/fetchproxy) 3.4 for ContextMint Bridge errors, capability subsets and managed pins ([#157](https://github.com/chrischall/vibo-mcp/issues/157)) ([1c484b7](https://github.com/chrischall/vibo-mcp/commit/1c484b711b3cf1c0d94cbbda6f791b9c1fc58db1))
+* **deps:** move to @chrischall/mcp-utils 2.8 and [@fetchproxy](https://github.com/fetchproxy) 3.4.1 for clearer browser-bridge errors ([#160](https://github.com/chrischall/vibo-mcp/issues/160)) ([f4b4c10](https://github.com/chrischall/vibo-mcp/commit/f4b4c10c7d33d6e2a5f3499c29388e16522ce692))
+
 ## [2.3.1](https://github.com/chrischall/vibo-mcp/compare/v2.3.0...v2.3.1) (2026-09-24)
 
 
