@@ -23,7 +23,9 @@ function installFetch(router: (call: Call) => RouterResult): Call[] {
     const r = router(call);
     return {
       status: r.status ?? 200,
+      headers: new Headers(),
       json: async () => ({ data: r.data, errors: r.errors }),
+      text: async () => JSON.stringify({ data: r.data, errors: r.errors }),
     } as unknown as Response;
   }) as unknown as typeof fetch;
   return calls;

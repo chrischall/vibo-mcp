@@ -6,6 +6,8 @@ import {
   readEnvVar,
   McpToolError,
   SessionNotAuthenticatedError,
+  detectEdgeBlock,
+  EdgeBlockedError,
   truncateErrorMessage,
   withAmbientCancellation,
 } from '@chrischall/mcp-utils';
@@ -168,6 +170,30 @@ function transportError(what: string, err: unknown, isWrite: boolean): McpToolEr
     hint: 'The Vibo API may be unreachable — check your connection and retry.',
     cause: err,
   });
+}
+
+/**
+ * Read a GraphQL response body. An error status is read as text first so a
+ * CDN/WAF refusal page (CloudFront, Cloudflare, Akamai, Imperva) is named as
+ * an {@link EdgeBlockedError} — the request never reached Vibo, so neither
+ * the permission-denial copy (403) nor a sign-in prompt applies.
+ */
+async function readGraphQLBody<T>(response: Response): Promise<GraphQLResponse<T>> {
+  if (response.status >= 400) {
+    const text = await response.text().catch(() => '');
+    const edge = detectEdgeBlock({ body: text, headers: response.headers, status: response.status });
+    if (edge !== null) throw new EdgeBlockedError(response.status, edge.vendor, { service: SERVICE });
+    try {
+      return JSON.parse(text) as GraphQLResponse<T>;
+    } catch {
+      return {};
+    }
+  }
+  try {
+    return (await response.json()) as GraphQLResponse<T>;
+  } catch {
+    return {};
+  }
 }
 
 /** One-way fingerprint of a configured token, so session.json never holds a
@@ -364,12 +390,7 @@ export class ViboClient {
       throw transportError('Upload to', err, true);
     }
 
-    let body: GraphQLResponse<T>;
-    try {
-      body = (await response.json()) as GraphQLResponse<T>;
-    } catch {
-      body = {};
-    }
+    const body = await readGraphQLBody<T>(response);
     return { status: response.status, body };
   }
 
@@ -433,8 +454,12 @@ export class ViboClient {
               return this.accessToken;
             }
           }
-        } catch {
-          // fall through to a full login
+        } catch (err) {
+          // A CDN/WAF block is not a dead refresh token: say so, rather than
+          // falling through to a login that meets the same block or to a
+          // "sign in again" that would not help. The stored tokens are kept.
+          if (err instanceof EdgeBlockedError) throw err;
+          // otherwise fall through to a full login
         }
       }
       if (this.email && this.password) {
@@ -470,12 +495,7 @@ export class ViboClient {
       throw transportError('Request to', err, isWrite);
     }
 
-    let body: GraphQLResponse<T>;
-    try {
-      body = (await response.json()) as GraphQLResponse<T>;
-    } catch {
-      body = {};
-    }
+    const body = await readGraphQLBody<T>(response);
     return { status: response.status, body };
   }
 
