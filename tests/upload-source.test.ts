@@ -133,12 +133,68 @@ describe('nodeUploadResolver confinement', () => {
     expect(await out.blob.text()).toBe('pdf');
   });
 
+  const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d]);
+  const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46, 0x49, 0x46, 0, 1]);
+
   it('requires an image extension for an image slot', async () => {
     const root = uploadDir();
     writeFileSync(join(root, 'notes.txt'), 'x');
-    writeFileSync(join(root, 'me.PNG'), 'x');
+    writeFileSync(join(root, 'me.PNG'), PNG);
     await expect(nodeUploadResolver({ path: join(root, 'notes.txt'), kind: 'image' })).rejects.toThrow(/not an image/);
     await expect(nodeUploadResolver({ path: join(root, 'me.PNG'), kind: 'image' })).resolves.toBeDefined();
+  });
+
+  it('refuses a non-image renamed to an image extension for an image slot (magic bytes)', async () => {
+    const root = uploadDir();
+    writeFileSync(join(root, 'creds.jpg'), 'aws_secret_access_key = abc');
+    await expect(nodeUploadResolver({ path: join(root, 'creds.jpg'), kind: 'image' })).rejects.toThrow(/not an image/);
+  });
+
+  it('sends exactly the vetted bytes of an image', async () => {
+    const root = uploadDir();
+    writeFileSync(join(root, 'me.jpg'), JPEG);
+    const out = await nodeUploadResolver({ path: 'me.jpg', kind: 'image' });
+    expect(out.filename).toBe('me.jpg');
+    expect(Buffer.from(await out.blob.arrayBuffer())).toEqual(JPEG);
+  });
+
+  it('refuses an image slot path that is itself a symlink, even one pointing inside the directory', async () => {
+    const root = uploadDir();
+    writeFileSync(join(root, 'real.png'), PNG);
+    symlinkSync(join(root, 'real.png'), join(root, 'alias.png'));
+    await expect(nodeUploadResolver({ path: join(root, 'alias.png'), kind: 'image' })).rejects.toThrow(/symbolic link/);
+  });
+
+  it('refuses an image reached through a symlinked directory that points outside', async () => {
+    const root = uploadDir();
+    const other = mkdtempSync(join(tmpdir(), 'vibo-outside-'));
+    try {
+      writeFileSync(join(other, 'x.png'), PNG);
+      symlinkSync(other, join(root, 'linked'));
+      await expect(nodeUploadResolver({ path: join(root, 'linked', 'x.png'), kind: 'image' })).rejects.toThrow(
+        /outside the upload directory/,
+      );
+    } finally {
+      rmSync(other, { recursive: true, force: true });
+    }
+  });
+
+  it('applies the confinement, hidden-file and size rules to an image slot too', async () => {
+    const root = uploadDir();
+    const other = mkdtempSync(join(tmpdir(), 'vibo-outside-'));
+    try {
+      writeFileSync(join(other, 'x.png'), PNG);
+      writeFileSync(join(root, '.hidden.png'), PNG);
+      writeFileSync(join(root, 'huge.png'), Buffer.concat([PNG, Buffer.alloc(MAX_UPLOAD_BYTES)]));
+      mkdirSync(join(root, 'dir.png'));
+      await expect(nodeUploadResolver({ path: join(other, 'x.png'), kind: 'image' })).rejects.toThrow(/outside the upload directory/);
+      await expect(nodeUploadResolver({ path: join(root, '.hidden.png'), kind: 'image' })).rejects.toThrow(/hidden/);
+      await expect(nodeUploadResolver({ path: join(root, 'huge.png'), kind: 'image' })).rejects.toThrow(/too large/);
+      await expect(nodeUploadResolver({ path: join(root, 'dir.png'), kind: 'image' })).rejects.toThrow(/Not a regular file/);
+      await expect(nodeUploadResolver({ path: join(root, 'gone.png'), kind: 'image' })).rejects.toThrow(/Could not read file/);
+    } finally {
+      rmSync(other, { recursive: true, force: true });
+    }
   });
 
   it('refuses a file over the size cap', async () => {
