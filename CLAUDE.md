@@ -226,7 +226,9 @@ VIBO_REFRESH_TOKEN=…
 VIBO_API_URL=…           # optional endpoint override
 VIBO_UPLOAD_DIR=…        # optional; the only dir local-path uploads may read
                          #   (default ~/Downloads/vibo-mcp; dotfiles, symlinks
-                         #   out of it, and files >25 MiB are refused)
+                         #   out of it, and files >25 MiB are refused; photo
+                         #   slots also refuse ANY symlink and need image magic
+                         #   bytes — mcp-utils vetUploadFile)
 ```
 
 Loaded via `loadDotenvSafely` from `.env` next to `dist/` (`override: false`, so
