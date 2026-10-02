@@ -64,7 +64,10 @@ or check a release zip against the `.sha256` file published beside it
 read local files from the upload directory — `VIBO_UPLOAD_DIR`, default
 `~/Downloads/vibo-mcp`. Copy a file there before asking Claude to upload it.
 Hidden files, symlinks that lead outside the directory, and files over 25 MiB
-are refused, and photo slots need an image file.
+are refused. Photo slots need a real image: the extension must be an image type
+*and* the file's contents must match it (a renamed text file is refused), and
+the path you pass must be the file itself — any symlink is refused for a photo,
+even one pointing inside the upload directory.
 
 ### Timeline sections and limits
 

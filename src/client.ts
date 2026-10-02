@@ -128,12 +128,11 @@ export interface ViboClientOptions {
  * meters it on. Measured on that fleet: claude.ai sent 101 cancellations in
  * the week to 2026-09-20.
  *
- * ONE definition for both request paths, which is not tidiness: the two are
- * the multipart upload and the plain query, they had the same seven lines
- * copied between them, and the next person to add a third path is the one
- * this saves. The `TimeoutError` checks at both call sites still name a real
- * timeout — an abort from the caller arrives as `AbortError` and falls
- * through to 'failed'.
+ * Used by the multipart UPLOAD path only. The plain JSON query path goes
+ * through mcp-utils' GraphQL client (`this.graphql`), which applies the same
+ * 30 s timeout and the caller's cancellation itself. The `TimeoutError` check
+ * in `uploadTransportError` names a real timeout — an abort from the caller
+ * arrives as `AbortError` and falls through to 'failed'.
  */
 function requestSignal(): AbortSignal | undefined {
   return withAmbientCancellation(AbortSignal.timeout(REQUEST_TIMEOUT_MS));
