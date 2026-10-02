@@ -11,6 +11,7 @@ import {
   truncateErrorMessage,
   withAmbientCancellation,
 } from '@chrischall/mcp-utils';
+import { createGraphqlClient, type GraphqlClient } from '@chrischall/mcp-utils/graphql';
 import { loadSession, saveSession } from './session-store.js';
 import type { UploadFile } from './upload-source.js';
 
@@ -138,42 +139,34 @@ function requestSignal(): AbortSignal | undefined {
   return withAmbientCancellation(AbortSignal.timeout(REQUEST_TIMEOUT_MS));
 }
 
-/** Whether a GraphQL document is a mutation (a write with side effects). */
-function isMutation(query: string): boolean {
-  return /^\s*(?:#[^\n]*\n\s*)*mutation\b/.test(query);
-}
-
 /**
- * The error for a request that never produced a response (timeout, dropped
- * connection, caller abort). For a READ that is safely retryable. For a WRITE
- * the outcome is unknown — Vibo may already have committed it — and a blind
- * retry repeats the side effect (a second round of invitation emails, a
- * second exported playlist, a duplicate comment or import); the confirmation
- * gate cannot stop that, because a fresh preview earns a fresh approval and
- * token. So a write says so, and asks for a state check first.
+ * The hint for a WRITE that never produced a response (timeout, dropped
+ * connection): its outcome is unknown — Vibo may already have committed it —
+ * and a blind retry repeats the side effect (a second round of invitation
+ * emails, a second exported playlist, a duplicate comment or import); the
+ * confirmation gate cannot stop that, because a fresh preview earns a fresh
+ * approval and token. So a write says so, and asks for a state check first.
  */
-function transportError(what: string, err: unknown, isWrite: boolean): McpToolError {
+const WRITE_OUTCOME_HINT =
+  'Do not repeat this write blindly — check the current state before retrying: e.g. ' +
+  'vibo_list_event_users after inviting, vibo_get_section_songs after adding, importing or commenting ' +
+  'on songs, the Spotify/Apple Music account after an export. Retry only if the change is not there.';
+
+/**
+ * The transport error for the multipart UPLOAD path (always a write) — the one
+ * request mcp-utils' GraphQL client does not send, since it speaks JSON only.
+ * Same wording as that client's write error.
+ */
+function uploadTransportError(err: unknown): McpToolError {
   const reason = err instanceof Error && err.name === 'TimeoutError' ? 'timed out' : 'failed';
-  if (isWrite) {
-    return new McpToolError(
-      `${what} ${SERVICE} ${reason} — the change may already have been applied (outcome is unknown).`,
-      {
-        hint:
-          'Do not repeat this write blindly — check the current state before retrying: e.g. ' +
-          'vibo_list_event_users after inviting, vibo_get_section_songs after adding, importing or commenting ' +
-          'on songs, the Spotify/Apple Music account after an export. Retry only if the change is not there.',
-        cause: err,
-      },
-    );
-  }
-  return new McpToolError(`${what} ${SERVICE} ${reason}.`, {
-    hint: 'The Vibo API may be unreachable — check your connection and retry.',
-    cause: err,
-  });
+  return new McpToolError(
+    `Upload to ${SERVICE} ${reason} — the change may already have been applied (outcome is unknown).`,
+    { hint: WRITE_OUTCOME_HINT, cause: err },
+  );
 }
 
 /**
- * Read a GraphQL response body. An error status is read as text first so a
+ * Read a multipart-upload GraphQL response body. An error status is read as text first so a
  * CDN/WAF refusal page (CloudFront, Cloudflare, Akamai, Imperva) is named as
  * an {@link EdgeBlockedError} — the request never reached Vibo, so neither
  * the permission-denial copy (403) nor a sign-in prompt applies.
@@ -228,8 +221,22 @@ export class ViboClient {
   private loginInFlight: Promise<string> | null = null;
   private reauthInFlight: Promise<string> | null = null;
 
+  // The JSON request path: mcp-utils' GraphQL transport (POST, errors[] at any
+  // status, CDN/WAF detection, timeout + the caller's cancellation, 429 retry,
+  // and a write-aware transport error judged by a real operation-kind lexer).
+  // Auth (x-token, single-flight refresh/login + one replay) and the
+  // permission/expiry classification below stay here: they are Vibo's rules.
+  // Pure to build — safe at Worker global scope.
+  private readonly graphql: GraphqlClient;
+
   constructor(opts: ViboClientOptions = {}) {
     this.apiUrl = opts.apiUrl ?? readEnvVar('VIBO_API_URL') ?? DEFAULT_API_URL;
+    this.graphql = createGraphqlClient({
+      endpoint: this.apiUrl,
+      serviceName: SERVICE,
+      timeout: REQUEST_TIMEOUT_MS,
+      writeOutcomeHint: WRITE_OUTCOME_HINT,
+    });
     this.email = opts.email ?? readEnvVar('VIBO_EMAIL') ?? null;
     this.password = opts.password ?? readEnvVar('VIBO_PASSWORD') ?? null;
     this.accessToken = opts.accessToken ?? readEnvVar('VIBO_ACCESS_TOKEN') ?? null;
@@ -387,7 +394,7 @@ export class ViboClient {
       });
     } catch (err) {
       // An upload is always a write (the multipart path only carries mutations).
-      throw transportError('Upload to', err, true);
+      throw uploadTransportError(err);
     }
 
     const body = await readGraphQLBody<T>(response);
@@ -478,25 +485,17 @@ export class ViboClient {
     variables: Record<string, unknown>,
     token: string | null,
   ): Promise<{ status: number; body: GraphQLResponse<T> }> {
-    const headers: Record<string, string> = { 'content-type': 'application/json' };
-    if (token) headers['x-token'] = token;
-
-    let response: Response;
-    try {
-      response = await fetch(this.apiUrl, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ query, variables }),
-        signal: requestSignal(),
-      });
-    } catch (err) {
+    const result = await this.graphql.execute<T>({
+      query,
+      variables,
+      ...(token ? { headers: { 'x-token': token } } : {}),
       // signIn / refreshToken are mutations too, but repeating them is harmless.
-      const isWrite = query !== SIGN_IN && query !== REFRESH && isMutation(query);
-      throw transportError('Request to', err, isWrite);
-    }
-
-    const body = await readGraphQLBody<T>(response);
-    return { status: response.status, body };
+      ...(query === SIGN_IN || query === REFRESH ? { idempotent: true } : {}),
+    });
+    const body: GraphQLResponse<T> = {};
+    if (result.data !== undefined) body.data = result.data as T;
+    if (result.errors !== undefined) body.errors = result.errors;
+    return { status: result.status, body };
   }
 
   /** An expired / missing session — the only case a refresh + replay can fix. */
