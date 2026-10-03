@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.4.1](https://github.com/chrischall/vibo-mcp/compare/v2.4.0...v2.4.1) (2026-10-03)
+
+
+### Bug Fixes
+
+* **deps:** adopt @chrischall/mcp-utils 2.12.0 upload vetting and GraphQL transport ([#168](https://github.com/chrischall/vibo-mcp/issues/168)) ([6b2276f](https://github.com/chrischall/vibo-mcp/commit/6b2276fa454182cc2bcc5ebc573df69579db4042))
+* **deps:** bump @chrischall/mcp-utils to 2.10.0 ([#166](https://github.com/chrischall/vibo-mcp/issues/166)) ([e324394](https://github.com/chrischall/vibo-mcp/commit/e32439424408e7672e97872816297f3279d27d56))
+* **deps:** bump @chrischall/mcp-utils to 2.13.0 ([#172](https://github.com/chrischall/vibo-mcp/issues/172)) ([6707c07](https://github.com/chrischall/vibo-mcp/commit/6707c0745a82a2f6c80bbbe5c355c69858ffea17))
+* **deps:** bump dotenv in the production-dependencies group ([#163](https://github.com/chrischall/vibo-mcp/issues/163)) ([a77c7f7](https://github.com/chrischall/vibo-mcp/commit/a77c7f73afcf28025450542be4d91be1d53d8fbb))
+* keep write approvals valid across a hosted restart (mcp-utils 2.11.0) ([#167](https://github.com/chrischall/vibo-mcp/issues/167)) ([6361372](https://github.com/chrischall/vibo-mcp/commit/6361372e2ea3343f4ade5573a13356fd56c23901))
+* report CDN/WAF blocks as edge_blocked, not a rejected credential (mcp-utils 2.9.0) ([#165](https://github.com/chrischall/vibo-mcp/issues/165)) ([50a7123](https://github.com/chrischall/vibo-mcp/commit/50a7123dd91f18d544f1d73adb6ddb13b387ba6f))
+
+
+### Documentation
+
+* document the photo-upload symlink rule and fix stale requestSignal doc ([#170](https://github.com/chrischall/vibo-mcp/issues/170)) ([bfbb815](https://github.com/chrischall/vibo-mcp/commit/bfbb815e078467a6a48916f318ca7be7b6247715))
+* replace restated PR policy with the fleet-policy pointer ([#171](https://github.com/chrischall/vibo-mcp/issues/171)) ([af2981c](https://github.com/chrischall/vibo-mcp/commit/af2981c21b67b5df33454a7cf72cd14f5b8674c0))
+
 ## [2.4.0](https://github.com/chrischall/vibo-mcp/compare/v2.3.1...v2.4.0) (2026-09-27)
 
 
