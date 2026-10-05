@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.2](https://github.com/chrischall/vibo-mcp/compare/v2.4.1...v2.4.2) (2026-10-05)
+
+
+### Bug Fixes
+
+* **deps:** require @chrischall/mcp-utils 2.14.0 and MCP SDK 2.3.0 ([#173](https://github.com/chrischall/vibo-mcp/issues/173)) ([183a0dc](https://github.com/chrischall/vibo-mcp/commit/183a0dc3ac9b2ef0b1c3a282ec48681a5f3bbc17))
+
 ## [2.4.1](https://github.com/chrischall/vibo-mcp/compare/v2.4.0...v2.4.1) (2026-10-03)
 
 
