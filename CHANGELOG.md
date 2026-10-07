@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.4.3](https://github.com/chrischall/vibo-mcp/compare/v2.4.2...v2.4.3) (2026-10-07)
+
+
+### Bug Fixes
+
+* **deps:** bump source-map-js ([#179](https://github.com/chrischall/vibo-mcp/issues/179)) ([d205df3](https://github.com/chrischall/vibo-mcp/commit/d205df3e2527ddd3a6e8e2f79cf194d24f16662f))
+* **deps:** bump the production-dependencies group with 2 updates ([#177](https://github.com/chrischall/vibo-mcp/issues/177)) ([1cb2df6](https://github.com/chrischall/vibo-mcp/commit/1cb2df650195af939f648e56e2eafbe86d4b1fee))
+* **deps:** pick up MCP_CONFIRM_ELICITATION=off and fetchproxy 3.6 bridge fixes ([#180](https://github.com/chrischall/vibo-mcp/issues/180)) ([9acfb36](https://github.com/chrischall/vibo-mcp/commit/9acfb36603a32cdd52c420f18cdb69ba3df35747))
+
+
+### Documentation
+
+* document MCP_CONFIRM_ELICITATION ([#181](https://github.com/chrischall/vibo-mcp/issues/181)) ([2034d77](https://github.com/chrischall/vibo-mcp/commit/2034d77db90c81365924b221aa29635c67a35641))
+
 ## [2.4.2](https://github.com/chrischall/vibo-mcp/compare/v2.4.1...v2.4.2) (2026-10-05)
 
 
