@@ -12,7 +12,7 @@ export function registerIdeasTools(server: McpServer, client: ViboClient): void 
     {
       description:
         "List the DJ's suggested song-idea collections for a section (each with a title, songsCount and _id). Use a song-ideas _id with vibo_list_song_ideas_songs to see the suggested songs, then add the ones you like with vibo_add_song_to_section.",
-      annotations: toolAnnotations({ title: 'List Vibo section song ideas', readOnly: true }),
+      annotations: toolAnnotations({ title: 'List Vibo section song ideas', readOnly: true, openWorld: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id (from vibo_list_sections).'),
@@ -35,7 +35,7 @@ export function registerIdeasTools(server: McpServer, client: ViboClient): void 
     {
       description:
         'List the suggested songs inside a song-idea collection (returns songUrl/viboSongId/title/artist to pass to vibo_add_song_to_section).',
-      annotations: toolAnnotations({ title: 'List Vibo song-idea songs', readOnly: true }),
+      annotations: toolAnnotations({ title: 'List Vibo song-idea songs', readOnly: true, openWorld: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id (from vibo_list_sections).'),

@@ -19,7 +19,7 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
     {
       description:
         "List the events you're part of (as host or guest). Defaults to upcoming events; pass past:true for events that have already happened. Optionally filter by a search query.",
-      annotations: toolAnnotations({ title: 'List Vibo events', readOnly: true }),
+      annotations: toolAnnotations({ title: 'List Vibo events', readOnly: true, openWorld: true }),
       inputSchema: z.object({
         past: z.boolean().optional().describe('Return past events instead of upcoming (default false).'),
         q: z.string().optional().describe('Search events by title.'),
@@ -43,7 +43,7 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
     {
       description:
         'Get full details for one event: title, date/timezone, location, your role, lock status, playlist size, and section/question progress. Use vibo_list_sections for the timeline.',
-      annotations: toolAnnotations({ title: 'Get Vibo event', readOnly: true }),
+      annotations: toolAnnotations({ title: 'Get Vibo event', readOnly: true, openWorld: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id (the _id from vibo_list_events).'),
       }),
@@ -59,7 +59,7 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
     {
       description:
         "Join an event you were invited to, via its share link or hash (e.g. a vibodj.app.link/... URL someone sent you). Returns the joined event's id. " + CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Join Vibo event', readOnly: false, destructive: false }),
+      annotations: toolAnnotations({ title: 'Join Vibo event', readOnly: false, destructive: false, openWorld: true }),
       inputSchema: z.object({
         link: z
           .string()
@@ -95,7 +95,7 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
     'vibo_leave_event',
     {
       description: 'Leave an event you previously joined. ' + CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Leave Vibo event', readOnly: false, destructive: true }),
+      annotations: toolAnnotations({ title: 'Leave Vibo event', readOnly: false, destructive: true, openWorld: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id to leave.'),
         confirmToken: confirmTokenParam,
@@ -123,7 +123,7 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
     {
       description:
         'Add a contact (host or guest) to an event with their name/email/phone. ' + CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Add Vibo event contact', readOnly: false, destructive: false, idempotent: false }),
+      annotations: toolAnnotations({ title: 'Add Vibo event contact', readOnly: false, destructive: true, idempotent: false, openWorld: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         role: z.enum(['host', 'guest']).describe("The contact's role in the event."),

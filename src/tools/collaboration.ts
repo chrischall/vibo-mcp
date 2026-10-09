@@ -30,7 +30,7 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
     {
       description:
         "List the hosts and guests on an event. With no usersType, returns both groups merged ({hosts, guests, hostsCount, guestsCount}) and `limit`/`skip` apply per group; with usersType, returns that one group's page. Default (compact) view returns each member's id, name and role only; pass view:'full' for email addresses and avatars.",
-      annotations: toolAnnotations({ title: 'List Vibo event users', readOnly: true }),
+      annotations: toolAnnotations({ title: 'List Vibo event users', readOnly: true, openWorld: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         usersType: z.enum(['host', 'guest']).optional().describe('Filter to only hosts or only guests.'),
@@ -76,7 +76,7 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
     'vibo_invite_users',
     {
       description: 'Invite people to an event by email (as host or guest). ' + CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Invite Vibo event users', readOnly: false, destructive: true, idempotent: false }),
+      annotations: toolAnnotations({ title: 'Invite Vibo event users', readOnly: false, destructive: true, idempotent: false, openWorld: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         type: z.enum(['host', 'guest']).describe('Invite as host or guest.'),
@@ -107,7 +107,7 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
     'vibo_change_user_role',
     {
       description: "Change an event member's role between host and guest. " + CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Change Vibo user role', readOnly: false, destructive: true }),
+      annotations: toolAnnotations({ title: 'Change Vibo user role', readOnly: false, destructive: true, openWorld: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         userId: z.string().describe('Id of the member to update.'),
@@ -137,7 +137,7 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
     'vibo_remove_user',
     {
       description: 'Remove a member from an event. ' + CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Remove Vibo event user', readOnly: false, destructive: true }),
+      annotations: toolAnnotations({ title: 'Remove Vibo event user', readOnly: false, destructive: true, openWorld: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         userId: z.string().describe('Id of the member to remove.'),

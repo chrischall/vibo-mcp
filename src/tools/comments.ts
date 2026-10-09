@@ -15,7 +15,7 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
     'vibo_comment_on_song',
     {
       description: 'Leave a comment / note for the DJ on a specific song. ' + CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Comment on Vibo song', readOnly: false, destructive: false, idempotent: false }),
+      annotations: toolAnnotations({ title: 'Comment on Vibo song', readOnly: false, destructive: true, idempotent: false, openWorld: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),
@@ -46,7 +46,7 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
     'vibo_delete_song_comment',
     {
       description: 'Delete a comment on a song. ' + CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Delete Vibo song comment', readOnly: false, destructive: true }),
+      annotations: toolAnnotations({ title: 'Delete Vibo song comment', readOnly: false, destructive: true, openWorld: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),
@@ -77,7 +77,7 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
     'vibo_comment_on_section',
     {
       description: 'Leave a comment on a timeline section. ' + CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Comment on Vibo section', readOnly: false, destructive: false, idempotent: false }),
+      annotations: toolAnnotations({ title: 'Comment on Vibo section', readOnly: false, destructive: true, idempotent: false, openWorld: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id (from vibo_list_sections).'),
@@ -107,7 +107,7 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
     'vibo_delete_section_comment',
     {
       description: 'Delete a comment on a timeline section. ' + CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Delete Vibo section comment', readOnly: false, destructive: true }),
+      annotations: toolAnnotations({ title: 'Delete Vibo section comment', readOnly: false, destructive: true, openWorld: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id (from vibo_list_sections).'),

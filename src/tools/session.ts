@@ -14,7 +14,7 @@ export function registerSessionTools(server: McpServer, client: ViboClient): voi
     {
       description:
         "Capture your Vibo login from a signed-in web.vibodj.com browser tab via ContextMint Bridge — for accounts that sign in with Apple/Google/Facebook (no password). Requires the ContextMint Bridge browser extension installed and you signed into https://web.vibodj.com; approve the pair code shown on first use. The token is saved locally and reused on future calls.",
-      annotations: toolAnnotations({ title: 'Capture Vibo session (SSO)', readOnly: false, destructive: false }),
+      annotations: toolAnnotations({ title: 'Capture Vibo session (SSO)', readOnly: false, destructive: false, openWorld: true }),
     },
     async () => {
       const captured = await captureViboSession();

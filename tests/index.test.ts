@@ -151,9 +151,18 @@ describe('tool registry', () => {
 
     // Reaches another person, spends something with no inverse here, or
     // OVERWRITES what was there (a previous photo, answer, DJ note or song
-    // comment cannot be put back once replaced).
+    // comment cannot be put back once replaced). Comments are notes posted to
+    // the DJ/other members (a delete cannot un-read them); marking notifications
+    // read, adding an event contact and exporting a Spotify/Apple Music
+    // playlist have no inverse tool in this set.
     const destructive = new Set([
       'vibo_answer_question',
+      'vibo_comment_on_section',
+      'vibo_comment_on_song',
+      'vibo_create_event_contact',
+      'vibo_export_event_to_apple_music',
+      'vibo_export_event_to_spotify',
+      'vibo_mark_notifications_read',
       'vibo_set_profile_photo',
       'vibo_update_section',
       'vibo_update_song',
@@ -176,6 +185,13 @@ describe('tool registry', () => {
       expect(destructiveHint, `${t.name} must SAY whether it destroys — silence means true`).toBeTypeOf('boolean');
       expect(destructiveHint, t.name).toBe(destructive.has(t.name));
     }
+  });
+
+  // openWorldHint is only emitted when passed; every tool here talks to the
+  // Vibo API (or, for capture_session, the browser bridge), so all say true.
+  it('declares openWorldHint: true on every tool', async () => {
+    const { tools } = await harness.client.listTools();
+    for (const t of tools) expect(t.annotations?.openWorldHint, t.name).toBe(true);
   });
 
   // idempotentHint defaults to FALSE, so a write that sets an absolute state
