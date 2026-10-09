@@ -120,7 +120,7 @@ authenticating with an `x-token` header obtained from an email/password
 `signIn`. This server reuses that same flow server-side (no browser needed) and
 wraps the host/couple operations as MCP tools. Every mutating tool asks you to
 confirm first: a client that can show a confirmation prompt (Claude Code) shows
-one; otherwise the first call makes no network call and returns a preview plus a
+one (unless `MCP_CONFIRM_ELICITATION=off`); otherwise the first call makes no network call and returns a preview plus a
 `confirmToken`, and only a repeat call with that token makes the change (see
 [Confirmations](#confirmations)).
 

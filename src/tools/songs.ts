@@ -206,7 +206,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
     'vibo_toggle_song_like',
     {
       description: 'Like or unlike a song in a section. ' + CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Like/unlike Vibo song', readOnly: false, destructive: false }),
+      annotations: toolAnnotations({ title: 'Like/unlike Vibo song', readOnly: false, destructive: false, idempotent: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),

@@ -31,8 +31,10 @@ src/
   index.ts        # entry — runMcp({ name, version, banner, tools })
   client.ts       # ViboClient — GraphQL POST w/ x-token, deferred config error,
                   #   single-flight login + refresh-on-expiry + replay-once;
-                  #   gqlUpload() for multipart (Upload scalar); setTokens() for
-                  #   adopting a browser-captured session
+                  #   gqlUpload() for multipart (Upload scalar);
+                  #   adoptVerifiedTokens() verifies a browser-captured pair on an
+                  #   isolated client before adopting it (never the env login,
+                  #   never session.json — the tool persists after it succeeds)
   auth.ts         # captureViboSession() — fetchproxy browser-bridge token capture (SSO)
   session-store.ts# persist {accessToken,refreshToken} to ~/.vibo-mcp/session.json (0600)
   gql.ts          # all GraphQL operation documents (selections from introspection)
@@ -107,7 +109,8 @@ Every mutating tool (all 26 except `vibo_capture_session`) takes an optional
 validation:
 
 - A client that can show an MCP elicitation prompt (Claude Code) gets the real
-  prompt; nothing is sent unless the user accepts.
+  prompt; nothing is sent unless the user accepts — unless the server sets
+  `MCP_CONFIRM_ELICITATION=off`, which sends every client down the token flow.
 - A client that cannot (claude.ai, Claude Desktop) gets the two-step token flow
   governed by `MCP_CONFIRM_MODE` (see README): the first call makes **no
   write** and returns `status: "confirmation-required"`, a `preview` of the
@@ -115,8 +118,11 @@ validation:
   `confirmToken`; only a repeat call with the same arguments plus that token
   writes. The token is single-use and bound to the tool, the target id and a
   hash of what will be sent — a changed argument is refused as `DRAFT_CHANGED`,
-  a replay as `TOKEN_REUSED`. Inline upload bytes are bound too (via
-  `payload`), although the preview shows them as `(inline bytes)`.
+  a replay as `TOKEN_REUSED`. Upload BYTES are bound too (via `payload`): the
+  upload tools resolve their files before the gate on every call and hash a
+  sha256 of each into the token, so inline bytes the preview shows as
+  `(inline bytes)` — and a different file written at the same local `path`
+  after the preview — are refused as `DRAFT_CHANGED` (fleet-audit #1139).
 
 Some tools READ before the gate — to refuse ids that aren't in the section
 (`remove_song_from_section`, `reorder_songs`, `reorder_sections`), to resolve

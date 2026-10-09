@@ -171,7 +171,9 @@ describe('question tools', () => {
       questionId: 'q3',
       imagePaths: ['/tmp/a.jpg'],
     });
-    expect(resolve).not.toHaveBeenCalled();
+    // Resolved (read + vetted) so the token can bind a digest of the bytes —
+    // but nothing is uploaded until the confirmed call.
+    expect(resolve).toHaveBeenCalledTimes(1);
     expect(gqlUpload).not.toHaveBeenCalled();
     expect(gql).not.toHaveBeenCalled();
     expect(parseToolResult<{ status: string }>(res).status).toBe('confirmation-required');

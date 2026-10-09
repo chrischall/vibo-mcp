@@ -3,20 +3,21 @@ import { client } from '../../src/client.js';
 import * as auth from '../../src/auth.js';
 import * as sessionStore from '../../src/session-store.js';
 import { registerSessionTools } from '../../src/tools/session.js';
+import { GET_ME } from '../../src/gql.js';
 import { createTestHarness } from '../helpers.js';
 import { parseToolResult } from '@chrischall/mcp-utils/test';
 
 const capture = vi.spyOn(auth, 'captureViboSession');
 const setTokens = vi.spyOn(client, 'setTokens').mockImplementation(() => {});
 const save = vi.spyOn(sessionStore, 'saveSession').mockImplementation(() => {});
-const gql = vi.spyOn(client, 'gql').mockResolvedValue(undefined as never);
+const adopt = vi.spyOn(client, 'adoptVerifiedTokens');
 let harness: Awaited<ReturnType<typeof createTestHarness>>;
 
 beforeEach(() => {
   capture.mockReset();
   setTokens.mockClear();
   save.mockClear();
-  gql.mockReset();
+  adopt.mockReset();
 });
 afterAll(async () => { if (harness) await harness.close(); });
 
@@ -25,16 +26,19 @@ describe('session tool', () => {
     harness = await createTestHarness((s) => registerSessionTools(s, client));
   });
 
-  it('vibo_capture_session captures, adopts the tokens, and confirms identity', async () => {
+  it('vibo_capture_session captures, verifies, and persists the pair verification ended with', async () => {
     capture.mockResolvedValue({ accessToken: 'AT', refreshToken: 'RT' });
-    gql.mockResolvedValue({ me: { _id: 'u1', email: 'a@b.com' } });
+    // Verification refreshed the stale capture: the rotated pair is what works.
+    adopt.mockResolvedValue({ data: { me: { _id: 'u1', email: 'a@b.com' } }, accessToken: 'AT2', refreshToken: 'RT2' });
 
     const res = await harness.callTool('vibo_capture_session');
 
     expect(capture).toHaveBeenCalled();
-    expect(setTokens).toHaveBeenCalledWith('AT', 'RT');
-    // persisted only after the GET_ME verify succeeded
-    expect(save).toHaveBeenCalledWith({ accessToken: 'AT', refreshToken: 'RT' });
+    expect(adopt).toHaveBeenCalledWith('AT', 'RT', GET_ME);
+    // The tool never installs the unverified pair itself.
+    expect(setTokens).not.toHaveBeenCalled();
+    // persisted only after the GET_ME verify succeeded — and the ROTATED pair
+    expect(save).toHaveBeenCalledWith({ accessToken: 'AT2', refreshToken: 'RT2' });
     expect(parseToolResult(res)).toEqual({
       captured: true,
       hasRefreshToken: true,
@@ -45,7 +49,7 @@ describe('session tool', () => {
 
   it('does not persist when the captured token fails to authenticate', async () => {
     capture.mockResolvedValue({ accessToken: 'BAD', refreshToken: null });
-    gql.mockRejectedValue(new Error('Not authorized. Try to log in'));
+    adopt.mockRejectedValue(new Error('Not authorized. Try to log in'));
     const res = await harness.callTool('vibo_capture_session');
     expect(res.isError).toBeTruthy();
     expect(save).not.toHaveBeenCalled(); // a stale token never lands on disk

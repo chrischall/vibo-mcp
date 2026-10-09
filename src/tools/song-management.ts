@@ -72,7 +72,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
         'Update songs in a section: mark must-play, flag as do-not-play, and/or set a comment. Provide at least one field. ' +
         `A comment can be at most ${SONG_COMMENT_MAX} characters (Vibo's limit; emoji count double; checked before anything is sent). ` +
         CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Update Vibo section songs', readOnly: false, destructive: false }),
+      annotations: toolAnnotations({ title: 'Update Vibo section songs', readOnly: false, destructive: true, idempotent: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),

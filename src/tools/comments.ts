@@ -15,7 +15,7 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
     'vibo_comment_on_song',
     {
       description: 'Leave a comment / note for the DJ on a specific song. ' + CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Comment on Vibo song', readOnly: false, destructive: false }),
+      annotations: toolAnnotations({ title: 'Comment on Vibo song', readOnly: false, destructive: false, idempotent: false }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),
@@ -73,7 +73,7 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
     'vibo_comment_on_section',
     {
       description: 'Leave a comment on a timeline section. ' + CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Comment on Vibo section', readOnly: false, destructive: false }),
+      annotations: toolAnnotations({ title: 'Comment on Vibo section', readOnly: false, destructive: false, idempotent: false }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id (from vibo_list_sections).'),

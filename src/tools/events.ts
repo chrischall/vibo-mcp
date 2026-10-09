@@ -119,7 +119,7 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
     {
       description:
         'Add a contact (host or guest) to an event with their name/email/phone. ' + CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Add Vibo event contact', readOnly: false, destructive: false }),
+      annotations: toolAnnotations({ title: 'Add Vibo event contact', readOnly: false, destructive: false, idempotent: false }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         role: z.enum(['host', 'guest']).describe("The contact's role in the event."),

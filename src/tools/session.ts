@@ -17,11 +17,15 @@ export function registerSessionTools(server: McpServer, client: ViboClient): voi
       annotations: toolAnnotations({ title: 'Capture Vibo session (SSO)', readOnly: false, destructive: false }),
     },
     async () => {
-      const { accessToken, refreshToken } = await captureViboSession();
-      client.setTokens(accessToken, refreshToken);
-      // Confirm the captured token actually authenticates BEFORE persisting it,
-      // so a stale snapshot never lands in session.json.
-      const data = await client.gql<{ me: { _id: string; email?: string } }>(GET_ME);
+      const captured = await captureViboSession();
+      // Verify the captured pair on an isolated client BEFORE adopting or
+      // persisting it: a stale snapshot never replaces the working in-memory
+      // session and never lands in session.json (fleet-audit #794). What is
+      // adopted and saved is the pair verification ended with — a refresh
+      // during it rotates the captured one.
+      const { data, accessToken, refreshToken } = await client.adoptVerifiedTokens<{
+        me: { _id: string; email?: string };
+      }>(captured.accessToken, captured.refreshToken, GET_ME);
       saveSession({ accessToken, refreshToken });
       return minifiedResult({
         captured: true,

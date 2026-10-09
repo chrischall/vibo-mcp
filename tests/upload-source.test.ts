@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { getUploadDir, MAX_UPLOAD_BYTES, nodeUploadResolver } from '../src/upload-source.js';
+import { getUploadDir, MAX_UPLOAD_BYTES, nodeUploadResolver, uploadDigest } from '../src/upload-source.js';
 
 // The injectable upload boundary: a caller that shares the filesystem names a
 // local path (node:fs); one that does not sends inline base64. Both converge on
@@ -206,5 +206,13 @@ describe('nodeUploadResolver confinement', () => {
   it('defaults the upload directory to ~/Downloads/vibo-mcp', () => {
     delete process.env.VIBO_UPLOAD_DIR;
     expect(getUploadDir()).toBe(join(homedir(), 'Downloads', 'vibo-mcp'));
+  });
+});
+
+describe('uploadDigest', () => {
+  it('is the hex sha256 of the resolved bytes', async () => {
+    expect(await uploadDigest({ blob: new Blob(['abc']), filename: 'a' })).toBe(
+      'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+    );
   });
 });

@@ -81,7 +81,7 @@ export function registerSectionManageTools(server: McpServer, client: ViboClient
         'visibility "host" (default) = "Me and DJ", "public" = visible to guests too. Vibo gives a section a host ' +
         "creates \"hosts can order songs\" = off, which only the DJ can turn on. Returns the new section _id. " +
         CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Create Vibo section', readOnly: false, destructive: false }),
+      annotations: toolAnnotations({ title: 'Create Vibo section', readOnly: false, destructive: false, idempotent: false }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         name: z.string().describe(`Section name, 1–${SECTION_NAME_MAX} characters.`),

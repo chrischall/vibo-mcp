@@ -117,6 +117,13 @@ export interface ViboClientOptions {
   accessToken?: string;
   refreshToken?: string;
   apiUrl?: string;
+  /**
+   * Use ONLY the injected credentials: no env-var fallback, and no
+   * session.json read or write. For verifying a candidate token pair
+   * (see {@link ViboClient.adoptVerifiedTokens}) without it touching the
+   * live session or verifying against some other account.
+   */
+  isolated?: boolean;
 }
 
 /**
@@ -165,7 +172,7 @@ function uploadTransportError(err: unknown): McpToolError {
 }
 
 /**
- * Read a multipart-upload GraphQL response body. An error status is read as text first so a
+ * Read a multipart-upload GraphQL response body (always a write's). An error status is read as text first so a
  * CDN/WAF refusal page (CloudFront, Cloudflare, Akamai, Imperva) is named as
  * an {@link EdgeBlockedError} — the request never reached Vibo, so neither
  * the permission-denial copy (403) nor a sign-in prompt applies.
@@ -181,8 +188,19 @@ async function readGraphQLBody<T>(response: Response): Promise<GraphQLResponse<T
       return {};
     }
   }
+  // Read and parse separately. A body that fails to ARRIVE (the request
+  // signal aborts the body read too, or the connection drops mid-body) means
+  // the upload reached Vibo but we never learned what it did: an unknown
+  // outcome, worded as one (fleet-audit #1135). Only a body that arrived and is
+  // not JSON is the "empty response" `unwrap` reports.
+  let text: string;
   try {
-    return (await response.json()) as GraphQLResponse<T>;
+    text = await response.text();
+  } catch (err) {
+    throw uploadTransportError(err);
+  }
+  try {
+    return JSON.parse(text) as GraphQLResponse<T>;
   } catch {
     return {};
   }
@@ -228,6 +246,9 @@ export class ViboClient {
   // Pure to build — safe at Worker global scope.
   private readonly graphql: GraphqlClient;
 
+  // See ViboClientOptions.isolated.
+  private readonly isolated: boolean;
+
   constructor(opts: ViboClientOptions = {}) {
     this.apiUrl = opts.apiUrl ?? readEnvVar('VIBO_API_URL') ?? DEFAULT_API_URL;
     this.graphql = createGraphqlClient({
@@ -236,10 +257,12 @@ export class ViboClient {
       timeout: REQUEST_TIMEOUT_MS,
       writeOutcomeHint: WRITE_OUTCOME_HINT,
     });
-    this.email = opts.email ?? readEnvVar('VIBO_EMAIL') ?? null;
-    this.password = opts.password ?? readEnvVar('VIBO_PASSWORD') ?? null;
-    this.accessToken = opts.accessToken ?? readEnvVar('VIBO_ACCESS_TOKEN') ?? null;
-    this.refreshTokenValue = opts.refreshToken ?? readEnvVar('VIBO_REFRESH_TOKEN') ?? null;
+    this.isolated = opts.isolated ?? false;
+    const env = (name: string): string | undefined => (this.isolated ? undefined : readEnvVar(name));
+    this.email = opts.email ?? env('VIBO_EMAIL') ?? null;
+    this.password = opts.password ?? env('VIBO_PASSWORD') ?? null;
+    this.accessToken = opts.accessToken ?? env('VIBO_ACCESS_TOKEN') ?? null;
+    this.refreshTokenValue = opts.refreshToken ?? env('VIBO_REFRESH_TOKEN') ?? null;
   }
 
   /**
@@ -253,6 +276,13 @@ export class ViboClient {
     this.configResolved = true;
 
     const haveLogin = Boolean(this.email && this.password);
+
+    if (this.isolated) {
+      if (!haveLogin && !this.accessToken) {
+        this.configError = new McpToolError('No Vibo credentials were supplied to verify.');
+      }
+      return;
+    }
 
     // Fall back to a previously browser-captured session (SSO accounts) ONLY
     // when there's no env/injected token AND no email/password. Email/password
@@ -304,6 +334,35 @@ export class ViboClient {
     this.refreshTokenValue = refreshToken;
     this.sessionLineage = null; // a browser capture descends from no configured pair
     this.configError = null;
+  }
+
+  /**
+   * Verify a candidate token pair (a browser capture) and adopt it only once it
+   * authenticates. `probe` runs on an ISOLATED client — no env credentials, no
+   * session.json — so a stale capture never replaces this client's working
+   * tokens, a refresh during verification is never persisted behind the
+   * caller's back, and the probe can never succeed by signing in with the env
+   * email/password instead. On success this client adopts the pair the
+   * verification ENDED with (a refresh may have rotated it), which is also
+   * what is returned for the caller to persist. On failure nothing changes.
+   */
+  async adoptVerifiedTokens<T>(
+    accessToken: string,
+    refreshToken: string | null,
+    probe: string,
+  ): Promise<{ data: T; accessToken: string; refreshToken: string | null }> {
+    const verifier = new ViboClient({
+      apiUrl: this.apiUrl,
+      accessToken,
+      ...(refreshToken ? { refreshToken } : {}),
+      isolated: true,
+    });
+    const data = await verifier.gql<T>(probe);
+    /* v8 ignore next -- gql() succeeded, so the verifier holds an access token */
+    const verifiedAccess = verifier.accessToken ?? accessToken;
+    const verifiedRefresh = verifier.refreshTokenValue;
+    this.setTokens(verifiedAccess, verifiedRefresh);
+    return { data, accessToken: verifiedAccess, refreshToken: verifiedRefresh };
   }
 
   /** True when operating purely from a token (no email/password) — refreshed
@@ -450,7 +509,7 @@ export class ViboClient {
               this.refreshTokenValue = data.refreshToken.refreshToken;
               // Persist the rotated pair so a captured/pasted session survives
               // a restart (no email/password to re-login with).
-              if (this.tokenOnlyMode) {
+              if (this.tokenOnlyMode && !this.isolated) {
                 saveSession({
                   accessToken: this.accessToken,
                   refreshToken: this.refreshTokenValue,
