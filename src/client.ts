@@ -172,7 +172,7 @@ function uploadTransportError(err: unknown): McpToolError {
 }
 
 /**
- * Read a multipart-upload GraphQL response body. An error status is read as text first so a
+ * Read a multipart-upload GraphQL response body (always a write's). An error status is read as text first so a
  * CDN/WAF refusal page (CloudFront, Cloudflare, Akamai, Imperva) is named as
  * an {@link EdgeBlockedError} — the request never reached Vibo, so neither
  * the permission-denial copy (403) nor a sign-in prompt applies.
@@ -188,8 +188,19 @@ async function readGraphQLBody<T>(response: Response): Promise<GraphQLResponse<T
       return {};
     }
   }
+  // Read and parse separately. A body that fails to ARRIVE (the request
+  // signal aborts the body read too, or the connection drops mid-body) means
+  // the upload reached Vibo but we never learned what it did: an unknown
+  // outcome, worded as one (fleet-audit #1135). Only a body that arrived and is
+  // not JSON is the "empty response" `unwrap` reports.
+  let text: string;
   try {
-    return (await response.json()) as GraphQLResponse<T>;
+    text = await response.text();
+  } catch (err) {
+    throw uploadTransportError(err);
+  }
+  try {
+    return JSON.parse(text) as GraphQLResponse<T>;
   } catch {
     return {};
   }

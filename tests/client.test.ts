@@ -483,6 +483,43 @@ describe('multipart upload responses', () => {
     respond(200, 'not json');
     await expect(upload()).rejects.toThrow(/empty response/);
   });
+
+  // fleet-audit #1135: the headers arrived, so the upload reached Vibo, but
+  // the BODY never did (the request signal also aborts the body read). That is
+  // an unknown outcome — the photo/answer may be saved — not an empty response.
+  it('a body that fails to arrive is an unknown outcome, not an empty response', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'AT';
+    const fail = async () => {
+      throw Object.assign(new Error('The operation was aborted due to timeout'), { name: 'TimeoutError' });
+    };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      status: 200,
+      headers: new Headers(),
+      text: fail,
+      json: fail,
+    } as unknown as Response);
+    const err = (await upload().catch((e: unknown) => e)) as Error & { hint?: string };
+    expect(err.message).toMatch(/may already have been applied/);
+    expect(err.message).not.toMatch(/empty response/);
+    expect(err.hint).toMatch(/check the current state before retrying/i);
+  });
+
+  it('a JSON-path mutation whose body fails to arrive is an unknown outcome too', async () => {
+    process.env.VIBO_ACCESS_TOKEN = 'AT';
+    const fail = async () => {
+      throw Object.assign(new Error('terminated'), { name: 'TypeError' });
+    };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      status: 200,
+      headers: new Headers(),
+      text: fail,
+      json: fail,
+    } as unknown as Response);
+    const err = (await new ViboClient()
+      .gql('mutation createSongComment($c: String!) { createSongComment(c: $c) { _id } }', { c: 'x' })
+      .catch((e: unknown) => e)) as Error;
+    expect(err.message).toMatch(/may already have been applied/);
+  });
 });
 
 /**
