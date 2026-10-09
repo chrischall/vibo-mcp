@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.4.4](https://github.com/chrischall/vibo-mcp/compare/v2.4.3...v2.4.4) (2026-10-09)
+
+
+### Bug Fixes
+
+* annotate tools truthfully and sync manifests with the served tools ([#186](https://github.com/chrischall/vibo-mcp/issues/186)) ([bc197ad](https://github.com/chrischall/vibo-mcp/commit/bc197ad89ea870096547cb7688ffc631dc33f6e3))
+* declare the plugin MCP config under the mcpServers key Claude Code reads ([#187](https://github.com/chrischall/vibo-mcp/issues/187)) ([d52312b](https://github.com/chrischall/vibo-mcp/commit/d52312b9beb172150912bcf05aba4f7931ffb8d0))
+* **deps:** update @chrischall/mcp-utils to 3.0.0 ([#185](https://github.com/chrischall/vibo-mcp/issues/185)) ([01768bd](https://github.com/chrischall/vibo-mcp/commit/01768bd900a9ee68a014bef7f4d4818e78b4f59c))
+* resolve low-severity audit findings ([#182](https://github.com/chrischall/vibo-mcp/issues/182)) ([c85b93b](https://github.com/chrischall/vibo-mcp/commit/c85b93b5c18fa6023223a2cabd168cb2648e29fb))
+
 ## [2.4.3](https://github.com/chrischall/vibo-mcp/compare/v2.4.2...v2.4.3) (2026-10-07)
 
 
