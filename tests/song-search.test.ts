@@ -219,6 +219,30 @@ describe('assessSong', () => {
     expect(assessSong(collab, stapletonQuery).confidence).toBe('likely-original');
   });
 
+  // A partial name is not the requested artist: matching is on whole words, and
+  // a result credit that is only PART of the requested name must be a full,
+  // multi-word name of its own (one half of a duo is a different act).
+  it.each([
+    ['Shay', 'Dan + Shay - Speechless'],
+    ['Dan', 'Dan + Shay - Speechless'],
+    ['Ed', 'Ed Sheeran - Perfect'],
+    ['Stapleton Covers', 'Chris Stapleton - Tennessee Whiskey'],
+    ['Chris', 'Chris Stapleton - Tennessee Whiskey'],
+    ['Edd Sheeran', 'Ed Sheeran - Perfect'],
+  ])('flags the partial artist credit %s for the query %s', (artist, query) => {
+    const result = assessSong({ ...OFFICIAL_STAPLETON, title: parseSearchQuery(query).title, artist }, parseSearchQuery(query));
+    expect(result.confidence).toBe('likely-not-original');
+    expect(result.warnings.some((w) => w.startsWith(`Artist is "${artist}"`))).toBe(true);
+  });
+
+  it('accepts a full credit that is one named act of a requested collaboration', () => {
+    const result = assessSong(
+      { ...OFFICIAL_STAPLETON, artist: 'Chris Stapleton' },
+      parseSearchQuery('Chris Stapleton & Justin Timberlake - Tennessee Whiskey'),
+    );
+    expect(result.warnings.some((w) => w.startsWith('Artist is'))).toBe(false);
+  });
+
   it('matches version markers on whole words only', () => {
     const demolition: SearchSong = { ...OFFICIAL_STAPLETON, title: 'Demolition Man', artist: 'The Police' };
     const result = assessSong(demolition, parseSearchQuery('The Police - Demolition Man'));

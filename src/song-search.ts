@@ -189,6 +189,23 @@ function soundcloudHandleIsConsistentWith(url: string, artist: string): boolean 
 }
 
 /**
+ * Does a result credited to `credited` count as the requested `wanted` artist?
+ * Both are normalized names, compared on whole words:
+ *
+ * - the requested name inside a wider credit passes ("Ed Sheeran" in
+ *   "Ed Sheeran & Beyoncé");
+ * - a credit that is only part of the requested name passes only when it is a
+ *   multi-word name of its own ("Chris Stapleton" for a requested
+ *   "Chris Stapleton & Justin Timberlake"). One word of the request — "Shay"
+ *   for "Dan + Shay", "Ed" for "Ed Sheeran" — is a different act, which is
+ *   exactly the cover/re-upload this check exists to catch.
+ */
+function creditsArtist(credited: string, wanted: string): boolean {
+  if (containsPhrase(credited, wanted)) return true;
+  return credited.split(' ').length >= 2 && containsPhrase(wanted, credited);
+}
+
+/**
  * Judge one search result, optionally against what the caller asked for.
  * Passing `intended` (from {@link parseSearchQuery}) enables the strongest
  * check by far: whether the result's artist is actually the artist requested.
@@ -217,10 +234,10 @@ export function assessSong(song: SearchSong, intended?: ParsedQuery): SongQualit
   }
 
   // The strongest available check: does the result credit the artist we asked
-  // for? Substring both ways so "Ed Sheeran" matches "Ed Sheeran & Beyoncé".
+  // for? See {@link creditsArtist}.
   if (intended?.artist && artist && !isJunkArtist) {
     const wanted = normalizeName(intended.artist);
-    if (wanted && !normalizedArtist.includes(wanted) && !wanted.includes(normalizedArtist)) {
+    if (wanted && !creditsArtist(normalizedArtist, wanted)) {
       warnings.push(`Artist is "${artist}", but the query asked for "${intended.artist}".`);
       hard = true;
     }
