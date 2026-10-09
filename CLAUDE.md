@@ -109,7 +109,8 @@ Every mutating tool (all 26 except `vibo_capture_session`) takes an optional
 validation:
 
 - A client that can show an MCP elicitation prompt (Claude Code) gets the real
-  prompt; nothing is sent unless the user accepts.
+  prompt; nothing is sent unless the user accepts — unless the server sets
+  `MCP_CONFIRM_ELICITATION=off`, which sends every client down the token flow.
 - A client that cannot (claude.ai, Claude Desktop) gets the two-step token flow
   governed by `MCP_CONFIRM_MODE` (see README): the first call makes **no
   write** and returns `status: "confirmation-required"`, a `preview` of the

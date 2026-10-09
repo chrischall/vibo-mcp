@@ -68,7 +68,9 @@ config error only appears on the first tool call.
 
 ### Writes (confirmation-gated)
 Each mutating tool asks the user to confirm before anything is sent. Where the
-client can show a confirmation prompt, it does. Otherwise the first call makes
+client can show a confirmation prompt, it does (unless the server sets
+`MCP_CONFIRM_ELICITATION=off`, which sends every client down the token path
+below). Otherwise the first call makes
 **no** network call and returns `status: "confirmation-required"` with a preview
 of exactly what would be sent (`preview.action` + `preview.willSend`) and a
 `confirmToken`. Show that preview to the user, and only after they approve in
