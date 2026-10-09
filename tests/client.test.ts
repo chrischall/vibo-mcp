@@ -307,6 +307,53 @@ describe('ViboClient auth lifecycle', () => {
     await expect(new ViboClient().gql(GET_ME)).rejects.toThrow(/credentials are not configured/i);
   });
 
+  // fleet-audit #794: a captured pair is verified on an ISOLATED client, so a
+  // stale capture never replaces the working in-memory session, never reaches
+  // session.json through a refresh, and never verifies against the env login.
+  describe('adoptVerifiedTokens', () => {
+    it('leaves the working session in place when the captured token fails', async () => {
+      process.env.VIBO_ACCESS_TOKEN = 'GOOD';
+      const calls = installFetch(({ token }) =>
+        token === 'GOOD' ? { data: { me: { _id: 'u1' } } } : { errors: [{ code: 'UNAUTHORIZED' }] },
+      );
+      const client = new ViboClient();
+      await expect(client.adoptVerifiedTokens('BAD', null, GET_ME)).rejects.toThrow();
+      calls.length = 0;
+      const data = await client.gql<{ me: { _id: string } }>(GET_ME);
+      expect(data.me._id).toBe('u1');
+      expect(calls[0].token).toBe('GOOD');
+    });
+
+    it('never verifies a capture against the env email/password', async () => {
+      process.env.VIBO_EMAIL = 'a@b.com';
+      process.env.VIBO_PASSWORD = 'pw';
+      const calls = installFetch(({ query, token }) => {
+        if (isOp(query, 'mutation signIn')) return { data: { signIn: { accessToken: 'ENVAT', refreshToken: 'ENVRT' } } };
+        return token === 'ENVAT' ? { data: { me: { _id: 'env-user' } } } : { errors: [{ code: 'UNAUTHORIZED' }] };
+      });
+      await expect(new ViboClient().adoptVerifiedTokens('BAD', null, GET_ME)).rejects.toThrow();
+      expect(calls.some((c) => isOp(c.query, 'mutation signIn'))).toBe(false);
+    });
+
+    it('adopts and returns the pair the verification ended with, without persisting it', async () => {
+      const calls = installFetch(({ query, token, variables }) => {
+        if (isOp(query, 'refreshToken') && variables.refreshToken === 'RT1') {
+          return { data: { refreshToken: { accessToken: 'AT2', refreshToken: 'RT2' } } };
+        }
+        return token === 'AT2' ? { data: { me: { _id: 'u3' } } } : { errors: [{ code: 'UNAUTHORIZED' }] };
+      });
+      const client = new ViboClient();
+      const res = await client.adoptVerifiedTokens<{ me: { _id: string } }>('STALE', 'RT1', GET_ME);
+      expect(res).toEqual({ data: { me: { _id: 'u3' } }, accessToken: 'AT2', refreshToken: 'RT2' });
+      // The verifier did not write session.json — the caller persists.
+      await expect(new ViboClient().gql(GET_ME)).rejects.toThrow(/credentials are not configured/i);
+      // The live client now uses the rotated token.
+      calls.length = 0;
+      await client.gql(GET_ME);
+      expect(calls[0].token).toBe('AT2');
+    });
+  });
+
   it('only logs in once under concurrent calls (single-flight)', async () => {
     process.env.VIBO_EMAIL = 'a@b.com';
     process.env.VIBO_PASSWORD = 'pw';

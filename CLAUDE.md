@@ -31,8 +31,10 @@ src/
   index.ts        # entry — runMcp({ name, version, banner, tools })
   client.ts       # ViboClient — GraphQL POST w/ x-token, deferred config error,
                   #   single-flight login + refresh-on-expiry + replay-once;
-                  #   gqlUpload() for multipart (Upload scalar); setTokens() for
-                  #   adopting a browser-captured session
+                  #   gqlUpload() for multipart (Upload scalar);
+                  #   adoptVerifiedTokens() verifies a browser-captured pair on an
+                  #   isolated client before adopting it (never the env login,
+                  #   never session.json — the tool persists after it succeeds)
   auth.ts         # captureViboSession() — fetchproxy browser-bridge token capture (SSO)
   session-store.ts# persist {accessToken,refreshToken} to ~/.vibo-mcp/session.json (0600)
   gql.ts          # all GraphQL operation documents (selections from introspection)
