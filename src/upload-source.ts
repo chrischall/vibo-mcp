@@ -242,3 +242,14 @@ export const nodeUploadResolver: UploadResolver = async (ref) => {
   });
 };
 
+/**
+ * Hex sha256 of a resolved upload's bytes. A gated upload binds this into its
+ * confirm token: a local `path` names a file, not its contents, so without it a
+ * different file written at the same path between the preview and the
+ * confirmed call would be sent to the DJ and every event member unseen
+ * (fleet-audit #1139). Web Crypto, so it runs wherever the resolver does.
+ */
+export async function uploadDigest(file: UploadFile): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', await file.blob.arrayBuffer());
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+}

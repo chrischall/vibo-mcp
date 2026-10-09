@@ -3,7 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { McpToolError, minifiedResult, confirmTokenParam, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { UPLOAD_USER_PHOTO } from '../gql.js';
-import { nodeUploadResolver, type UploadResolver } from '../upload-source.js';
+import { nodeUploadResolver, uploadDigest, type UploadResolver } from '../upload-source.js';
 import { confirmWrite, CONFIRM_NOTE } from './shared.js';
 
 /**
@@ -42,16 +42,11 @@ export function registerUploadTools(
           hint: 'Pass `path` for a local file, or `fileData` (base64) if the server cannot read your filesystem.',
         });
       }
-      const gate = await confirmWrite(ctx, {
-        tool: 'vibo_set_profile_photo',
-        mutation: 'uploadUserPhoto',
-        message: 'Review and confirm this profile photo upload:',
-        confirmToken,
-        target: '',
-        willSend: { photo: path ?? '(inline bytes)' },
-        payload: { path, fileData, filename },
-      });
-      if (gate) return gate;
+      // Resolved (vetted + read) on EVERY call, before the gate: the token binds
+      // a digest of these bytes, so a file swapped in at the same path after
+      // the preview no longer matches, and the bytes sent on the confirmed call
+      // are exactly the ones fingerprinted (fleet-audit #1139). Reading is not
+      // a write; nothing reaches Vibo until the gate passes.
       // A local path keeps its own basename (and real extension) unless the
       // caller names it; only unnamed inline bytes get the "photo.jpg" default.
       const file = await resolveUpload({
@@ -60,6 +55,16 @@ export function registerUploadTools(
         filename: filename ?? (path ? undefined : 'photo.jpg'),
         kind: 'image',
       });
+      const gate = await confirmWrite(ctx, {
+        tool: 'vibo_set_profile_photo',
+        mutation: 'uploadUserPhoto',
+        message: 'Review and confirm this profile photo upload:',
+        confirmToken,
+        target: '',
+        willSend: { photo: path ?? '(inline bytes)' },
+        payload: { path, fileData, filename, sha256: await uploadDigest(file) },
+      });
+      if (gate) return gate;
       const data = await client.gqlUpload<{ uploadUserPhoto: unknown }>(
         UPLOAD_USER_PHOTO,
         { photo: null },

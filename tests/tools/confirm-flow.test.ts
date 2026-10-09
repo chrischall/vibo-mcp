@@ -96,7 +96,7 @@ describe('confirm-token flow (client without elicitation)', () => {
     expect(body.preview.willSend).toEqual({ photo: '(inline bytes)' });
     const res = await harness.callTool('vibo_set_profile_photo', { ...args, fileData: 'Ynll', confirmToken: body.confirmToken });
     expect(parseToolResult<Rejection>(res).error).toBe('DRAFT_CHANGED');
-    expect(resolve).not.toHaveBeenCalled();
+    // The bytes are resolved on every call to fingerprint them; none are sent.
     expect(gqlUpload).not.toHaveBeenCalled();
   });
 
@@ -109,8 +109,47 @@ describe('confirm-token flow (client without elicitation)', () => {
       ...args, images: [{ data: 'Ynll', filename: 'a.png' }], confirmToken: body.confirmToken,
     });
     expect(parseToolResult<Rejection>(res).error).toBe('DRAFT_CHANGED');
-    expect(resolve).not.toHaveBeenCalled();
+    // The bytes are resolved on every call to fingerprint them; none are sent.
     expect(gqlUpload).not.toHaveBeenCalled();
+  });
+
+  // fleet-audit #1139: a local `path` names a file, not its bytes. The token
+  // binds a digest of the bytes read at preview time, so a different file
+  // written at the same path before the confirmed call is refused, not sent.
+  const swapAtPath = () =>
+    resolve
+      .mockResolvedValueOnce({ blob: new Blob(['the photo the user saw']), filename: 'me.jpg' })
+      .mockResolvedValueOnce({ blob: new Blob(['something else entirely']), filename: 'me.jpg' });
+
+  it('a profile photo swapped at the same path is refused as DRAFT_CHANGED', async () => {
+    harness = await createTestHarness(register);
+    swapAtPath();
+    const args = { path: 'me.jpg' };
+    const body = await previewCall(harness, 'vibo_set_profile_photo', args);
+    const res = await harness.callTool('vibo_set_profile_photo', { ...args, confirmToken: body.confirmToken });
+    expect(parseToolResult<Rejection>(res).error).toBe('DRAFT_CHANGED');
+    expect(gqlUpload).not.toHaveBeenCalled();
+  });
+
+  it('a question attachment swapped at the same path is refused as DRAFT_CHANGED', async () => {
+    harness = await createTestHarness(register);
+    swapAtPath();
+    const args = { eventId: 'e1', sectionId: 's1', questionId: 'q3', imagePaths: ['me.jpg'] };
+    const body = await previewCall(harness, 'vibo_answer_question', args);
+    const res = await harness.callTool('vibo_answer_question', { ...args, confirmToken: body.confirmToken });
+    expect(parseToolResult<Rejection>(res).error).toBe('DRAFT_CHANGED');
+    expect(gqlUpload).not.toHaveBeenCalled();
+  });
+
+  it('the same bytes at the same path still confirm, and exactly those bytes are sent', async () => {
+    harness = await createTestHarness(register);
+    gqlUpload.mockResolvedValue({ uploadUserPhoto: { url: 'u' } });
+    const same = { blob: new Blob(['the photo the user saw']), filename: 'me.jpg' };
+    resolve.mockResolvedValueOnce(same).mockResolvedValueOnce(same);
+    const body = await previewCall(harness, 'vibo_set_profile_photo', { path: 'me.jpg' });
+    const res = await harness.callTool('vibo_set_profile_photo', { path: 'me.jpg', confirmToken: body.confirmToken });
+    expect(res.isError).toBeFalsy();
+    expect(gqlUpload).toHaveBeenCalledWith(expect.anything(), { photo: null }, { 'variables.photo': same });
   });
 
   it('MCP_CONFIRM_MODE=refuse refuses the write outright', async () => {

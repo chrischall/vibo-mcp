@@ -117,8 +117,11 @@ validation:
   `confirmToken`; only a repeat call with the same arguments plus that token
   writes. The token is single-use and bound to the tool, the target id and a
   hash of what will be sent — a changed argument is refused as `DRAFT_CHANGED`,
-  a replay as `TOKEN_REUSED`. Inline upload bytes are bound too (via
-  `payload`), although the preview shows them as `(inline bytes)`.
+  a replay as `TOKEN_REUSED`. Upload BYTES are bound too (via `payload`): the
+  upload tools resolve their files before the gate on every call and hash a
+  sha256 of each into the token, so inline bytes the preview shows as
+  `(inline bytes)` — and a different file written at the same local `path`
+  after the preview — are refused as `DRAFT_CHANGED` (fleet-audit #1139).
 
 Some tools READ before the gate — to refuse ids that aren't in the section
 (`remove_song_from_section`, `reorder_songs`, `reorder_sections`), to resolve

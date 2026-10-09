@@ -28,9 +28,10 @@ describe('upload tools', () => {
     harness = await createTestHarness((s) => registerUploadTools(s, client, resolve));
   });
 
-  it('vibo_set_profile_photo previews without a token (no resolve, no upload)', async () => {
+  it('vibo_set_profile_photo previews without a token (reads to fingerprint, no upload)', async () => {
     const res = await harness.callTool('vibo_set_profile_photo', { path: '/tmp/me.jpg' });
-    expect(resolve).not.toHaveBeenCalled();
+    // Resolved so the token can bind a digest of the bytes (fleet-audit #1139).
+    expect(resolve).toHaveBeenCalledTimes(1);
     expect(gqlUpload).not.toHaveBeenCalled();
     expect(parseToolResult<{ status: string }>(res).status).toBe('confirmation-required');
   });
