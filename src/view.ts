@@ -37,7 +37,13 @@ const EVENT_USERS_NOTE =
   'avatar URLs; "full" returns Vibo\'s payload untouched, emails included. This document\'s field list is ' +
   'fixed by its query, so the projection cannot drop an unknown field.';
 
-/** The `view` parameter every read tool in this server takes. */
+/**
+ * The `view` parameter every read tool whose GraphQL document selects media
+ * (thumbnails, `imageUrl`, `images { url }`) takes. Reads that select no media
+ * (events, sections, questions, song-idea collections) have nothing for compact
+ * to strip and take no `view`; `tests/view.test.ts` ("view coverage") pins the
+ * correspondence.
+ */
 export const viewArg = (): ReturnType<typeof viewParam> => viewParam(VIBO_VIEWS, { note: NOTE });
 
 /**

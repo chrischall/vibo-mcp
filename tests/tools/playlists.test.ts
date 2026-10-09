@@ -37,6 +37,36 @@ describe('playlist tools', () => {
     });
   });
 
+  it('vibo_get_playlists strips playlist cover images by default and keeps them on view: "full"', async () => {
+    const payload = {
+      getPlaylists: {
+        playlists: [{ id: 'p1', name: 'Wedding', total: 3, images: [{ url: 'https://i.scdn.co/image/a', width: 640, height: 640 }] }],
+      },
+    };
+    gql.mockResolvedValue(payload);
+    const compact = parseToolResult<{ playlists: Array<Record<string, unknown>> }>(
+      await harness.callTool('vibo_get_playlists', { source: 'spotify' }),
+    );
+    expect(compact.playlists[0]).toEqual({ id: 'p1', name: 'Wedding', total: 3 });
+    gql.mockResolvedValue(payload);
+    const full = parseToolResult<{ playlists: Array<Record<string, unknown>> }>(
+      await harness.callTool('vibo_get_playlists', { source: 'spotify', view: 'full' }),
+    );
+    expect(full.playlists[0].images).toEqual(payload.getPlaylists.playlists[0].images);
+  });
+
+  it('vibo_get_playlist_songs strips track artwork by default but keeps the song link', async () => {
+    gql.mockResolvedValue({
+      getPlaylistSongs: {
+        tracks: [{ id: 't1', title: 'T', artist: 'A', songUrl: 'https://open.spotify.com/track/x', images: [{ url: 'https://i.scdn.co/image/b' }] }],
+      },
+    });
+    const out = parseToolResult<{ tracks: Array<Record<string, unknown>> }>(
+      await harness.callTool('vibo_get_playlist_songs', { playlistId: 'p1', source: 'spotify' }),
+    );
+    expect(out.tracks[0]).toEqual({ id: 't1', title: 'T', artist: 'A', songUrl: 'https://open.spotify.com/track/x' });
+  });
+
   it('vibo_export_event_to_spotify previews then exports', async () => {
     const args = { eventId: 'e1', sectionIds: ['s1', 's2'], title: 'My Set' };
     const preview = await harness.callTool('vibo_export_event_to_spotify', args);

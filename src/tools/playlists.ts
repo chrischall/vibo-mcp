@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/server';
 import { minifiedResult, confirmTokenParam, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
+import { viewArg, viewResponse } from '../view.js';
 import {
   GET_PLAYLISTS,
   GET_PLAYLIST_SONGS,
@@ -26,15 +27,16 @@ export function registerPlaylistTools(server: McpServer, client: ViboClient): vo
         q: z.string().optional().describe('Filter playlists by name.'),
         limit: limitSchema,
         skip: skipSchema,
+        view: viewArg(),
       }),
     },
-    async ({ source, q, limit, skip }) => {
+    async ({ source, q, limit, skip, view }) => {
       const data = await client.gql<{ getPlaylists: unknown }>(GET_PLAYLISTS, {
         source,
         pagination: pagination(limit, skip),
         ...(q ? { filter: { q } } : {}),
       });
-      return minifiedResult(data.getPlaylists);
+      return viewResponse(view, data.getPlaylists);
     },
   );
 
@@ -48,15 +50,16 @@ export function registerPlaylistTools(server: McpServer, client: ViboClient): vo
         source: sourceSchema,
         limit: limitSchema,
         skip: skipSchema,
+        view: viewArg(),
       }),
     },
-    async ({ playlistId, source, limit, skip }) => {
+    async ({ playlistId, source, limit, skip, view }) => {
       const data = await client.gql<{ getPlaylistSongs: unknown }>(GET_PLAYLIST_SONGS, {
         playlistId,
         source,
         pagination: pagination(limit, skip),
       });
-      return minifiedResult(data.getPlaylistSongs);
+      return viewResponse(view, data.getPlaylistSongs);
     },
   );
 

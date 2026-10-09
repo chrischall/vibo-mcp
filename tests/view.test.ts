@@ -6,6 +6,7 @@ import { registerSongTools } from '../src/tools/songs.js';
 import { registerNotificationTools } from '../src/tools/notifications.js';
 import { registerIdeasTools } from '../src/tools/ideas.js';
 import { registerCollaborationTools } from '../src/tools/collaboration.js';
+import { registerPlaylistTools } from '../src/tools/playlists.js';
 import { client } from '../src/client.js';
 import { createTestHarness } from './helpers.js';
 
@@ -151,14 +152,19 @@ describe('viewArg', () => {
  * selection to `gql.ts` and the second fails, pointing at the first.
  */
 describe('view coverage', () => {
-  it('gql.ts selects media in exactly six documents', async () => {
+  it('gql.ts selects media in exactly eight documents', async () => {
     const gql = await readFile(new URL('../src/gql.ts', import.meta.url), 'utf8');
     // `THUMBS` is a shared fragment interpolated at three sites; `imageUrl` is
-    // selected literally at three more. Count the USE sites, not the defs.
+    // selected literally at three more; the connected-service playlist reads
+    // select `images { url … }` at two more (fleet-audit #799 — the first
+    // version of this guard counted only the first two shapes and missed them).
+    // Count the USE sites, not the defs.
     const thumbSites = gql.match(/\$\{THUMBS\}/g) ?? [];
     const imageUrlSites = gql.match(/\bimageUrl\b/g) ?? [];
+    const imagesSites = gql.match(/\bimages\s*\{/g) ?? [];
     expect(thumbSites).toHaveLength(3);
     expect(imageUrlSites).toHaveLength(3);
+    expect(imagesSites).toHaveLength(2);
   });
 
   it('every read behind one of those documents declares view', async () => {
@@ -168,6 +174,7 @@ describe('view coverage', () => {
       registerNotificationTools(server, client);
       registerIdeasTools(server, client);
       registerCollaborationTools(server, client);
+      registerPlaylistTools(server, client);
     });
     const { tools } = await harness.client.listTools();
     const withView = tools
@@ -177,6 +184,8 @@ describe('view coverage', () => {
     await harness.close();
     expect(withView).toEqual([
       'vibo_get_me', //                 GET_ME              → me.imageUrl
+      'vibo_get_playlist_songs', //     GET_PLAYLIST_SONGS  → tracks[].images
+      'vibo_get_playlists', //          GET_PLAYLISTS       → playlists[].images
       'vibo_get_section_songs', //      GET_SECTION_SONGS   → ${THUMBS}
       'vibo_list_event_users', //       LIST_EVENT_USERS    → users[].imageUrl
       'vibo_list_notifications', //     GET_NOTIFICATIONS   → imageUrl
