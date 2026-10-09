@@ -32,7 +32,7 @@ export function registerUploadTools(
           .string()
           .optional()
           .describe('Base64-encoded image bytes (a `data:` URL prefix is allowed). Use this when the server cannot read your filesystem.'),
-        filename: z.string().optional().describe('Filename for the image when using fileData (default "photo.jpg").'),
+        filename: z.string().optional().describe('Filename for the image (default: the basename of `path`, or "photo.jpg" for inline fileData).'),
         confirmToken: confirmTokenParam,
       }),
     },
@@ -52,7 +52,14 @@ export function registerUploadTools(
         payload: { path, fileData, filename },
       });
       if (gate) return gate;
-      const file = await resolveUpload({ path, data: fileData, filename: filename ?? 'photo.jpg', kind: 'image' });
+      // A local path keeps its own basename (and real extension) unless the
+      // caller names it; only unnamed inline bytes get the "photo.jpg" default.
+      const file = await resolveUpload({
+        path,
+        data: fileData,
+        filename: filename ?? (path ? undefined : 'photo.jpg'),
+        kind: 'image',
+      });
       const data = await client.gqlUpload<{ uploadUserPhoto: unknown }>(
         UPLOAD_USER_PHOTO,
         { photo: null },

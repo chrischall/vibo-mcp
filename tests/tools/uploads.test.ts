@@ -38,7 +38,9 @@ describe('upload tools', () => {
   it('vibo_set_profile_photo resolves a local path and uploads via the multipart path after confirmation', async () => {
     gqlUpload.mockResolvedValue({ uploadUserPhoto: { url: 'https://x/y.jpg' } });
     const res = await confirmCall(harness, 'vibo_set_profile_photo', { path: '/tmp/me.jpg' }, gqlUpload);
-    expect(resolve).toHaveBeenCalledWith({ path: '/tmp/me.jpg', data: undefined, filename: 'photo.jpg', kind: 'image' });
+    // A local path keeps its own basename (and so its real extension): the
+    // "photo.jpg" default is only for inline bytes, which have no name.
+    expect(resolve).toHaveBeenCalledWith({ path: '/tmp/me.jpg', data: undefined, filename: undefined, kind: 'image' });
     expect(gqlUpload).toHaveBeenCalledWith(
       UPLOAD_USER_PHOTO,
       { photo: null },
@@ -52,6 +54,18 @@ describe('upload tools', () => {
     await confirmCall(harness, 'vibo_set_profile_photo', { fileData: 'aGk=', filename: 'me.png' }, gqlUpload);
     expect(resolve).toHaveBeenCalledWith({ path: undefined, data: 'aGk=', filename: 'me.png', kind: 'image' });
     expect(gqlUpload).toHaveBeenCalledWith(UPLOAD_USER_PHOTO, { photo: null }, { 'variables.photo': stubFile });
+  });
+
+  it('vibo_set_profile_photo does not rename a local .png to photo.jpg', async () => {
+    gqlUpload.mockResolvedValue({ uploadUserPhoto: { url: 'https://x/p.png' } });
+    await confirmCall(harness, 'vibo_set_profile_photo', { path: '/tmp/me.png' }, gqlUpload);
+    expect(resolve).toHaveBeenCalledWith({ path: '/tmp/me.png', data: undefined, filename: undefined, kind: 'image' });
+  });
+
+  it('vibo_set_profile_photo names unnamed inline bytes photo.jpg', async () => {
+    gqlUpload.mockResolvedValue({ uploadUserPhoto: { url: 'https://x/q.jpg' } });
+    await confirmCall(harness, 'vibo_set_profile_photo', { fileData: 'aGk=' }, gqlUpload);
+    expect(resolve).toHaveBeenCalledWith({ path: undefined, data: 'aGk=', filename: 'photo.jpg', kind: 'image' });
   });
 
   it('vibo_set_profile_photo errors when neither path nor fileData is provided', async () => {
