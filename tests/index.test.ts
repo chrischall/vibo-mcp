@@ -149,8 +149,14 @@ describe('tool registry', () => {
   it('declares destructiveHint on every write, and only the right ones are destructive', async () => {
     const { tools } = await harness.client.listTools();
 
-    // Reaches another person, or spends something with no inverse here.
+    // Reaches another person, spends something with no inverse here, or
+    // OVERWRITES what was there (a previous photo, answer, DJ note or song
+    // comment cannot be put back once replaced).
     const destructive = new Set([
+      'vibo_answer_question',
+      'vibo_set_profile_photo',
+      'vibo_update_section',
+      'vibo_update_song',
       'vibo_change_user_role',
       'vibo_delete_section',
       'vibo_delete_section_comment',
@@ -170,5 +176,34 @@ describe('tool registry', () => {
       expect(destructiveHint, `${t.name} must SAY whether it destroys — silence means true`).toBeTypeOf('boolean');
       expect(destructiveHint, t.name).toBe(destructive.has(t.name));
     }
+  });
+
+  // idempotentHint defaults to FALSE, so a write that sets an absolute state
+  // must say so for a client to retry it safely; one that adds/sends again on
+  // every call says false explicitly.
+  it('declares idempotentHint on writes whose repeat is (or is not) harmless', async () => {
+    const { tools } = await harness.client.listTools();
+    const idempotent = new Set([
+      'vibo_mark_notifications_read',
+      'vibo_toggle_song_like',
+      'vibo_update_section',
+      'vibo_update_song',
+    ]);
+    const notIdempotent = new Set([
+      'vibo_comment_on_section',
+      'vibo_comment_on_song',
+      'vibo_create_event_contact',
+      'vibo_create_section',
+      'vibo_export_event_to_apple_music',
+      'vibo_export_event_to_spotify',
+      'vibo_invite_users',
+    ]);
+    for (const t of tools) {
+      const hint = t.annotations?.idempotentHint;
+      if (idempotent.has(t.name)) expect(hint, t.name).toBe(true);
+      else if (notIdempotent.has(t.name)) expect(hint, t.name).toBe(false);
+    }
+    const names = new Set(tools.map((t) => t.name));
+    for (const n of [...idempotent, ...notIdempotent]) expect(names.has(n), n).toBe(true);
   });
 });

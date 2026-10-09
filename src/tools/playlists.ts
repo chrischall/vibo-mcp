@@ -65,7 +65,7 @@ export function registerPlaylistTools(server: McpServer, client: ViboClient): vo
     {
       description:
         "Export an event's song selections to a new Spotify playlist (Spotify must be connected). Returns the playlist URL plus how many tracks exported / failed. " + CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Export event to Spotify', readOnly: false, destructive: false }),
+      annotations: toolAnnotations({ title: 'Export event to Spotify', readOnly: false, destructive: false, idempotent: false }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionIds: z.array(z.string()).min(1).describe('Section ids to include (from vibo_list_sections).'),
@@ -97,7 +97,7 @@ export function registerPlaylistTools(server: McpServer, client: ViboClient): vo
     {
       description:
         "Export an event's song selections to a new Apple Music playlist (Apple Music must be connected). Returns the playlist URL plus how many tracks exported / failed. " + CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Export event to Apple Music', readOnly: false, destructive: false }),
+      annotations: toolAnnotations({ title: 'Export event to Apple Music', readOnly: false, destructive: false, idempotent: false }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionIds: z.array(z.string()).min(1).describe('Section ids to include (from vibo_list_sections).'),

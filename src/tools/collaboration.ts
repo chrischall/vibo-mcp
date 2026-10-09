@@ -76,7 +76,7 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
     'vibo_invite_users',
     {
       description: 'Invite people to an event by email (as host or guest). ' + CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Invite Vibo event users', readOnly: false, destructive: true }),
+      annotations: toolAnnotations({ title: 'Invite Vibo event users', readOnly: false, destructive: true, idempotent: false }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         type: z.enum(['host', 'guest']).describe('Invite as host or guest.'),
