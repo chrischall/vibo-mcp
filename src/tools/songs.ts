@@ -142,7 +142,8 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, sectionId, songUrl, viboSongId, title, artist, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { eventId, sectionId, songUrl, viboSongId, title, artist, confirmToken } = args;
       const song: Record<string, unknown> = { songUrl };
       if (viboSongId !== undefined) song.viboSongId = viboSongId;
       if (title !== undefined) song.title = title;
@@ -153,6 +154,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         mutation: 'addSongToSection',
         message: 'Review and confirm adding this song:',
         confirmToken,
+        args,
         target: sectionId,
         willSend: { eventId, sectionId, payload },
       });
@@ -215,12 +217,14 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, sectionId, songId, liked, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { eventId, sectionId, songId, liked, confirmToken } = args;
       const gate = await confirmWrite(ctx, {
         tool: 'vibo_toggle_song_like',
         mutation: 'toggleLike',
         message: 'Review and confirm this like/unlike:',
         confirmToken,
+        args,
         target: songId,
         willSend: { eventId, sectionId, songId, liked },
       });

@@ -50,6 +50,13 @@ export interface ConfirmWriteOptions {
   message: string;
   /** The phase-2 token from the tool's input, or undefined. */
   confirmToken?: string;
+  /**
+   * The tool's validated arguments as the handler received them (mcp-utils
+   * drops `confirmToken`). Bound into both the confirm token and an
+   * elicitation acceptance, so an approval for one set of arguments is
+   * refused for any other.
+   */
+  args: object;
   /** The primary id acted on, or '' when there is none. */
   target: string;
   /** What the write sends, as the user should see it. */
@@ -88,6 +95,10 @@ export function confirmWrite(ctx: ServerContext, options: ConfirmWriteOptions) {
       details: preview,
       tool: options.tool,
       confirmToken: options.confirmToken,
+      // One Vibo account per server process (stdio env login, or one hosted
+      // child per user), so there is no principal to tell apart here.
+      account: undefined,
+      args: options.args,
       subject: () => ({
         target: options.target,
         payload: options.payload ?? (options.context ? { willSend: options.willSend, context: options.context } : options.willSend),

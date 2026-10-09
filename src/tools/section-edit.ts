@@ -22,7 +22,8 @@ export function registerSectionEditTools(server: McpServer, client: ViboClient):
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, sectionId, name, time, note, description, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { eventId, sectionId, name, time, note, description, confirmToken } = args;
       const payload: Record<string, unknown> = {};
       if (name !== undefined) payload.name = name;
       if (time !== undefined) payload.time = time;
@@ -39,6 +40,7 @@ export function registerSectionEditTools(server: McpServer, client: ViboClient):
         mutation: 'updateSection',
         message: 'Review and confirm this section edit:',
         confirmToken,
+        args,
         target: sectionId,
         willSend: vars,
       });

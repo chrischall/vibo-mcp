@@ -67,13 +67,15 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ link, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { link, confirmToken } = args;
       const isUrl = /^https?:\/\//i.test(link);
       const gate = await confirmWrite(ctx, {
         tool: 'vibo_join_event',
         mutation: 'joinEvent',
         message: 'Review and confirm joining this event:',
         confirmToken,
+        args,
         target: link,
         willSend: isUrl ? { deepLink: link } : { hash: link },
       });
@@ -99,12 +101,14 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { eventId, confirmToken } = args;
       const gate = await confirmWrite(ctx, {
         tool: 'vibo_leave_event',
         mutation: 'leaveEvent',
         message: 'Review and confirm leaving this event:',
         confirmToken,
+        args,
         target: eventId,
         willSend: { eventId },
       });
@@ -131,7 +135,8 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, role, email, firstName, lastName, phoneCode, phoneNumber, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { eventId, role, email, firstName, lastName, phoneCode, phoneNumber, confirmToken } = args;
       const payload: Record<string, unknown> = { role, email };
       if (firstName !== undefined) payload.firstName = firstName;
       if (lastName !== undefined) payload.lastName = lastName;
@@ -147,6 +152,7 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
         mutation: 'createEventContact',
         message: 'Review and confirm adding this event contact:',
         confirmToken,
+        args,
         target: eventId,
         willSend: { eventId, payload },
       });

@@ -171,6 +171,14 @@ describe('section management tools', () => {
       expect(writes).not.toHaveBeenCalled();
     });
 
+    it('binds the tool arguments into the token: adding force:true after the preview is refused', async () => {
+      const { writes } = withContent();
+      const { confirmToken } = await previewCall(harness, 'vibo_delete_section', { eventId: 'e1', sectionId: 'Z' });
+      const res = await harness.callTool('vibo_delete_section', { eventId: 'e1', sectionId: 'Z', force: true, confirmToken });
+      expect(JSON.stringify(res)).toContain('DRAFT_CHANGED');
+      expect(writes).not.toHaveBeenCalled();
+    });
+
     it.each(['dontPlay', 'headline'])('refuses a %s section unless force:true', async (type) => {
       const { writes } = fresh({ sections: [section('X', { type })] });
       const res = await harness.callTool('vibo_delete_section', { eventId: 'e1', sectionId: 'X' });

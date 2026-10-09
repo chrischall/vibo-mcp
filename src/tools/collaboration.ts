@@ -85,13 +85,15 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, type, text, emails, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { eventId, type, text, emails, confirmToken } = args;
       const variables = { eventId, type, text, emails };
       const gate = await confirmWrite(ctx, {
         tool: 'vibo_invite_users',
         mutation: 'inviteUserViaEmail',
         message: 'Review and confirm sending these invitations:',
         confirmToken,
+        args,
         target: eventId,
         willSend: variables,
       });
@@ -113,13 +115,15 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, userId, type, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { eventId, userId, type, confirmToken } = args;
       const variables = { eventId, userId, type };
       const gate = await confirmWrite(ctx, {
         tool: 'vibo_change_user_role',
         mutation: 'changeUserTypeInEvent',
         message: 'Review and confirm this role change:',
         confirmToken,
+        args,
         target: userId,
         willSend: variables,
       });
@@ -140,13 +144,15 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, userId, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { eventId, userId, confirmToken } = args;
       const variables = { eventId, userId };
       const gate = await confirmWrite(ctx, {
         tool: 'vibo_remove_user',
         mutation: 'removeUserFromEvent',
         message: 'Review and confirm removing this member from the event:',
         confirmToken,
+        args,
         target: userId,
         willSend: variables,
       });

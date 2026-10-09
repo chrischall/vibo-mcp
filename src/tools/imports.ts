@@ -27,7 +27,8 @@ export function registerImportTools(server: McpServer, client: ViboClient): void
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, sectionId, source, playlistId, tracksToAdd, tracksToIgnore, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { eventId, sectionId, source, playlistId, tracksToAdd, tracksToIgnore, confirmToken } = args;
       const vars = {
         eventId,
         sectionId,
@@ -41,6 +42,7 @@ export function registerImportTools(server: McpServer, client: ViboClient): void
         mutation: 'importPlaylistToSectionWeb',
         message: 'Review and confirm this playlist import:',
         confirmToken,
+        args,
         target: sectionId,
         willSend: vars,
       });
