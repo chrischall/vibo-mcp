@@ -51,7 +51,8 @@ export function registerNotificationTools(server: McpServer, client: ViboClient)
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ notificationIds, readAll, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { notificationIds, readAll, confirmToken } = args;
       if (!notificationIds?.length && !readAll) {
         throw new McpToolError('Provide notificationIds or set readAll:true.', {
           hint: 'Pass an array of notification ids, or readAll:true to clear all.',
@@ -65,6 +66,7 @@ export function registerNotificationTools(server: McpServer, client: ViboClient)
         mutation: 'markAsRead',
         message: 'Review and confirm marking these notifications read:',
         confirmToken,
+        args,
         target: '',
         willSend: variables,
       });

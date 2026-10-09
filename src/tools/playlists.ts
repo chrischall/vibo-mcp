@@ -77,7 +77,8 @@ export function registerPlaylistTools(server: McpServer, client: ViboClient): vo
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, sectionIds, title, onlyFlagged, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { eventId, sectionIds, title, onlyFlagged, confirmToken } = args;
       const variables: Record<string, unknown> = { eventId, sectionIds };
       if (title !== undefined) variables.title = title;
       if (onlyFlagged !== undefined) variables.filter = { isFlagged: onlyFlagged };
@@ -86,6 +87,7 @@ export function registerPlaylistTools(server: McpServer, client: ViboClient): vo
         mutation: 'exportEventToSpotify',
         message: 'Review and confirm this Spotify export:',
         confirmToken,
+        args,
         target: eventId,
         willSend: variables,
       });
@@ -109,7 +111,8 @@ export function registerPlaylistTools(server: McpServer, client: ViboClient): vo
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, sectionIds, title, onlyFlagged, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { eventId, sectionIds, title, onlyFlagged, confirmToken } = args;
       const variables: Record<string, unknown> = { eventId, sectionIds };
       if (title !== undefined) variables.title = title;
       if (onlyFlagged !== undefined) variables.filter = { isFlagged: onlyFlagged };
@@ -118,6 +121,7 @@ export function registerPlaylistTools(server: McpServer, client: ViboClient): vo
         mutation: 'exportEventToAppleMusic',
         message: 'Review and confirm this Apple Music export:',
         confirmToken,
+        args,
         target: eventId,
         willSend: variables,
       });

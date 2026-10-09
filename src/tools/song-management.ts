@@ -39,7 +39,8 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, sectionId, songIds, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { eventId, sectionId, songIds, confirmToken } = args;
       // Vibo answers success:true for ids that aren't in the section and removes
       // nothing, so check them ourselves before asking the user to confirm.
       const songs = await fetchSectionSongs(client, eventId, sectionId);
@@ -50,6 +51,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
         mutation: 'removeSectionSongsV2',
         message: 'Review and confirm removing these songs:',
         confirmToken,
+        args,
         target: sectionId,
         willSend: vars,
         context: {
@@ -86,7 +88,8 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, sectionId, songIds, isMustPlay, isFlagged, comment, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { eventId, sectionId, songIds, isMustPlay, isFlagged, comment, confirmToken } = args;
       const payload: Record<string, unknown> = {};
       if (isMustPlay !== undefined) payload.isMustPlay = isMustPlay;
       if (isFlagged !== undefined) payload.isFlagged = isFlagged;
@@ -108,6 +111,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
         mutation: 'updateSectionSongs',
         message: 'Review and confirm this song update:',
         confirmToken,
+        args,
         target: sectionId,
         willSend: vars,
       });
@@ -133,13 +137,15 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, sourceSectionId, targetSectionId, songIds, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { eventId, sourceSectionId, targetSectionId, songIds, confirmToken } = args;
       const vars = { eventId, sourceSectionId, targetSectionId, songIds };
       const gate = await confirmWrite(ctx, {
         tool: 'vibo_move_song',
         mutation: 'moveSectionSongsV2',
         message: 'Review and confirm moving these songs:',
         confirmToken,
+        args,
         target: sourceSectionId,
         willSend: vars,
       });
@@ -174,7 +180,8 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, sectionId, sourceSongIds, targetSongId, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { eventId, sectionId, sourceSongIds, targetSongId, confirmToken } = args;
       if (new Set(sourceSongIds).size !== sourceSongIds.length) {
         throw new McpToolError('sourceSongIds contains a duplicate.', { hint: 'List each song once.' });
       }
@@ -215,6 +222,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
         mutation: 'reorderSongsBatch',
         message: 'Review and confirm this reorder:',
         confirmToken,
+        args,
         target: sectionId,
         willSend: { eventId, sectionId, calls },
       });

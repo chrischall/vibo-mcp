@@ -101,7 +101,8 @@ export function registerSectionManageTools(server: McpServer, client: ViboClient
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, name, visibility, time, note, afterSectionId, position, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { eventId, name, visibility, time, note, afterSectionId, position, confirmToken } = args;
       const trimmed = name.trim();
       if (!trimmed) {
         throw new McpToolError('Section name is empty.', { hint: 'Pass a name of 1–45 characters.' });
@@ -162,6 +163,7 @@ export function registerSectionManageTools(server: McpServer, client: ViboClient
         mutation: note !== undefined ? 'createSection, then updateSection (note)' : 'createSection',
         message: `Review and confirm creating section "${trimmed}":`,
         confirmToken,
+        args,
         target: eventId,
         willSend,
         context: { placedAfter: placedAfter ? sectionLabel(placedAfter) : 'start of timeline' },
@@ -221,7 +223,8 @@ export function registerSectionManageTools(server: McpServer, client: ViboClient
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, sectionId, force, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { eventId, sectionId, force, confirmToken } = args;
       const section = findSection(await fetchSections(client, eventId), sectionId);
       if (PROTECTED_TYPES.has(section.type) && !force) {
         throw new McpToolError(
@@ -248,6 +251,7 @@ export function registerSectionManageTools(server: McpServer, client: ViboClient
           `Delete section "${section.name}"? It holds ${section.songsCount} song(s) and ` +
           `${section.answeredCount} of ${section.questionsCount} answered question(s). This cannot be undone.`,
         confirmToken,
+        args,
         target: sectionId,
         willSend: vars,
         context: summary,
@@ -279,7 +283,8 @@ export function registerSectionManageTools(server: McpServer, client: ViboClient
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, sourceSectionIds, targetSectionId, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { eventId, sourceSectionIds, targetSectionId, confirmToken } = args;
       if (new Set(sourceSectionIds).size !== sourceSectionIds.length) {
         throw new McpToolError('sourceSectionIds contains a duplicate.', { hint: 'List each section once.' });
       }
@@ -310,6 +315,7 @@ export function registerSectionManageTools(server: McpServer, client: ViboClient
         mutation: 'reorderSections',
         message: `Review and confirm moving ${sourceSectionIds.length} section(s):`,
         confirmToken,
+        args,
         target: eventId,
         willSend: { eventId, calls },
         context: { moving: sourceSectionIds.map((id) => byId.get(id)!.name), after },

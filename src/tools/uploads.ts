@@ -36,7 +36,8 @@ export function registerUploadTools(
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ path, fileData, filename, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { path, fileData, filename, confirmToken } = args;
       if (!path && !fileData) {
         throw new McpToolError('Provide an image: a local file `path` or inline base64 `fileData`.', {
           hint: 'Pass `path` for a local file, or `fileData` (base64) if the server cannot read your filesystem.',
@@ -60,6 +61,7 @@ export function registerUploadTools(
         mutation: 'uploadUserPhoto',
         message: 'Review and confirm this profile photo upload:',
         confirmToken,
+        args,
         target: '',
         willSend: { photo: path ?? '(inline bytes)' },
         payload: { path, fileData, filename, sha256: await uploadDigest(file) },

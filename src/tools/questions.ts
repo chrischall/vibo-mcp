@@ -75,7 +75,8 @@ export function registerQuestionTools(
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, sectionId, questionId, text, selectedOptions, link, otherOptionTitle, imagePaths, filePaths, images, files, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { eventId, sectionId, questionId, text, selectedOptions, link, otherOptionTitle, imagePaths, filePaths, images, files, confirmToken } = args;
       // Merge local-path and inline-byte file refs (in that order) into one list
       // per slot. A local caller supplies paths; a remote one supplies inline
       // bytes; the injected resolver turns each ref into an in-memory blob.
@@ -134,6 +135,7 @@ export function registerQuestionTools(
           mutation: 'answerEventSectionQuestionV2',
           message: 'Review and confirm this answer and its attachments:',
           confirmToken,
+          args,
           target: questionId,
           willSend: { eventId, sectionId, questionId, payload, uploads: previewUploads },
           payload: { eventId, sectionId, questionId, payload, uploads: { images: imageRefs, files: fileRefs }, sha256: digests },
@@ -153,6 +155,7 @@ export function registerQuestionTools(
         mutation: 'answerEventSectionQuestionV2',
         message: 'Review and confirm this answer:',
         confirmToken,
+        args,
         target: questionId,
         willSend: { eventId, sectionId, questionId, payload },
       });

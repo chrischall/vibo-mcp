@@ -24,13 +24,15 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, sectionId, songId, message, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { eventId, sectionId, songId, message, confirmToken } = args;
       const vars = { eventId, sectionId, songId, payload: { message } };
       const gate = await confirmWrite(ctx, {
         tool: 'vibo_comment_on_song',
         mutation: 'createSongComment',
         message: 'Review and confirm this song comment:',
         confirmToken,
+        args,
         target: songId,
         willSend: vars,
       });
@@ -53,13 +55,15 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, sectionId, songId, commentId, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { eventId, sectionId, songId, commentId, confirmToken } = args;
       const vars = { eventId, sectionId, songId, commentId };
       const gate = await confirmWrite(ctx, {
         tool: 'vibo_delete_song_comment',
         mutation: 'deleteSongComment',
         message: 'Review and confirm deleting this song comment:',
         confirmToken,
+        args,
         target: commentId,
         willSend: vars,
       });
@@ -81,13 +85,15 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, sectionId, message, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { eventId, sectionId, message, confirmToken } = args;
       const vars = { eventId, sectionId, payload: { message } };
       const gate = await confirmWrite(ctx, {
         tool: 'vibo_comment_on_section',
         mutation: 'createSectionComment',
         message: 'Review and confirm this section comment:',
         confirmToken,
+        args,
         target: sectionId,
         willSend: vars,
       });
@@ -109,13 +115,15 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
         confirmToken: confirmTokenParam,
       }),
     },
-    async ({ eventId, sectionId, commentId, confirmToken }, ctx) => {
+    async (args, ctx) => {
+      const { eventId, sectionId, commentId, confirmToken } = args;
       const vars = { eventId, sectionId, commentId };
       const gate = await confirmWrite(ctx, {
         tool: 'vibo_delete_section_comment',
         mutation: 'deleteSectionComment',
         message: 'Review and confirm deleting this section comment:',
         confirmToken,
+        args,
         target: commentId,
         willSend: vars,
       });
