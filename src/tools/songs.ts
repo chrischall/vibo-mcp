@@ -30,7 +30,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
     {
       description:
         "List the songs requested in a section, with who added each, like counts, must-play / do-not-play flags, comments, and streaming links. Sort by likesCount, createdAt, or title.",
-      annotations: toolAnnotations({ title: 'Get Vibo section songs', readOnly: true }),
+      annotations: toolAnnotations({ title: 'Get Vibo section songs', readOnly: true, openWorld: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id (from vibo_list_sections).'),
@@ -76,7 +76,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         'before adding, and never add a `likely-not-original` result without saying so. ' +
         "source 'spotify' searches your connected Spotify (a structured catalog, so the hyphen " +
         'matters less). Returns songUrl/viboSongId/title/artist for vibo_add_song_to_section.',
-      annotations: toolAnnotations({ title: 'Search Vibo songs', readOnly: true }),
+      annotations: toolAnnotations({ title: 'Search Vibo songs', readOnly: true, openWorld: true }),
       inputSchema: z.object({
         view: viewArg(),
         eventId: z.string().describe('Event id (search is scoped to an event/section).'),
@@ -131,7 +131,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         'report the closest matches back rather than adding a best guess. After adding, re-reads the section and ' +
         'reports an error if the song is not actually there (Vibo has answered added:true without adding). ' +
         CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Add song to Vibo section', readOnly: false, destructive: false }),
+      annotations: toolAnnotations({ title: 'Add song to Vibo section', readOnly: false, destructive: false, openWorld: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id to add the song to.'),
@@ -208,7 +208,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
     'vibo_toggle_song_like',
     {
       description: 'Like or unlike a song in a section. ' + CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Like/unlike Vibo song', readOnly: false, destructive: false, idempotent: true }),
+      annotations: toolAnnotations({ title: 'Like/unlike Vibo song', readOnly: false, destructive: false, idempotent: true, openWorld: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),

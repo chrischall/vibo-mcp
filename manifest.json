@@ -38,7 +38,10 @@
         "VIBO_EMAIL": "${user_config.vibo_email}",
         "VIBO_PASSWORD": "${user_config.vibo_password}",
         "VIBO_ACCESS_TOKEN": "${user_config.vibo_access_token}",
-        "VIBO_REFRESH_TOKEN": "${user_config.vibo_refresh_token}"
+        "VIBO_REFRESH_TOKEN": "${user_config.vibo_refresh_token}",
+        "VIBO_UPLOAD_DIR": "${user_config.vibo_upload_dir}",
+        "VIBO_SESSION_FILE": "${user_config.vibo_session_file}",
+        "VIBO_API_URL": "${user_config.vibo_api_url}"
       }
     }
   },
@@ -70,6 +73,27 @@
       "description": "The matching x-refresh-token, so the session can renew when the access token expires.",
       "required": false,
       "sensitive": true
+    },
+    "vibo_upload_dir": {
+      "type": "string",
+      "title": "Upload Directory",
+      "description": "Optional. The upload directory: vibo_set_profile_photo and photo/file answers to vibo_answer_question only read local files from it. Default ~/Downloads/vibo-mcp.",
+      "required": false,
+      "sensitive": false
+    },
+    "vibo_session_file": {
+      "type": "string",
+      "title": "Session File",
+      "description": "Optional. Where a browser-captured token pair is persisted so it survives MCP restarts. Default ~/.vibo-mcp/session.json.",
+      "required": false,
+      "sensitive": false
+    },
+    "vibo_api_url": {
+      "type": "string",
+      "title": "Vibo API URL",
+      "description": "Optional. Overrides the Vibo GraphQL endpoint. Default https://api.vibodj.com/v2/graphql.",
+      "required": false,
+      "sensitive": false
     }
   },
   "tools": [

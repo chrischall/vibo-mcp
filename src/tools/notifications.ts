@@ -12,7 +12,7 @@ export function registerNotificationTools(server: McpServer, client: ViboClient)
     {
       description:
         'List your Vibo notifications (song additions, comments, DJ updates, etc.) with read state and linked event/section ids.',
-      annotations: toolAnnotations({ title: 'List Vibo notifications', readOnly: true }),
+      annotations: toolAnnotations({ title: 'List Vibo notifications', readOnly: true, openWorld: true }),
       inputSchema: z.object({
         view: viewArg(),
         limit: limitSchema,
@@ -31,7 +31,7 @@ export function registerNotificationTools(server: McpServer, client: ViboClient)
     'vibo_get_notifications_count',
     {
       description: 'Get the count of unread Vibo notifications.',
-      annotations: toolAnnotations({ title: 'Unread notification count', readOnly: true }),
+      annotations: toolAnnotations({ title: 'Unread notification count', readOnly: true, openWorld: true }),
     },
     async () => {
       const data = await client.gql<{ getNotificationsCount: { total: number } }>(GET_NOTIFICATIONS_COUNT);
@@ -44,7 +44,7 @@ export function registerNotificationTools(server: McpServer, client: ViboClient)
     {
       description:
         'Mark notifications as read — pass specific notificationIds, or readAll:true to clear everything. ' + CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Mark notifications read', readOnly: false, destructive: false, idempotent: true }),
+      annotations: toolAnnotations({ title: 'Mark notifications read', readOnly: false, destructive: true, idempotent: true, openWorld: true }),
       inputSchema: z.object({
         notificationIds: z.array(z.string()).optional().describe('Specific notification ids to mark read.'),
         readAll: z.boolean().optional().describe('Mark every notification as read.'),

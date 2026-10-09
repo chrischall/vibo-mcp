@@ -11,7 +11,7 @@ export function registerProfileTools(server: McpServer, client: ViboClient): voi
     {
       description:
         "Get the signed-in Vibo user's profile (id, name, email, phone, locale, and whether Spotify/Apple Music are connected). Use the returned _id to recognize your own songs/contacts.",
-      annotations: toolAnnotations({ title: 'Get my Vibo profile', readOnly: true }),
+      annotations: toolAnnotations({ title: 'Get my Vibo profile', readOnly: true, openWorld: true }),
       inputSchema: z.object({ view: viewArg() }),
     },
     async ({ view }) => {
@@ -25,7 +25,7 @@ export function registerProfileTools(server: McpServer, client: ViboClient): voi
     {
       description:
         'Verify connectivity and authentication to the Vibo API by fetching the current user. Returns ok:true with your account id when credentials work.',
-      annotations: toolAnnotations({ title: 'Vibo healthcheck', readOnly: true }),
+      annotations: toolAnnotations({ title: 'Vibo healthcheck', readOnly: true, openWorld: true }),
     },
     async () => {
       const data = await client.gql<{ me: { _id: string; email?: string } }>(GET_ME);

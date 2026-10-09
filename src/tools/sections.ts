@@ -10,7 +10,7 @@ export function registerSectionTools(server: McpServer, client: ViboClient): voi
     {
       description:
         "List an event's timeline sections (e.g. Ceremony, First Dance, Dinner, Dancing) with each section's id, name, scheduled time, note, song count and progress. Use a section _id with vibo_get_section_songs / vibo_add_song_to_section.",
-      annotations: toolAnnotations({ title: 'List Vibo event sections', readOnly: true }),
+      annotations: toolAnnotations({ title: 'List Vibo event sections', readOnly: true, openWorld: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id (from vibo_list_events).'),
       }),

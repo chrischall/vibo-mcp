@@ -28,7 +28,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
       description:
         'Remove one or more songs from a section. Every id is checked against the section first; if any is not ' +
         'there, nothing is sent and the missing ids are listed. ' + CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Remove songs from Vibo section', readOnly: false, destructive: true }),
+      annotations: toolAnnotations({ title: 'Remove songs from Vibo section', readOnly: false, destructive: true, openWorld: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),
@@ -74,7 +74,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
         'Update songs in a section: mark must-play, flag as do-not-play, and/or set a comment. Provide at least one field. ' +
         `A comment can be at most ${SONG_COMMENT_MAX} characters (Vibo's limit; emoji count double; checked before anything is sent). ` +
         CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Update Vibo section songs', readOnly: false, destructive: true, idempotent: true }),
+      annotations: toolAnnotations({ title: 'Update Vibo section songs', readOnly: false, destructive: true, idempotent: true, openWorld: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),
@@ -125,7 +125,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
     'vibo_move_song',
     {
       description: 'Move songs from one section to another. ' + CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Move Vibo section songs', readOnly: false, destructive: false }),
+      annotations: toolAnnotations({ title: 'Move Vibo section songs', readOnly: false, destructive: false, openWorld: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sourceSectionId: z.string().describe('Section id the songs are currently in.'),
@@ -165,7 +165,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
         'DJ can turn it on, so a host usually cannot reorder songs in sections they added. Sends one ' +
         'reorderSongsBatch call per song that actually moves. ' +
         CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Reorder Vibo section songs', readOnly: false, destructive: false }),
+      annotations: toolAnnotations({ title: 'Reorder Vibo section songs', readOnly: false, destructive: false, openWorld: true }),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),

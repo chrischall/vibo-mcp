@@ -11,7 +11,7 @@ export function registerSectionEditTools(server: McpServer, client: ViboClient):
     {
       description:
         "Edit a timeline section's name, time, note, or description. Subject to the section's host-edit permissions. " + CONFIRM_NOTE,
-      annotations: toolAnnotations({ title: 'Update Vibo section', readOnly: false, destructive: true, idempotent: true }),
+      annotations: toolAnnotations({ title: 'Update Vibo section', readOnly: false, destructive: true, idempotent: true, openWorld: true }),
       inputSchema: z.object({
         eventId: z.string(),
         sectionId: z.string(),
