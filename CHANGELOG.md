@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.4.5](https://github.com/chrischall/vibo-mcp/compare/v2.4.4...v2.4.5) (2026-10-16)
+
+
+### Bug Fixes
+
+* **deps:** bump the production-dependencies group with 5 updates ([#189](https://github.com/chrischall/vibo-mcp/issues/189)) ([32f933c](https://github.com/chrischall/vibo-mcp/commit/32f933c3a50412d35c28aee8e8858cbcc1d9c784))
+* **deps:** update to mcp-utils 3.0.3 and gate writes with its confirmWrite kit ([#191](https://github.com/chrischall/vibo-mcp/issues/191)) ([96dc6ed](https://github.com/chrischall/vibo-mcp/commit/96dc6ed25464f826a9df85fe2fcb52ac77c8eb05))
+
 ## [2.4.4](https://github.com/chrischall/vibo-mcp/compare/v2.4.3...v2.4.4) (2026-10-09)
 
 
