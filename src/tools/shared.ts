@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { ServerContext } from '@modelcontextprotocol/server';
-import { confirmationFromEnv, requireConfirmationWithFallback } from '@chrischall/mcp-utils';
+import { CONFIRM_FLOW_SENTENCE, confirmWrite as confirmWriteKit } from '@chrischall/mcp-utils';
 
 /** Pagination knobs shared by the list tools (maps to Vibo's PaginationInput). */
 export const limitSchema = z
@@ -37,9 +37,7 @@ export const inlineFileSchema = z.object({
  * The sentence every gated tool's description ends with, so the model knows a
  * first call may only preview.
  */
-export const CONFIRM_NOTE =
-  'Asks the user to confirm first: a confirmation prompt where the client supports one; otherwise the first ' +
-  'call returns a preview and a confirmToken, and only a repeat call with that token proceeds (see MCP_CONFIRM_MODE).';
+export const CONFIRM_NOTE = CONFIRM_FLOW_SENTENCE;
 
 export interface ConfirmWriteOptions {
   /** The tool name the confirmation is bound to, e.g. `vibo_leave_event`. */
@@ -80,30 +78,26 @@ export interface ConfirmWriteOptions {
  * `undefined` means proceed; anything else is the result to return unchanged.
  * Nothing here makes a network call, so phase 1 never writes (a tool may READ
  * before calling this, to validate ids or fill `context`).
+ *
+ * A thin adapter over mcp-utils' `confirmWrite` kit: both rails bind the tool,
+ * the target, what is sent (`payload`, else `willSend`), the arguments and the
+ * preview the user was shown — `willSend` and `context` included — so a change
+ * to any of them between preview and confirm is refused as DRAFT_CHANGED.
  */
 export function confirmWrite(ctx: ServerContext, options: ConfirmWriteOptions) {
-  const preview = {
-    action: options.mutation,
+  return confirmWriteKit(ctx, {
+    tool: options.tool,
+    action: options.tool.replace(/^vibo_/, 'vibo.'),
+    summary: options.mutation,
+    message: options.message,
+    // One Vibo account per server process (stdio env login, or one hosted
+    // child per user), so there is no principal to tell apart here.
+    account: undefined,
+    target: options.target,
+    payload: options.payload ?? options.willSend,
     willSend: options.willSend,
-    ...(options.context ? { context: options.context } : {}),
-  };
-  return requireConfirmationWithFallback(
-    ctx,
-    confirmationFromEnv({
-      action: options.tool.replace(/^vibo_/, 'vibo.'),
-      message: options.message,
-      details: preview,
-      tool: options.tool,
-      confirmToken: options.confirmToken,
-      // One Vibo account per server process (stdio env login, or one hosted
-      // child per user), so there is no principal to tell apart here.
-      account: undefined,
-      args: options.args,
-      subject: () => ({
-        target: options.target,
-        payload: options.payload ?? (options.context ? { willSend: options.willSend, context: options.context } : options.willSend),
-        preview,
-      }),
-    }),
-  );
+    preview: options.context ? { context: options.context } : {},
+    args: options.args,
+    confirmToken: options.confirmToken,
+  });
 }

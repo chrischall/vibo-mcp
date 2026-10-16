@@ -3,7 +3,7 @@
 MCP server for [Vibo](https://vibodj.com). Wraps the Vibo consumer GraphQL API
 (`https://api.vibodj.com/v2/graphql`) and exposes 42 host/couple tools to Claude
 over stdio (15 reads + 27 writes/actions, confirmation-gated where they mutate). Built on `@chrischall/mcp-utils`
-(`runMcp`, `textResult`, `toolAnnotations`, `confirmationFromEnv` / `requireConfirmationWithFallback`, error classes).
+(`runMcp`, `minifiedResult`, `toolAnnotations`, `confirmWrite`, error classes).
 
 ## Commands
 
@@ -66,7 +66,7 @@ src/
 ```
 
 Each tool file exports `register<Domain>Tools(server)` calling
-`server.registerTool(...)` and returns `textResult(...)`. `index.ts` wires them
+`server.registerTool(...)` and returns `minifiedResult(...)` (or `viewResponse(...)` from `src/view.ts` for the `view` reads). `index.ts` wires them
 through `runMcp`. Tool modules import the shared `client` singleton and the
 operation docs from `gql.ts`.
 
