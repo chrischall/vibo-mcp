@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "vibo": {
-      "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "vibo-mcp"],
       "env": {
         "VIBO_EMAIL": "${VIBO_EMAIL}",
         "VIBO_PASSWORD": "${VIBO_PASSWORD}",
