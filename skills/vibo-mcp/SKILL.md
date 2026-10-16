@@ -85,7 +85,8 @@ fresh preview and token to re-approve), and a reused one as `TOKEN_REUSED`.
 - `vibo_update_song` — mark must-play / do-not-play, or set a comment (at most 90 characters; an emoji counts as 2).
 - `vibo_add_song_to_section` re-reads the section after adding and errors if the song isn't actually there.
 - `vibo_toggle_song_like` — like/unlike a song.
-- `vibo_comment_on_song` / `vibo_comment_on_section` (+ delete) — leave the DJ notes.
+- `vibo_comment_on_song` / `vibo_comment_on_section` — leave the DJ notes.
+- `vibo_delete_song_comment` / `vibo_delete_section_comment` — remove a comment you left (e.g. undo one you just posted).
 - `vibo_import_playlist_to_section` — pull tracks from a connected Spotify/Apple playlist.
 - `vibo_join_event` — join via a share link/hash (e.g. a `vibodj.app.link/...` URL).
 - `vibo_leave_event`.
