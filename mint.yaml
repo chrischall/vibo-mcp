@@ -6,6 +6,18 @@ summary: >-
   song requests, the DJ's song ideas and planning questions,
   must-play/do-not-play, comments, guests, and exports to Spotify/Apple
   Music, via natural language.
+examples:
+  - prompt: >-
+      Walk me through the timeline for my upcoming event in Vibo and list the
+      songs in each section.
+    note: Lists your events, their timeline sections, and each section's songs.
+  - prompt: >-
+      Which of the DJ's planning questions for my wedding are still
+      unanswered?
+    note: Reads each section's planning questions; nothing is answered for you.
+  - prompt: >-
+      Show me the song ideas the DJ suggested for the first dance section.
+    note: Read-only; adding a suggestion to the section is a separate step.
 #
 # Hosting note (a comment, not user-facing summary text): this is a
 # BROWSER-BRIDGE MCP — it reaches its site through the user's signed-in
