@@ -2,10 +2,9 @@ version: 1
 name: Vibo
 slug: vibo
 summary: >-
-  Plan and manage your event music in Vibo (vibodj.com) — events, timeline,
-  song requests, the DJ's song ideas and planning questions,
-  must-play/do-not-play, comments, guests, and exports to Spotify/Apple
-  Music, via natural language.
+  Plan your Vibo (vibodj.com) event music: timeline, song requests, DJ song
+  ideas, planning questions, must-play/do-not-play, comments, guests,
+  and Spotify/Apple Music exports.
 examples:
   - prompt: >-
       Walk me through the timeline for my upcoming event in Vibo and list the
