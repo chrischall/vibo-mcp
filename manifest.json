@@ -4,7 +4,7 @@
   "name": "vibo-mcp",
   "display_name": "Vibo",
   "version": "2.4.5",
-  "description": "Plan and manage your event music in Vibo (vibodj.com) — events, timeline, song requests, the DJ's song ideas and planning questions, must-play/do-not-play, comments, guests, and exports to Spotify/Apple Music, via natural language.",
+  "description": "Plan your Vibo (vibodj.com) event music: timeline, song requests, DJ song ideas, planning questions, must-play/do-not-play, comments, guests, and Spotify/Apple Music exports.",
   "author": {
     "name": "Chris Chall",
     "email": "chris.c.hall@gmail.com",
