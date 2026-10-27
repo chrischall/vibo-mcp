@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.4.6](https://github.com/chrischall/vibo-mcp/compare/v2.4.5...v2.4.6) (2026-10-27)
+
+
+### Bug Fixes
+
+* **deps:** bump the production-dependencies group with 2 updates ([#200](https://github.com/chrischall/vibo-mcp/issues/200)) ([beb503d](https://github.com/chrischall/vibo-mcp/commit/beb503d186ccd2998f466641d28297f51084be34))
+* **deps:** bump the production-dependencies group with 4 updates ([#202](https://github.com/chrischall/vibo-mcp/issues/202)) ([e391d7b](https://github.com/chrischall/vibo-mcp/commit/e391d7b98252b0e2c00f5ccc0e9191e0a5db36ee))
+
+
+### Documentation
+
+* **manifest:** match the description to the concise catalog summary ([#198](https://github.com/chrischall/vibo-mcp/issues/198)) ([57875c6](https://github.com/chrischall/vibo-mcp/commit/57875c6f0f28b9e7df0e24869de2971e08272d24))
+* **mint:** add sample prompts for the public catalog ([#194](https://github.com/chrischall/vibo-mcp/issues/194)) ([f6209d3](https://github.com/chrischall/vibo-mcp/commit/f6209d387e6e8db6cbab65cfe87814f5f2eb2fb5))
+* **mint:** fit the catalog summary within 200 characters ([#196](https://github.com/chrischall/vibo-mcp/issues/196)) ([036a27e](https://github.com/chrischall/vibo-mcp/commit/036a27e0d10044f95843457dde4787c33d7f344b))
+
 ## [2.4.5](https://github.com/chrischall/vibo-mcp/compare/v2.4.4...v2.4.5) (2026-10-16)
 
 
