@@ -3,7 +3,7 @@
   "manifest_version": "0.3",
   "name": "vibo-mcp",
   "display_name": "Vibo",
-  "version": "2.4.5",
+  "version": "2.4.6",
   "description": "Plan your Vibo (vibodj.com) event music: timeline, song requests, DJ song ideas, planning questions, must-play/do-not-play, comments, guests, and Spotify/Apple Music exports.",
   "author": {
     "name": "Chris Chall",
