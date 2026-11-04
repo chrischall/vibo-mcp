@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.5.0](https://github.com/chrischall/vibo-mcp/compare/v2.4.5...v2.5.0) (2026-11-04)
+
+
+### Features
+
+* context-group hints ([#205](https://github.com/chrischall/vibo-mcp/issues/205)) ([6423a27](https://github.com/chrischall/vibo-mcp/commit/6423a27deef8530f1d5138d6f0d667206fe4570a))
+
+
+### Bug Fixes
+
+* **brief:** align the brief view with the fleet contract ([#208](https://github.com/chrischall/vibo-mcp/issues/208)) ([659e921](https://github.com/chrischall/vibo-mcp/commit/659e921d9eb09bd5a9bcdb83b208a62593fa35f5))
+* **brief:** escape an event title or notification header that starts with "-- " ([#207](https://github.com/chrischall/vibo-mcp/issues/207)) ([d579296](https://github.com/chrischall/vibo-mcp/commit/d579296cd87f96bbb95ae515b6c0e7b6a43e7573)), closes [#206](https://github.com/chrischall/vibo-mcp/issues/206)
+* **deps:** bump @chrischall/mcp-utils ([#204](https://github.com/chrischall/vibo-mcp/issues/204)) ([9242a6a](https://github.com/chrischall/vibo-mcp/commit/9242a6a071c8f00296402e6ef0670fa60ee3fb51))
+* **deps:** bump the production-dependencies group with 2 updates ([#200](https://github.com/chrischall/vibo-mcp/issues/200)) ([beb503d](https://github.com/chrischall/vibo-mcp/commit/beb503d186ccd2998f466641d28297f51084be34))
+* **deps:** bump the production-dependencies group with 4 updates ([#202](https://github.com/chrischall/vibo-mcp/issues/202)) ([e391d7b](https://github.com/chrischall/vibo-mcp/commit/e391d7b98252b0e2c00f5ccc0e9191e0a5db36ee))
+
+
+### Documentation
+
+* **manifest:** match the description to the concise catalog summary ([#198](https://github.com/chrischall/vibo-mcp/issues/198)) ([57875c6](https://github.com/chrischall/vibo-mcp/commit/57875c6f0f28b9e7df0e24869de2971e08272d24))
+* **mint:** add sample prompts for the public catalog ([#194](https://github.com/chrischall/vibo-mcp/issues/194)) ([f6209d3](https://github.com/chrischall/vibo-mcp/commit/f6209d387e6e8db6cbab65cfe87814f5f2eb2fb5))
+* **mint:** fit the catalog summary within 200 characters ([#196](https://github.com/chrischall/vibo-mcp/issues/196)) ([036a27e](https://github.com/chrischall/vibo-mcp/commit/036a27e0d10044f95843457dde4787c33d7f344b))
+
 ## [2.4.5](https://github.com/chrischall/vibo-mcp/compare/v2.4.4...v2.4.5) (2026-10-16)
 
 
