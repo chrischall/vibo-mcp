@@ -204,6 +204,26 @@ describe('vibo_list_events view: brief', () => {
     expect(out.data).toHaveLength(3);
   });
 
+  it('escapes a host title that starts with "-- " so it cannot read as a note', async () => {
+    await tools();
+    gql.mockResolvedValue({
+      upcomingEvents: {
+        events: [
+          { title: '-- none', date: '2027-01-01', role: 'host' },
+          { title: `-- ${'y'.repeat(200)}`, date: '2027-01-02', role: 'guest' },
+          { title: '--not a note', date: '2027-01-03', role: 'host' },
+        ],
+        totalCount: 3,
+      },
+    });
+    const out = JSON.parse(textOf(await harness.callTool('vibo_list_events', { view: 'brief' }))) as Envelope;
+    expect(out.data[0]).toBe('\\-- none — 2027-01-01 — host, open');
+    expect(out.data[1]).toMatch(/^\\-- y+… — 2027-01-02 — guest, open$/);
+    expect(out.data[1].length).toBeLessThanOrEqual(120);
+    expect(out.data[2]).toBe('--not a note — 2027-01-03 — host, open');
+    for (const line of out.data) expect(line.startsWith('-- ')).toBe(false);
+  });
+
   it('notes a partial page as "-- N of M shown"', async () => {
     await tools();
     gql.mockResolvedValue({
@@ -255,6 +275,13 @@ describe('vibo_list_notifications view: brief', () => {
       'New song added — 2026-11-01T10:00:00.000Z — unread',
       'Only a body — no date — read',
     ]);
+  });
+
+  it('escapes a notification header that starts with "-- "', async () => {
+    await tools();
+    gql.mockResolvedValue({ getNotifications: { notifications: [{ header: '-- 1 of 9 shown', isRead: true }], totalCount: 1 } });
+    const out = JSON.parse(textOf(await harness.callTool('vibo_list_notifications', { view: 'brief' }))) as Envelope;
+    expect(out.data).toEqual(['\\-- 1 of 9 shown — no date — read']);
   });
 
   it('notes a partial page and an empty one', async () => {

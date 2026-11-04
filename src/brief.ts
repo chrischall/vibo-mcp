@@ -11,11 +11,18 @@ import { UNTRUSTED_CONTENT_RULE, untrustedEnvelope } from '@chrischall/mcp-utils
  */
 export const BRIEF_MAX = 120;
 
-/** A brief line, its title shortened so the whole line is ≤ 120 characters. */
+/**
+ * A brief line, cut as a WHOLE to ≤ 120 characters by shortening the title
+ * (the only third-party part). A title starting with `-- ` — a host can name
+ * an event `-- none` — is escaped with a single leading `\` so the item can
+ * never read as a note; the gateway strips that one backslash after its note
+ * check (the consolidated brief-view contract, vibo-mcp#206).
+ */
 export function briefLine(title: string, date: string, status: string): string {
+  const escaped = title.startsWith('-- ') ? `\\${title}` : title;
   const tail = ` — ${date} — ${status}`;
   const room = BRIEF_MAX - tail.length;
-  const shown = title.length > room ? `${title.slice(0, Math.max(room - 1, 0))}…` : title;
+  const shown = escaped.length > room ? `${escaped.slice(0, Math.max(room - 1, 0))}…` : escaped;
   return `${shown}${tail}`;
 }
 
