@@ -224,6 +224,25 @@ describe('vibo_list_events view: brief', () => {
     for (const line of out.data) expect(line.startsWith('-- ')).toBe(false);
   });
 
+  it('escapes a host title that starts with a backslash, since the gateway strips one from every item', async () => {
+    await tools();
+    gql.mockResolvedValue({
+      upcomingEvents: { events: [{ title: '\\-- none', date: '2027-01-01', role: 'host' }], totalCount: 1 },
+    });
+    const out = JSON.parse(textOf(await harness.callTool('vibo_list_events', { view: 'brief' }))) as Envelope;
+    expect(out.data).toEqual(['\\\\-- none — 2027-01-01 — host, open']);
+  });
+
+  it('cuts the WHOLE line to ≤ 120 chars, title first, even when the status is long', async () => {
+    await tools();
+    gql.mockResolvedValue({
+      upcomingEvents: { events: [{ title: 'Spring Gala Reception', date: '2027-04-10', role: 'r'.repeat(200) }], totalCount: 1 },
+    });
+    const out = JSON.parse(textOf(await harness.callTool('vibo_list_events', { view: 'brief' }))) as Envelope;
+    expect(out.data[0].length).toBeLessThanOrEqual(120);
+    expect(out.data[0]).toMatch(/^Spring Gala Reception — 2027-04-10 — r+…$/);
+  });
+
   it('notes a partial page as "-- N of M shown"', async () => {
     await tools();
     gql.mockResolvedValue({

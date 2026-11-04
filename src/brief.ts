@@ -11,19 +11,28 @@ import { UNTRUSTED_CONTENT_RULE, untrustedEnvelope } from '@chrischall/mcp-utils
  */
 export const BRIEF_MAX = 120;
 
+/** The shortest a title is cut to before the status gives way too. */
+const TITLE_FLOOR = 24;
+
+const cut = (s: string, n: number): string => (s.length > n ? `${s.slice(0, Math.max(n - 1, 0))}…` : s);
+
 /**
- * A brief line, cut as a WHOLE to ≤ 120 characters by shortening the title
- * (the only third-party part). A title starting with `-- ` — a host can name
- * an event `-- none` — is escaped with a single leading `\` so the item can
- * never read as a note; the gateway strips that one backslash after its note
- * check (the consolidated brief-view contract, vibo-mcp#206).
+ * A brief line, cut as a WHOLE to ≤ 120 characters, title first: the title
+ * shortens until the line fits, and if the status alone would still overflow
+ * once the title is at its floor, the status is cut as well (ioffice-mcp#212).
+ * A title starting with `-- ` — a host can name an event `-- none` — or with
+ * `\` is escaped with a single leading `\`, so the item can never read as a
+ * note; the gateway strips that one backslash from every item line after its
+ * note check (the consolidated brief-view contract, vibo-mcp#206/#207).
  */
 export function briefLine(title: string, date: string, status: string): string {
-  const escaped = title.startsWith('-- ') ? `\\${title}` : title;
-  const tail = ` — ${date} — ${status}`;
-  const room = BRIEF_MAX - tail.length;
-  const shown = escaped.length > room ? `${escaped.slice(0, Math.max(room - 1, 0))}…` : escaped;
-  return `${shown}${tail}`;
+  const escaped = title.startsWith('-- ') || title.startsWith('\\') ? `\\${title}` : title;
+  const sep = ` — ${date} — `;
+  const room = BRIEF_MAX - sep.length;
+  if (escaped.length + status.length <= room) return `${escaped}${sep}${status}`;
+  const titleRoom = Math.max(room - status.length, Math.min(escaped.length, TITLE_FLOOR));
+  const shown = cut(escaped, titleRoom);
+  return `${shown}${sep}${cut(status, room - shown.length)}`;
 }
 
 /** A trimmed non-empty string, else undefined. */
