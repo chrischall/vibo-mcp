@@ -4,6 +4,7 @@ import { minifiedResult, confirmTokenParam, toolAnnotations } from '@chrischall/
 import type { ViboClient } from '../client.js';
 import { IMPORT_PLAYLIST_TO_SECTION } from '../gql.js';
 import { confirmWrite, CONFIRM_NOTE } from './shared.js';
+import { familyMeta } from './hints.js';
 
 export function registerImportTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
@@ -12,6 +13,7 @@ export function registerImportTools(server: McpServer, client: ViboClient): void
       description:
         'Import selected tracks from a connected Spotify/Apple Music playlist into a section. Returns counts of added/existing/ignored. ' + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Import playlist to section', readOnly: false, destructive: false, openWorld: true }),
+      _meta: familyMeta('change'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id (from vibo_list_sections).'),

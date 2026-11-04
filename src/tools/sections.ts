@@ -3,6 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { minifiedResult, toolAnnotations } from '@chrischall/mcp-utils';
 import type { ViboClient } from '../client.js';
 import { LIST_SECTIONS } from '../gql.js';
+import { familyMeta } from './hints.js';
 
 export function registerSectionTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
@@ -11,6 +12,7 @@ export function registerSectionTools(server: McpServer, client: ViboClient): voi
       description:
         "List an event's timeline sections (e.g. Ceremony, First Dance, Dinner, Dancing) with each section's id, name, scheduled time, note, song count and progress. Use a section _id with vibo_get_section_songs / vibo_add_song_to_section.",
       annotations: toolAnnotations({ title: 'List Vibo event sections', readOnly: true, openWorld: true }),
+      _meta: familyMeta('lookup'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id (from vibo_list_events).'),
       }),

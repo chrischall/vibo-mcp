@@ -7,6 +7,7 @@ import { GET_SECTION_SONGS, SEARCH_SONGS, ADD_SONG_TO_SECTION, TOGGLE_LIKE } fro
 import { annotateSearchResults, type SearchSong } from '../song-search.js';
 import { limitSchema, skipSchema, pagination, confirmWrite, CONFIRM_NOTE } from './shared.js';
 import { fetchSectionSongs, type SectionSongRef } from './lookups.js';
+import { familyMeta } from './hints.js';
 
 /**
  * Waits before each post-add re-read. Vibo's re-reads can be briefly stale
@@ -31,6 +32,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
       description:
         "List the songs requested in a section, with who added each, like counts, must-play / do-not-play flags, comments, and streaming links. Sort by likesCount, createdAt, or title.",
       annotations: toolAnnotations({ title: 'Get Vibo section songs', readOnly: true, openWorld: true }),
+      _meta: familyMeta('lookup'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id (from vibo_list_sections).'),
@@ -77,6 +79,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         "source 'spotify' searches your connected Spotify (a structured catalog, so the hyphen " +
         'matters less). Returns songUrl/viboSongId/title/artist for vibo_add_song_to_section.',
       annotations: toolAnnotations({ title: 'Search Vibo songs', readOnly: true, openWorld: true }),
+      _meta: familyMeta('lookup'),
       inputSchema: z.object({
         view: viewArg(),
         eventId: z.string().describe('Event id (search is scoped to an event/section).'),
@@ -132,6 +135,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
         'reports an error if the song is not actually there (Vibo has answered added:true without adding). ' +
         CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Add song to Vibo section', readOnly: false, destructive: false, openWorld: true }),
+      _meta: familyMeta('change'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id to add the song to.'),
@@ -209,6 +213,7 @@ export function registerSongTools(server: McpServer, client: ViboClient): void {
     {
       description: 'Like or unlike a song in a section. ' + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Like/unlike Vibo song', readOnly: false, destructive: false, idempotent: true, openWorld: true }),
+      _meta: familyMeta('change'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),

@@ -147,7 +147,23 @@ deliberately **no `raw` rung**: nothing here re-serialises or normalises the
 GraphQL response, so `full` already IS the upstream payload and a third value
 would silently alias one that exists.
 
-### The other 34 tools have no `view`
+### `view: "brief"` on the two context-group reads
+
+`vibo_list_notifications` also takes `view: "brief"`, and `vibo_list_events`
+takes `view: "full" | "brief"` (`full`, the default, is Vibo's payload as it
+arrived — its document selects no media, so it has no compact rung). Brief
+answers one line per item, at most 120 characters, inside the untrusted-data
+envelope (`{"untrusted_content":true,"note":…,"data":[…lines]}`), because the
+titles and headers are written by other people:
+
+- events: `title — <ISO date | no date> — <your role>, <open|locked>`
+- notifications: `header — <ISO date | no date> — <read|unread>`
+
+A line starting with `-- ` is a note, not an item: `-- none` for an empty
+page, `-- N of M shown` when Vibo's `totalCount` says more exist, `-- more`
+when a next page exists with no total. Page with `skip`/`limit` as usual.
+
+### The other 33 tools have no `view`
 
 - **The 27 mutating tools** (every confirmation-gated write, plus
   `vibo_capture_session`) answer with a confirmation preview or a receipt — an id,
@@ -157,7 +173,7 @@ would silently alias one that exists.
   the same `GET_ME` document as `vibo_get_me` and still takes no rung, because
   it never returns Vibo's user object — it builds `{ok, userId, email}` here.
   A `view` on it would be a parameter that changes nothing.
-- **The 6 remaining reads** (`vibo_list_events`, `vibo_get_event`,
+- **The 5 remaining reads** (`vibo_get_event`,
   `vibo_list_sections`, `vibo_list_section_questions`,
   `vibo_list_section_song_ideas`, `vibo_get_notifications_count`) **hand back
   Vibo's GraphQL payload as it arrived**, and their documents select no media,
@@ -166,6 +182,37 @@ would silently alias one that exists.
 A `view` passed to a tool that does not declare one is dropped by zod without a
 warning, so a successful call is never evidence the rung was honoured. Check
 the table above rather than assuming.
+
+## In context groups
+
+This server joins the **family** context group (mcp-host's `_meta.mint`
+hints; every tool except `vibo_healthcheck` carries one).
+
+- **What's on:** `vibo_list_events` is the group's canonical read — your
+  upcoming events, asked for with `view: "brief"`. It takes no date range
+  (Vibo lists upcoming or past, not a window) and no subject: nothing here
+  lists people or properties to pick between, so the group asks it for all of
+  your events.
+- **What's new:** `vibo_list_notifications` is canonical — song additions,
+  comments and DJ updates, newest first, with read state.
+  `vibo_get_notifications_count` is a non-canonical what's-new read (the
+  unread total).
+- **What's due:** nothing here answers it — Vibo has no due dates to list, so
+  no tool claims it.
+- Every other read is a `lookup` and every write a `change` (comments and
+  invitations are `send`; the playlist exports and `vibo_capture_session` are
+  `other`). Writes keep their confirmation gate whatever group asks.
+
+A compound ask reaches this server through the group, e.g. "what's coming up
+for the family this month — anything new from the DJ?" puts the brief event
+list and the brief notification list beside the group's other members.
+
+This member is not browser-bridged in normal use: the reads go straight to
+Vibo's API with the server-side sign-in (email + password, or a captured
+token), so the group never needs your browser open for it. Only
+`vibo_capture_session` uses the browser (your signed-in web.vibodj.com tab and
+the ContextMint Bridge extension), and only when you run it to capture or
+refresh an SSO login.
 
 ## Typical flow
 

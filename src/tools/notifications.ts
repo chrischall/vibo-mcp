@@ -4,7 +4,17 @@ import { McpToolError, minifiedResult, confirmTokenParam, toolAnnotations } from
 import type { ViboClient } from '../client.js';
 import { GET_NOTIFICATIONS, GET_NOTIFICATIONS_COUNT, MARK_AS_READ } from '../gql.js';
 import { limitSchema, skipSchema, pagination, confirmWrite, CONFIRM_NOTE } from './shared.js';
-import { viewArg, viewResponse } from '../view.js';
+import { VIBO_VIEWS, viewResponse } from '../view.js';
+import { familyMeta } from './hints.js';
+import { briefLine, briefLines, isoDate, pageOf, text, untrustedBriefResponse } from '../brief.js';
+
+/** Who writes the text a brief notification line carries. */
+const NOTIFICATION_AUTHOR = 'Notification text quotes what other event members and the DJ wrote.';
+
+/** One notification as `header — <ISO date | no date> — <read|unread>`, ≤ 120 chars. */
+export function notificationBrief(n: Record<string, unknown>): string {
+  return briefLine(text(n.header) ?? text(n.body) ?? '(notification)', isoDate(n.createdAt), n.isRead === true ? 'read' : 'unread');
+}
 
 export function registerNotificationTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
@@ -13,16 +23,30 @@ export function registerNotificationTools(server: McpServer, client: ViboClient)
       description:
         'List your Vibo notifications (song additions, comments, DJ updates, etc.) with read state and linked event/section ids.',
       annotations: toolAnnotations({ title: 'List Vibo notifications', readOnly: true, openWorld: true }),
+      _meta: familyMeta('whats-new', {
+        canonical: true,
+        aliases: ['dj', 'vibo', 'notifications', 'updates', 'wedding music', 'song requests'],
+      }),
       inputSchema: z.object({
-        view: viewArg(),
+        view: z
+          .enum([...VIBO_VIEWS, 'brief'])
+          .optional()
+          .describe(
+            'compact (default) strips image/avatar URLs; "full" returns Vibo\'s payload untouched; "brief" ' +
+              'returns one line per notification: header — <ISO date | no date> — <read|unread>, inside the ' +
+              'untrusted-data envelope, with "-- none" for none and "-- N of M shown" / "-- more" when partial.',
+          ),
         limit: limitSchema,
         skip: skipSchema,
       }),
     },
     async ({ limit, skip, view }) => {
-      const data = await client.gql<{ getNotifications: unknown }>(GET_NOTIFICATIONS, {
-        pagination: pagination(limit, skip),
-      });
+      const page = pagination(limit, skip);
+      const data = await client.gql<{ getNotifications: unknown }>(GET_NOTIFICATIONS, { pagination: page });
+      if (view === 'brief') {
+        const lines = briefLines(pageOf(data.getNotifications, 'notifications', page.skip), notificationBrief);
+        return untrustedBriefResponse(lines, NOTIFICATION_AUTHOR);
+      }
       return viewResponse(view, data.getNotifications);
     },
   );
@@ -32,6 +56,7 @@ export function registerNotificationTools(server: McpServer, client: ViboClient)
     {
       description: 'Get the count of unread Vibo notifications.',
       annotations: toolAnnotations({ title: 'Unread notification count', readOnly: true, openWorld: true }),
+      _meta: familyMeta('whats-new', { aliases: ['dj', 'vibo', 'unread', 'wedding music'] }),
     },
     async () => {
       const data = await client.gql<{ getNotificationsCount: { total: number } }>(GET_NOTIFICATIONS_COUNT);
@@ -45,6 +70,7 @@ export function registerNotificationTools(server: McpServer, client: ViboClient)
       description:
         'Mark notifications as read — pass specific notificationIds, or readAll:true to clear everything. ' + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Mark notifications read', readOnly: false, destructive: true, idempotent: true, openWorld: true }),
+      _meta: familyMeta('change'),
       inputSchema: z.object({
         notificationIds: z.array(z.string()).optional().describe('Specific notification ids to mark read.'),
         readAll: z.boolean().optional().describe('Mark every notification as read.'),

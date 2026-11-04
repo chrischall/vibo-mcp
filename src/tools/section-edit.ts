@@ -4,6 +4,7 @@ import { McpToolError, minifiedResult, confirmTokenParam, toolAnnotations } from
 import type { ViboClient } from '../client.js';
 import { UPDATE_SECTION } from '../gql.js';
 import { confirmWrite, CONFIRM_NOTE } from './shared.js';
+import { familyMeta } from './hints.js';
 
 export function registerSectionEditTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
@@ -12,6 +13,7 @@ export function registerSectionEditTools(server: McpServer, client: ViboClient):
       description:
         "Edit a timeline section's name, time, note, or description. Subject to the section's host-edit permissions. " + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Update Vibo section', readOnly: false, destructive: true, idempotent: true, openWorld: true }),
+      _meta: familyMeta('change'),
       inputSchema: z.object({
         eventId: z.string(),
         sectionId: z.string(),
