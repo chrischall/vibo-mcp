@@ -10,6 +10,7 @@ import {
   EXPORT_EVENT_TO_APPLE_MUSIC,
 } from '../gql.js';
 import { limitSchema, skipSchema, pagination, confirmWrite, CONFIRM_NOTE } from './shared.js';
+import { familyMeta } from './hints.js';
 
 const sourceSchema = z
   .enum(['spotify', 'appleMusic'])
@@ -22,6 +23,7 @@ export function registerPlaylistTools(server: McpServer, client: ViboClient): vo
       description:
         "List your playlists from a connected streaming service (Spotify or Apple Music) so you can import songs from them. Requires that source to be connected (see vibo_get_me).",
       annotations: toolAnnotations({ title: 'List connected playlists', readOnly: true, openWorld: true }),
+      _meta: familyMeta('lookup'),
       inputSchema: z.object({
         source: sourceSchema,
         q: z.string().optional().describe('Filter playlists by name.'),
@@ -45,6 +47,7 @@ export function registerPlaylistTools(server: McpServer, client: ViboClient): vo
     {
       description: 'List the tracks in one of your connected-service playlists.',
       annotations: toolAnnotations({ title: 'Get playlist tracks', readOnly: true, openWorld: true }),
+      _meta: familyMeta('lookup'),
       inputSchema: z.object({
         playlistId: z.string().describe('Playlist id from vibo_get_playlists.'),
         source: sourceSchema,
@@ -69,6 +72,7 @@ export function registerPlaylistTools(server: McpServer, client: ViboClient): vo
       description:
         "Export an event's song selections to a new Spotify playlist (Spotify must be connected). Returns the playlist URL plus how many tracks exported / failed. " + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Export event to Spotify', readOnly: false, destructive: true, idempotent: false, openWorld: true }),
+      _meta: familyMeta('other'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionIds: z.array(z.string()).min(1).describe('Section ids to include (from vibo_list_sections).'),
@@ -103,6 +107,7 @@ export function registerPlaylistTools(server: McpServer, client: ViboClient): vo
       description:
         "Export an event's song selections to a new Apple Music playlist (Apple Music must be connected). Returns the playlist URL plus how many tracks exported / failed. " + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Export event to Apple Music', readOnly: false, destructive: true, idempotent: false, openWorld: true }),
+      _meta: familyMeta('other'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionIds: z.array(z.string()).min(1).describe('Section ids to include (from vibo_list_sections).'),

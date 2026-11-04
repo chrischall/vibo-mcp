@@ -13,6 +13,7 @@ import {
   type EventPermissions,
   type SectionInfo,
 } from './lookups.js';
+import { familyMeta } from './hints.js';
 
 /**
  * The web app's section-name limit (`nameMustBeCharactersOrLess`, count 45).
@@ -82,6 +83,7 @@ export function registerSectionManageTools(server: McpServer, client: ViboClient
         "creates \"hosts can order songs\" = off, which only the DJ can turn on. Returns the new section _id. " +
         CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Create Vibo section', readOnly: false, destructive: false, idempotent: false, openWorld: true }),
+      _meta: familyMeta('change'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         name: z.string().describe(`Section name, 1–${SECTION_NAME_MAX} characters.`),
@@ -216,6 +218,7 @@ export function registerSectionManageTools(server: McpServer, client: ViboClient
         "DJ's do-not-play list) and \"headline\" (timeline dividers) are refused unless force:true. " +
         CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Delete Vibo section', readOnly: false, destructive: true, openWorld: true }),
+      _meta: familyMeta('change'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section _id from vibo_list_sections.'),
@@ -276,6 +279,7 @@ export function registerSectionManageTools(server: McpServer, client: ViboClient
         'actually moves. ' +
         CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Reorder Vibo sections', readOnly: false, destructive: false, openWorld: true }),
+      _meta: familyMeta('change'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sourceSectionIds: z.array(z.string()).min(1).describe('Section _ids to move, in the order they should end up.'),

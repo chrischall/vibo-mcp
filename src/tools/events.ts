@@ -12,6 +12,17 @@ import {
   CREATE_EVENT_CONTACT,
 } from '../gql.js';
 import { limitSchema, skipSchema, pagination, confirmWrite, CONFIRM_NOTE } from './shared.js';
+import { familyMeta } from './hints.js';
+import { briefLine, briefLines, isoDate, pageOf, text, untrustedBriefResponse } from '../brief.js';
+
+/** Who writes the text a brief event line carries. */
+const EVENT_TITLES_AUTHOR = 'Event titles are written by the event\'s hosts and DJ, not by Vibo.';
+
+/** One event as `title — <ISO date | no date> — <role>, <open|locked>`, ≤ 120 chars. */
+export function eventBrief(e: Record<string, unknown>): string {
+  const role = text(e.role) ?? 'member';
+  return briefLine(text(e.title) ?? '(untitled event)', isoDate(e.date), `${role}, ${e.isLocked === true ? 'locked' : 'open'}`);
+}
 
 export function registerEventTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
@@ -20,21 +31,38 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
       description:
         "List the events you're part of (as host or guest). Defaults to upcoming events; pass past:true for events that have already happened. Optionally filter by a search query.",
       annotations: toolAnnotations({ title: 'List Vibo events', readOnly: true, openWorld: true }),
+      _meta: familyMeta('whats-on', {
+        canonical: true,
+        aliases: ['wedding', 'party', 'event', 'dj', 'vibo', 'music planning', 'reception'],
+      }),
       inputSchema: z.object({
         past: z.boolean().optional().describe('Return past events instead of upcoming (default false).'),
         q: z.string().optional().describe('Search events by title.'),
         limit: limitSchema,
         skip: skipSchema,
+        view: z
+          .enum(['full', 'brief'])
+          .optional()
+          .describe(
+            '"full" (default) returns Vibo\'s payload as it arrived; "brief" returns one line per event: ' +
+              'title — <ISO date | no date> — <your role>, <open|locked>, inside the untrusted-data envelope, ' +
+              'with "-- none" for no events and "-- N of M shown" / "-- more" when the page is partial.',
+          ),
       }),
     },
-    async ({ past, q, limit, skip }) => {
+    async ({ past, q, limit, skip, view }) => {
       const variables = {
         pagination: pagination(limit, skip),
         ...(q ? { filter: { q } } : {}),
       };
       const doc = past ? LIST_HISTORY_EVENTS : LIST_UPCOMING_EVENTS;
       const data = await client.gql<Record<string, unknown>>(doc, variables);
-      return minifiedResult(past ? data.historyEvents : data.upcomingEvents);
+      const page = past ? data.historyEvents : data.upcomingEvents;
+      if (view === 'brief') {
+        const lines = briefLines(pageOf(page, 'events', variables.pagination.skip), eventBrief);
+        return untrustedBriefResponse(lines, EVENT_TITLES_AUTHOR);
+      }
+      return minifiedResult(page);
     },
   );
 
@@ -44,6 +72,7 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
       description:
         'Get full details for one event: title, date/timezone, location, your role, lock status, playlist size, and section/question progress. Use vibo_list_sections for the timeline.',
       annotations: toolAnnotations({ title: 'Get Vibo event', readOnly: true, openWorld: true }),
+      _meta: familyMeta('lookup'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id (the _id from vibo_list_events).'),
       }),
@@ -60,6 +89,7 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
       description:
         "Join an event you were invited to, via its share link or hash (e.g. a vibodj.app.link/... URL someone sent you). Returns the joined event's id. " + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Join Vibo event', readOnly: false, destructive: false, openWorld: true }),
+      _meta: familyMeta('change'),
       inputSchema: z.object({
         link: z
           .string()
@@ -96,6 +126,7 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
     {
       description: 'Leave an event you previously joined. ' + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Leave Vibo event', readOnly: false, destructive: true, openWorld: true }),
+      _meta: familyMeta('change'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id to leave.'),
         confirmToken: confirmTokenParam,
@@ -124,6 +155,7 @@ export function registerEventTools(server: McpServer, client: ViboClient): void 
       description:
         'Add a contact (host or guest) to an event with their name/email/phone. ' + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Add Vibo event contact', readOnly: false, destructive: true, idempotent: false, openWorld: true }),
+      _meta: familyMeta('change'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         role: z.enum(['host', 'guest']).describe("The contact's role in the event."),

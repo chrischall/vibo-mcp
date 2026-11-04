@@ -9,6 +9,7 @@ import {
   DELETE_SECTION_COMMENT,
 } from '../gql.js';
 import { confirmWrite, CONFIRM_NOTE } from './shared.js';
+import { familyMeta } from './hints.js';
 
 export function registerCommentTools(server: McpServer, client: ViboClient): void {
   server.registerTool(
@@ -16,6 +17,7 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
     {
       description: 'Leave a comment / note for the DJ on a specific song. ' + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Comment on Vibo song', readOnly: false, destructive: true, idempotent: false, openWorld: true }),
+      _meta: familyMeta('send'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),
@@ -47,6 +49,7 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
     {
       description: 'Delete a comment on a song. ' + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Delete Vibo song comment', readOnly: false, destructive: true, openWorld: true }),
+      _meta: familyMeta('change'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),
@@ -78,6 +81,7 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
     {
       description: 'Leave a comment on a timeline section. ' + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Comment on Vibo section', readOnly: false, destructive: true, idempotent: false, openWorld: true }),
+      _meta: familyMeta('send'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id (from vibo_list_sections).'),
@@ -108,6 +112,7 @@ export function registerCommentTools(server: McpServer, client: ViboClient): voi
     {
       description: 'Delete a comment on a timeline section. ' + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Delete Vibo section comment', readOnly: false, destructive: true, openWorld: true }),
+      _meta: familyMeta('change'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id (from vibo_list_sections).'),

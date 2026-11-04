@@ -13,6 +13,7 @@ import {
   assertSongsInSection,
   isHost,
 } from './lookups.js';
+import { familyMeta } from './hints.js';
 
 /**
  * Vibo's song-comment limit, measured live: 90 is stored, 91 is refused with
@@ -29,6 +30,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
         'Remove one or more songs from a section. Every id is checked against the section first; if any is not ' +
         'there, nothing is sent and the missing ids are listed. ' + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Remove songs from Vibo section', readOnly: false, destructive: true, openWorld: true }),
+      _meta: familyMeta('change'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),
@@ -75,6 +77,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
         `A comment can be at most ${SONG_COMMENT_MAX} characters (Vibo's limit; emoji count double; checked before anything is sent). ` +
         CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Update Vibo section songs', readOnly: false, destructive: true, idempotent: true, openWorld: true }),
+      _meta: familyMeta('change'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),
@@ -126,6 +129,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
     {
       description: 'Move songs from one section to another. ' + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Move Vibo section songs', readOnly: false, destructive: false, openWorld: true }),
+      _meta: familyMeta('change'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sourceSectionId: z.string().describe('Section id the songs are currently in.'),
@@ -166,6 +170,7 @@ export function registerSongManagementTools(server: McpServer, client: ViboClien
         'reorderSongsBatch call per song that actually moves. ' +
         CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Reorder Vibo section songs', readOnly: false, destructive: false, openWorld: true }),
+      _meta: familyMeta('change'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         sectionId: z.string().describe('Section id.'),

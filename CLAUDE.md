@@ -40,6 +40,8 @@ src/
   gql.ts          # all GraphQL operation documents (selections from introspection)
   reorder.ts      # planMoves() — "move these after X" as single-item reorder
                   #   calls (Vibo: source lands after target; null = first)
+  brief.ts        # view: "brief" lines (title — date — status, ≤ 120 chars,
+                  #   "-- " note lines) in the untrusted-data envelope
   song-search.ts  # pure search-quality heuristics — parseSearchQuery, assessSong,
                   #   annotateSearchResults; grades each search hit
                   #   likely-original / uncertain / likely-not-original
@@ -63,7 +65,14 @@ src/
     uploads.ts          # set_profile_photo
     session.ts          # capture_session (SSO browser token capture)
     shared.ts           # pagination + confirmWrite (confirmation gate) helpers
+    hints.ts            # familyMeta() — context-group `_meta.mint` hints
 ```
+
+Every tool except `vibo_healthcheck` carries `_meta: familyMeta(intent, …)`
+(mcp-host context groups, group `family`); `tests/hints.test.ts` enumerates the
+served tools, so a new tool must pick its intent there. The canonical reads are
+`vibo_list_events` (whats-on) and `vibo_list_notifications` (whats-new), each
+with `view: "brief"`.
 
 Each tool file exports `register<Domain>Tools(server)` calling
 `server.registerTool(...)` and returns `minifiedResult(...)` (or `viewResponse(...)` from `src/view.ts` for the `view` reads). `index.ts` wires them

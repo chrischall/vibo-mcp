@@ -5,6 +5,7 @@ import type { ViboClient } from '../client.js';
 import { LIST_EVENT_USERS, INVITE_USERS, CHANGE_USER_ROLE, REMOVE_USER } from '../gql.js';
 import { limitSchema, skipSchema, pagination, confirmWrite, CONFIRM_NOTE } from './shared.js';
 import { eventUsersViewArg, viewResponse, VIBO_VIEWS } from '../view.js';
+import { familyMeta } from './hints.js';
 
 /**
  * Compact rung for event members. Unlike the rest of this server, the shape
@@ -31,6 +32,7 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
       description:
         "List the hosts and guests on an event. With no usersType, returns both groups merged ({hosts, guests, hostsCount, guestsCount}) and `limit`/`skip` apply per group; with usersType, returns that one group's page. Default (compact) view returns each member's id, name and role only; pass view:'full' for email addresses and avatars.",
       annotations: toolAnnotations({ title: 'List Vibo event users', readOnly: true, openWorld: true }),
+      _meta: familyMeta('lookup'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         usersType: z.enum(['host', 'guest']).optional().describe('Filter to only hosts or only guests.'),
@@ -77,6 +79,7 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
     {
       description: 'Invite people to an event by email (as host or guest). ' + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Invite Vibo event users', readOnly: false, destructive: true, idempotent: false, openWorld: true }),
+      _meta: familyMeta('send'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         type: z.enum(['host', 'guest']).describe('Invite as host or guest.'),
@@ -108,6 +111,7 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
     {
       description: "Change an event member's role between host and guest. " + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Change Vibo user role', readOnly: false, destructive: true, openWorld: true }),
+      _meta: familyMeta('change'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         userId: z.string().describe('Id of the member to update.'),
@@ -138,6 +142,7 @@ export function registerCollaborationTools(server: McpServer, client: ViboClient
     {
       description: 'Remove a member from an event. ' + CONFIRM_NOTE,
       annotations: toolAnnotations({ title: 'Remove Vibo event user', readOnly: false, destructive: true, openWorld: true }),
+      _meta: familyMeta('change'),
       inputSchema: z.object({
         eventId: z.string().describe('Event id.'),
         userId: z.string().describe('Id of the member to remove.'),
