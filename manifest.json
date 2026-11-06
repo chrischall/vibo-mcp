@@ -259,7 +259,11 @@
     },
     {
       "name": "vibo_set_profile_photo",
-      "description": "Set your Vibo profile photo from a local image"
+      "description": "Set your Vibo profile photo from a local image, base64 bytes or an upload slot"
+    },
+    {
+      "name": "vibo_upload_slots",
+      "description": "Get signed upload URLs for files to send from a hosted session"
     },
     {
       "name": "vibo_capture_session",

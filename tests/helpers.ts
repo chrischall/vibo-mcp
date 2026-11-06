@@ -1,6 +1,8 @@
 // Re-export the shared in-memory test harness from `@chrischall/mcp-utils/test`,
 // matching the fleet convention so local imports (`../helpers.js`) resolve.
+import { createHash } from 'node:crypto';
 import { expect, type MockInstance } from 'vitest';
+import type { UploadFile } from '../src/upload-source.js';
 import { parseToolResult, type TestHarness } from '@chrischall/mcp-utils/test';
 
 export { createTestHarness } from '@chrischall/mcp-utils/test';
@@ -43,4 +45,21 @@ export async function confirmCall(
   const result = await harness.callTool(name, { ...args, confirmToken });
   expect(total()).toBe(before + 1);
   return result;
+}
+
+/**
+ * A resolved upload for tests that inject a fake resolver: `text` as the bytes,
+ * with the sha256 a real resolver would report (so a confirm token binds it).
+ */
+export function stubUpload(text = 'x', filename = 'f'): UploadFile {
+  const bytes = new TextEncoder().encode(text);
+  return {
+    blob: new Blob([bytes]),
+    filename,
+    origin: 'path',
+    mimeType: 'application/octet-stream',
+    sizeBytes: bytes.length,
+    sha256: createHash('sha256').update(bytes).digest('hex'),
+    release: async () => ({ deleted: null }),
+  };
 }

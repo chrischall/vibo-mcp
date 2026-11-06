@@ -5,7 +5,7 @@ import { registerUploadTools } from '../../src/tools/uploads.js';
 import { registerQuestionTools } from '../../src/tools/questions.js';
 import { CREATE_SONG_COMMENT, DELETE_SECTION_COMMENT } from '../../src/gql.js';
 import type { UploadFile, FileRef } from '../../src/upload-source.js';
-import { createTestHarness, previewCall } from '../helpers.js';
+import { createTestHarness, previewCall, stubUpload } from '../helpers.js';
 import { parseToolResult } from '@chrischall/mcp-utils/test';
 
 // Repo-wide properties of the confirm-token gate, exercised on a few tools.
@@ -13,8 +13,9 @@ import { parseToolResult } from '@chrischall/mcp-utils/test';
 
 const gql = vi.spyOn(client, 'gql').mockResolvedValue(undefined as never);
 const gqlUpload = vi.spyOn(client, 'gqlUpload').mockResolvedValue(undefined as never);
-const stubFile: UploadFile = { blob: new Blob(['x']), filename: 'f' };
-const resolve = vi.fn<(ref: FileRef) => Promise<UploadFile>>().mockResolvedValue(stubFile);
+// The fake resolver mirrors the real one: the sha256 it reports is of the
+// bytes it was handed, so different inline data fingerprints differently.
+const resolve = vi.fn<(ref: FileRef) => Promise<UploadFile>>(async (ref) => stubUpload(ref.data ?? 'x', 'f'));
 
 const register = (s: Parameters<Parameters<typeof createTestHarness>[0]>[0]) => {
   registerCommentTools(s, client);
@@ -89,11 +90,11 @@ describe('confirm-token flow (client without elicitation)', () => {
     expect(gql).not.toHaveBeenCalled();
   });
 
-  it('inline upload bytes are bound into the token even though the preview hides them', async () => {
+  it('inline upload bytes are bound into the token, by the sha256 the preview shows', async () => {
     harness = await createTestHarness(register);
     const args = { fileData: 'aGk=', filename: 'me.png' };
     const body = await previewCall(harness, 'vibo_set_profile_photo', args);
-    expect(body.preview.willSend).toEqual({ photo: '(inline bytes)' });
+    expect((body.preview.willSend.photo as { sha256: string }).sha256).toBe(stubUpload('aGk=').sha256);
     const res = await harness.callTool('vibo_set_profile_photo', { ...args, fileData: 'Ynll', confirmToken: body.confirmToken });
     expect(parseToolResult<Rejection>(res).error).toBe('DRAFT_CHANGED');
     // The bytes are resolved on every call to fingerprint them; none are sent.
@@ -104,7 +105,9 @@ describe('confirm-token flow (client without elicitation)', () => {
     harness = await createTestHarness(register);
     const args = { eventId: 'e1', sectionId: 's1', questionId: 'q3', images: [{ data: 'aGk=', filename: 'a.png' }] };
     const body = await previewCall(harness, 'vibo_answer_question', args);
-    expect(body.preview.willSend.uploads).toEqual({ 'variables.payload.answer.images.0': '(inline bytes)' });
+    expect(body.preview.willSend.uploads).toEqual({
+      'variables.payload.answer.images.0': expect.objectContaining({ sha256: stubUpload('aGk=').sha256 }),
+    });
     const res = await harness.callTool('vibo_answer_question', {
       ...args, images: [{ data: 'Ynll', filename: 'a.png' }], confirmToken: body.confirmToken,
     });
@@ -118,8 +121,8 @@ describe('confirm-token flow (client without elicitation)', () => {
   // written at the same path before the confirmed call is refused, not sent.
   const swapAtPath = () =>
     resolve
-      .mockResolvedValueOnce({ blob: new Blob(['the photo the user saw']), filename: 'me.jpg' })
-      .mockResolvedValueOnce({ blob: new Blob(['something else entirely']), filename: 'me.jpg' });
+      .mockResolvedValueOnce(stubUpload('the photo the user saw', 'me.jpg'))
+      .mockResolvedValueOnce(stubUpload('something else entirely', 'me.jpg'));
 
   it('a profile photo swapped at the same path is refused as DRAFT_CHANGED', async () => {
     harness = await createTestHarness(register);
@@ -144,7 +147,7 @@ describe('confirm-token flow (client without elicitation)', () => {
   it('the same bytes at the same path still confirm, and exactly those bytes are sent', async () => {
     harness = await createTestHarness(register);
     gqlUpload.mockResolvedValue({ uploadUserPhoto: { url: 'u' } });
-    const same = { blob: new Blob(['the photo the user saw']), filename: 'me.jpg' };
+    const same = stubUpload('the photo the user saw', 'me.jpg');
     resolve.mockResolvedValueOnce(same).mockResolvedValueOnce(same);
     const body = await previewCall(harness, 'vibo_set_profile_photo', { path: 'me.jpg' });
     const res = await harness.callTool('vibo_set_profile_photo', { path: 'me.jpg', confirmToken: body.confirmToken });

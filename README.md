@@ -60,14 +60,33 @@ or check a release zip against the `.sha256` file published beside it
 
 ### Uploads
 
-`vibo_set_profile_photo` and photo/file answers to `vibo_answer_question` only
-read local files from the upload directory — `VIBO_UPLOAD_DIR`, default
-`~/Downloads/vibo-mcp`. Copy a file there before asking Claude to upload it.
-Hidden files, symlinks that lead outside the directory, and files over 25 MiB
-are refused. Photo slots need a real image: the extension must be an image type
-*and* the file's contents must match it (a renamed text file is refused), and
-the path you pass must be the file itself — any symlink is refused for a photo,
-even one pointing inside the upload directory.
+`vibo_set_profile_photo` and photo/file answers to `vibo_answer_question` take
+each file one of three ways:
+
+- **A local path** (local installs only). Files are read only from the upload
+  directory — `VIBO_UPLOAD_DIR`, default `~/Downloads/vibo-mcp`. Copy a file
+  there before asking Claude to upload it. Hidden files and symlinks that lead
+  outside the directory are refused. For a photo, the path you pass must be the
+  file itself: any symlink is refused, even one pointing inside the upload
+  directory. On a hosted deployment a path is refused, with a pointer to the
+  routes below.
+- **Inline base64** (`fileData`, or `images`/`files`), for small files on any
+  deployment. It is decoded strictly: truncated, mis-padded or otherwise
+  malformed base64 is refused rather than sent as a corrupt file. A
+  `data:<type>;base64,` prefix and line breaks are fine.
+- **An upload slot** (hosted deployments with a blob store). Call
+  `vibo_upload_slots` with the filenames, `PUT` each file to the signed URL it
+  returns (its `curl` field is a ready command), then pass the `blobKey`
+  (`blobKey`, or `imageBlobKeys`/`fileBlobKeys`). The stored copy is deleted
+  only after Vibo accepts the upload, and the result reports it in
+  `blobCleanup`. If the upload fails, the copy is kept so you can retry.
+
+Every route is capped at 25 MiB. Photos must be real images
+(jpg/png/gif/webp/heic) by any route: the type must be an image type *and* the
+bytes must match it, so a renamed text file is refused. The confirmation preview
+shows each file's source, name, type, size and SHA-256. If the bytes change
+before you confirm, such as a different file at the same path or a re-uploaded
+slot, the confirmation is refused.
 
 ### Timeline sections and limits
 

@@ -1,8 +1,8 @@
 # vibo-mcp
 
 MCP server for [Vibo](https://vibodj.com). Wraps the Vibo consumer GraphQL API
-(`https://api.vibodj.com/v2/graphql`) and exposes 42 host/couple tools to Claude
-over stdio (15 reads + 27 writes/actions, confirmation-gated where they mutate). Built on `@chrischall/mcp-utils`
+(`https://api.vibodj.com/v2/graphql`) and exposes 43 host/couple tools to Claude
+over stdio (16 reads + 27 writes/actions, confirmation-gated where they mutate). Built on `@chrischall/mcp-utils`
 (`runMcp`, `minifiedResult`, `toolAnnotations`, `confirmWrite`, error classes).
 
 ## Commands
@@ -42,6 +42,9 @@ src/
                   #   calls (Vibo: source lands after target; null = first)
   brief.ts        # view: "brief" lines (title — date — status, ≤ 120 chars,
                   #   "-- " note lines) in the untrusted-data envelope
+  upload-source.ts# nodeUploadResolver — exactly one of path | inline base64 |
+                  #   blobKey → validated in-memory UploadFile (mcp-utils
+                  #   resolveUploadSource; see "Uploads" below)
   song-search.ts  # pure search-quality heuristics — parseSearchQuery, assessSong,
                   #   annotateSearchResults; grades each search hit
                   #   likely-original / uncertain / likely-not-original
@@ -62,7 +65,8 @@ src/
     section-manage.ts   # create_section, delete_section, reorder_sections
     lookups.ts          # read-before-write helpers (sections, event perms,
                         #   section song ids, id validation)
-    uploads.ts          # set_profile_photo
+    uploads.ts          # set_profile_photo, upload_slots (signed PUT slots
+                        #   into the hosted blob store; read-only)
     session.ts          # capture_session (SSO browser token capture)
     shared.ts           # pagination + confirmWrite (confirmation gate) helpers
     hints.ts            # familyMeta() — context-group `_meta.mint` hints
@@ -128,10 +132,10 @@ validation:
   writes. The token is single-use and bound to the tool, the target id and a
   hash of what will be sent — a changed argument is refused as `DRAFT_CHANGED`,
   a replay as `TOKEN_REUSED`. Upload BYTES are bound too (via `payload`): the
-  upload tools resolve their files before the gate on every call and hash a
-  sha256 of each into the token, so inline bytes the preview shows as
-  `(inline bytes)` — and a different file written at the same local `path`
-  after the preview — are refused as `DRAFT_CHANGED` (fleet-audit #1139).
+  upload tools resolve their files before the gate on every call and bind
+  each file's sha256 (also shown in the preview), so a different file written
+  at the same local `path`, or a blob re-PUT to the same slot, after the
+  preview is refused as `DRAFT_CHANGED` (fleet-audit #1139).
 
 Some tools READ before the gate — to refuse ids that aren't in the section
 (`remove_song_from_section`, `reorder_songs`, `reorder_sections`), to resolve
@@ -231,6 +235,44 @@ caller to re-query when the form was unhyphenated or nothing looked original.
   were correct, so the DJ still gets the right track — but don't treat the
   stored `links` blob as a faithful copy of the search result.
 
+## Uploads
+
+`src/upload-source.ts` is the one file entry point for `vibo_set_profile_photo`
+and photo/file answers to `vibo_answer_question`. Each file is **exactly one** of
+a local `path`, inline base64, or a `blobKey` from `vibo_upload_slots`. All of
+them go through mcp-utils `resolveUploadSource` (`@chrischall/mcp-utils/export`),
+except one route covered below. The checks:
+
+- **Strict base64.** Inline bytes used to go through `atob` after a hand-rolled
+  `data:` strip, which silently accepted truncated or mis-padded payloads, and
+  had **no size cap** (the 25 MiB `MAX_UPLOAD_BYTES` guarded `path` only).
+  `decodeBase64Strict` refuses anything malformed and checks the size before
+  decoding.
+- **Same 25 MiB cap on every route.**
+- **Photo slots (`kind: 'image'`) are type-checked on every route.** They use
+  the image allowlist plus magic bytes. Unnamed inline image bytes are named
+  `photo.<sniffed ext>`, so an unnamed PNG is not judged as a JPEG.
+- **A `path` is refused on a hosted deployment** (`isHostedEnv`: `MCP_DATA_DIR`
+  or `MCP_BLOB_BASE_URL`). The refusal names `vibo_upload_slots` when there is a
+  blob store, and inline base64 otherwise. Messages use each tool's own
+  parameter names (`FileRef.names`).
+- **Local confinement is unchanged.** A photo path goes through `vetUploadFile`
+  with the same root, hidden-segment and symlink rules, mapped onto this repo's
+  wording. A NON-image file-slot path (a .docx, a .txt) keeps its own
+  `confinedFileBlob`, because `vetUploadFile` requires magic bytes those types
+  lack. That file is now read into memory once, so the digest and the bytes
+  sent are the same.
+- **Blob lifecycle.** Reading never deletes. The tool binds `sha256`,
+  re-resolves on the confirmed call, and calls `release()` (via
+  `releaseUploads`) only after `gqlUpload` resolves. The result then carries
+  `blobCleanup: [{blobKey, deleted, error?, note?}]`. That key is absent when no
+  blob was used, so path/inline results are unchanged. A failed upload throws
+  past the release, keeping the blob for a retry. A failed delete is reported,
+  never thrown.
+
+Tests drive the blob store through `tests/fake-blob-store.ts`: the real
+mcp-utils client, found via `MCP_BLOB_*` env, behind a stubbed `fetch`.
+
 ## Environment
 
 ```
@@ -243,7 +285,11 @@ VIBO_UPLOAD_DIR=…        # optional; the only dir local-path uploads may read
                          #   (default ~/Downloads/vibo-mcp; dotfiles, symlinks
                          #   out of it, and files >25 MiB are refused; photo
                          #   slots also refuse ANY symlink and need image magic
-                         #   bytes — mcp-utils vetUploadFile)
+                         #   bytes — mcp-utils vetUploadFile). Ignored on a
+                         #   hosted deployment, where paths are refused
+MCP_BLOB_BASE_URL / MCP_BLOB_SIGNING_KEY / MCP_DATA_DIR
+                         # injected by mcp-host; enable vibo_upload_slots and
+                         #   blobKey uploads, and mark the deployment hosted
 ```
 
 Loaded via `loadDotenvSafely` from `.env` next to `dist/` (`override: false`, so
