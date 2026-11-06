@@ -22,7 +22,7 @@ describe('tool registry', () => {
   let harness: Awaited<ReturnType<typeof createTestHarness>>;
   afterAll(async () => { if (harness) await harness.close(); });
 
-  it('registers exactly the expected 42 tools', async () => {
+  it('registers exactly the expected 43 tools', async () => {
     harness = await createTestHarness((server) => {
       registerProfileTools(server, client);
       registerEventTools(server, client);
@@ -93,6 +93,7 @@ describe('tool registry', () => {
       'vibo_reorder_sections',
       // uploads
       'vibo_set_profile_photo',
+      'vibo_upload_slots',
       // SSO session capture
       'vibo_capture_session',
     ].sort();
@@ -188,7 +189,8 @@ describe('tool registry', () => {
   });
 
   // openWorldHint is only emitted when passed; every tool here talks to the
-  // Vibo API (or, for capture_session, the browser bridge), so all say true.
+  // Vibo API (or, for capture_session, the browser bridge; for upload_slots,
+  // it hands out URLs into the hosted blob store), so all say true.
   it('declares openWorldHint: true on every tool', async () => {
     const { tools } = await harness.client.listTools();
     for (const t of tools) expect(t.annotations?.openWorldHint, t.name).toBe(true);

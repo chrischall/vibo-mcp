@@ -77,6 +77,7 @@ const EXPECTED_INTENT: Record<string, string> = {
   vibo_delete_section: 'change',
   vibo_reorder_sections: 'change',
   vibo_set_profile_photo: 'change',
+  vibo_upload_slots: 'other',
   vibo_capture_session: 'other',
 };
 

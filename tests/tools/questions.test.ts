@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
 import { client } from '../../src/client.js';
 import { registerQuestionTools } from '../../src/tools/questions.js';
 import { LIST_SECTION_QUESTIONS, ANSWER_SECTION_QUESTION } from '../../src/gql.js';
 import type { UploadFile, FileRef } from '../../src/upload-source.js';
-import { createTestHarness, confirmCall } from '../helpers.js';
+import { createTestHarness, confirmCall, previewCall, stubUpload } from '../helpers.js';
+import { installFakeBlobStore } from '../fake-blob-store.js';
 import { parseToolResult } from '@chrischall/mcp-utils/test';
 
 const gql = vi.spyOn(client, 'gql').mockResolvedValue(undefined as never);
@@ -11,8 +12,11 @@ const gqlUpload = vi.spyOn(client, 'gqlUpload').mockResolvedValue(undefined as n
 
 // Fake upload resolver (see uploads.test.ts): the tool hands it a FileRef and
 // gets back a stub in-memory file, so no filesystem is touched in tests.
-const stubFile: UploadFile = { blob: new Blob(['x']), filename: 'f' };
+const stubFile: UploadFile = stubUpload('x', 'f');
 const resolve = vi.fn<(ref: FileRef) => Promise<UploadFile>>().mockResolvedValue(stubFile);
+
+const IMAGE_NAMES = { path: 'imagePaths', inline: 'images', blobKey: 'imageBlobKeys' };
+const FILE_NAMES = { path: 'filePaths', inline: 'files', blobKey: 'fileBlobKeys' };
 
 let harness: Awaited<ReturnType<typeof createTestHarness>>;
 
@@ -123,9 +127,9 @@ describe('question tools', () => {
     }, gql, gqlUpload);
     // JSON path is not used; the upload path carries null placeholders + resolved blobs.
     expect(gql).not.toHaveBeenCalled();
-    expect(resolve).toHaveBeenCalledWith({ path: '/tmp/a.jpg', kind: 'image' });
-    expect(resolve).toHaveBeenCalledWith({ path: '/tmp/b.jpg', kind: 'image' });
-    expect(resolve).toHaveBeenCalledWith({ path: '/tmp/c.pdf' });
+    expect(resolve).toHaveBeenCalledWith({ path: '/tmp/a.jpg', kind: 'image', names: IMAGE_NAMES });
+    expect(resolve).toHaveBeenCalledWith({ path: '/tmp/b.jpg', kind: 'image', names: IMAGE_NAMES });
+    expect(resolve).toHaveBeenCalledWith({ path: '/tmp/c.pdf', kind: 'file', names: FILE_NAMES });
     expect(gqlUpload).toHaveBeenCalledWith(
       ANSWER_SECTION_QUESTION,
       {
@@ -151,7 +155,7 @@ describe('question tools', () => {
       images: [{ data: 'aGk=', filename: 'a.png' }],
     }, gql, gqlUpload);
     expect(gql).not.toHaveBeenCalled();
-    expect(resolve).toHaveBeenCalledWith({ data: 'aGk=', filename: 'a.png' });
+    expect(resolve).toHaveBeenCalledWith({ data: 'aGk=', filename: 'a.png', kind: 'image', names: IMAGE_NAMES });
     expect(gqlUpload).toHaveBeenCalledWith(
       ANSWER_SECTION_QUESTION,
       {
@@ -177,5 +181,71 @@ describe('question tools', () => {
     expect(gqlUpload).not.toHaveBeenCalled();
     expect(gql).not.toHaveBeenCalled();
     expect(parseToolResult<{ status: string }>(res).status).toBe('confirmation-required');
+  });
+});
+
+describe('vibo_answer_question with the real resolver', () => {
+  const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d]);
+  const base = { eventId: 'e1', sectionId: 's1', questionId: 'q3' };
+  let h: Awaited<ReturnType<typeof createTestHarness>> | undefined;
+  afterEach(async () => {
+    if (h) await h.close();
+    h = undefined;
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    gqlUpload.mockReset();
+  });
+
+  it('uploads slot files, then deletes them, and reports it', async () => {
+    const fake = installFakeBlobStore();
+    const img = fake.put('table plan.png', PNG);
+    const doc = fake.put('run of show.txt', new TextEncoder().encode('first dance at 8'));
+    h = await createTestHarness((s) => registerQuestionTools(s, client));
+    gqlUpload.mockResolvedValue({ answerEventSectionQuestionV2: { progress: 1 } });
+    const args = { ...base, imageBlobKeys: [img], fileBlobKeys: [doc] };
+    const body = await previewCall(h, 'vibo_answer_question', args);
+    expect((body.preview.willSend.uploads as Record<string, unknown>)['variables.payload.answer.images.0']).toMatchObject({
+      source: 'blob', blobKey: img, filename: 'table plan.png',
+    });
+    expect(fake.objects.size).toBe(2);
+    const res = await h.callTool('vibo_answer_question', { ...args, confirmToken: body.confirmToken });
+    expect(res.isError).toBeFalsy();
+    const files = gqlUpload.mock.calls[0]![2] as Record<string, UploadFile>;
+    expect(files['variables.payload.answer.images.0']!.filename).toBe('table plan.png');
+    expect(await files['variables.payload.answer.files.0']!.blob.text()).toBe('first dance at 8');
+    expect(fake.objects.size).toBe(0);
+    expect(parseToolResult<{ blobCleanup: unknown[] }>(res).blobCleanup).toEqual([
+      { blobKey: img, deleted: true },
+      { blobKey: doc, deleted: true },
+    ]);
+  });
+
+  it('keeps slot files when Vibo refuses the answer', async () => {
+    const fake = installFakeBlobStore();
+    const img = fake.put('a.png', PNG);
+    h = await createTestHarness((s) => registerQuestionTools(s, client));
+    gqlUpload.mockRejectedValue(new Error('Vibo refused'));
+    const args = { ...base, imageBlobKeys: [img] };
+    const body = await previewCall(h, 'vibo_answer_question', args);
+    const res = await h.callTool('vibo_answer_question', { ...args, confirmToken: body.confirmToken });
+    expect(res.isError).toBe(true);
+    expect(fake.objects.has(img)).toBe(true);
+  });
+
+  it('refuses inline images that are not images, and malformed base64, before any preview', async () => {
+    h = await createTestHarness((s) => registerQuestionTools(s, client));
+    const notImage = await h.callTool('vibo_answer_question', { ...base, images: [{ data: 'aGk=', filename: 'a.png' }] });
+    expect(JSON.stringify(notImage.content)).toMatch(/do not look like image\/png/);
+    const truncated = await h.callTool('vibo_answer_question', { ...base, files: [{ data: 'aGVsbG8', filename: 'a.txt' }] });
+    expect(JSON.stringify(truncated.content)).toMatch(/not valid base64/);
+    expect(gqlUpload).not.toHaveBeenCalled();
+  });
+
+  it('on a hosted deployment refuses imagePaths in its own parameter names', async () => {
+    vi.stubEnv('MCP_DATA_DIR', '/data');
+    h = await createTestHarness((s) => registerQuestionTools(s, client));
+    const res = await h.callTool('vibo_answer_question', { ...base, imagePaths: ['me.png'] });
+    expect(res.isError).toBe(true);
+    expect(JSON.stringify(res.content)).toMatch(/imagePaths cannot work here.*images \(base64\)/);
   });
 });

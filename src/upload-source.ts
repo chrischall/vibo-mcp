@@ -1,16 +1,24 @@
 // Injectable file-source boundary for multipart uploads.
 //
 // The Vibo upload tools (`vibo_set_profile_photo`, `vibo_answer_question` with
-// photo/file answers) send local media through the GraphQL `Upload` scalar.
-// A caller that shares a filesystem with the server names a local path; one
-// that does not — anything reaching this server remotely — sends the bytes
-// inline as base64 instead. Both converge on an in-memory {@link UploadFile}
-// that `ViboClient.gqlUpload` streams into a `FormData`.
+// photo/file answers) send media through the GraphQL `Upload` scalar. The
+// caller's file arrives one of three ways, and all three converge on one
+// validated, in-memory {@link UploadFile}:
 //
-// A tool hands the resolver a {@link FileRef} (a local `path`, or inline base64
-// `data`) and gets back a `Blob` + filename; `nodeUploadResolver` resolves
-// either.
+//  - a local `path` — only on a local (stdio) install, confined to the upload
+//    directory (see {@link getUploadDir});
+//  - inline base64 — any deployment, for a small file;
+//  - a `blobKey` — a file the caller PUT to an upload slot minted by
+//    `vibo_upload_slots` (hosted deployments with a blob store).
+//
+// Inline and blob sources, and photo-slot paths, go through mcp-utils
+// `resolveUploadSource`: strict base64 (no silent `atob` leniency), the same
+// 25 MiB cap on every route, the image allowlist + magic-byte check on every
+// route for a photo slot, and a refusal of `path` on a hosted deployment.
+// A non-image file-slot path keeps its own confined reader (`confinedFileBlob`)
+// because those types (a .docx, a .txt) have no magic bytes to verify.
 
+import { createHash } from 'node:crypto';
 import { homedir } from 'os';
 import { basename, isAbsolute, join, relative, resolve, sep } from 'path';
 import {
@@ -18,31 +26,67 @@ import {
   fileBlob,
   McpToolError,
   readEnvVar,
+  sniffMimeBytes,
   UploadRefusedError,
-  vetUploadFile,
 } from '@chrischall/mcp-utils';
+import {
+  isHostedEnv,
+  resolveUploadSource,
+  sanitizeUploadFilename,
+  type UploadRelease,
+  type UploadSource,
+} from '@chrischall/mcp-utils/export';
 
-/** An in-memory file ready to append to a multipart `FormData`. */
+export type { UploadRelease } from '@chrischall/mcp-utils/export';
+
+/** The read-only tool that mints upload slots; named in hosted refusals. */
+export const UPLOAD_SLOT_TOOL = 'vibo_upload_slots';
+
+/** A validated, in-memory file ready to append to a multipart `FormData`. */
 export interface UploadFile {
   blob: Blob;
   filename: string;
+  /** Which route it came in by. */
+  origin: UploadSource['origin'];
+  mimeType: string;
+  sizeBytes: number;
+  /** Hex SHA-256 of exactly the bytes in `blob` — bind it into a confirmation. */
+  sha256: string;
+  /** The blob-store key, for `origin: 'blob'`. */
+  blobKey?: string;
+  /**
+   * Delete the blob-store upload. Call ONLY after Vibo accepted the upload: a
+   * failed write must leave the blob for a retry. Never throws; `deleted: null`
+   * for a path / inline source (nothing to delete).
+   */
+  release(): Promise<UploadRelease>;
+}
+
+/** The tool's own parameter names, for messages. */
+export interface FileRefNames {
+  path?: string;
+  inline?: string;
+  blobKey?: string;
 }
 
 /**
- * A reference to a file to upload: either a local filesystem `path` or inline
- * base64 `data`. `filename` overrides the name
- * sent to the server (defaults to the path basename, or a generic name for
- * inline bytes).
+ * A reference to a file to upload: exactly one of a local filesystem `path`,
+ * inline base64 `data`, or an upload-slot `blobKey`. `filename` overrides the
+ * name sent to the server (defaults to the path basename, the slot's filename,
+ * or a generic name for inline bytes).
  */
 export interface FileRef {
   path?: string;
   data?: string;
+  blobKey?: string;
   filename?: string;
-  /** `image` for a photo slot: a local `path` must then be a real image (extension AND magic bytes). */
+  /** `image` for a photo slot: every route must then be a real image (type AND magic bytes). */
   kind?: 'image' | 'file';
+  /** Parameter names to use in messages. Default `path` / `fileData` / `blobKey`. */
+  names?: FileRefNames;
 }
 
-/** Largest local file an upload tool will send (25 MiB). */
+/** Largest file an upload tool will send, by any route (25 MiB). */
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 /** Photo-slot types, by extension → the MIME their magic bytes must match. */
@@ -54,6 +98,19 @@ const IMAGE_MIME_BY_EXT: Readonly<Record<string, string>> = {
   webp: 'image/webp',
   heic: 'image/heic',
   heif: 'image/heif',
+};
+
+/** The bare MIME types a photo slot accepts, by any route. */
+const IMAGE_MIME_TYPES: readonly string[] = [...new Set(Object.values(IMAGE_MIME_BY_EXT))];
+
+/** Extension for an unnamed inline image, by sniffed type. */
+const EXT_BY_IMAGE_MIME: Readonly<Record<string, string>> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+  'image/heic': 'heic',
+  'image/heif': 'heif',
 };
 
 /**
@@ -126,46 +183,33 @@ function uploadTarget(path: string): UploadTarget {
 }
 
 /**
- * A photo slot: mcp-utils `vetUploadFile` — real-path confinement to the
- * upload directory, the extension allowlist, no symlink, a regular file, no
- * hidden segment, the size cap, ONE `O_NOFOLLOW` open, and the magic bytes
- * must match the extension (a credential renamed `.jpg` is refused). The
- * vetted bytes themselves are sent, so nothing can be swapped in after the
- * checks. Refusals are mapped onto this tool's own wording.
+ * Map a photo-slot path refusal from mcp-utils `vetUploadFile` (run inside
+ * `resolveUploadSource`: real-path confinement to the upload directory, the
+ * extension allowlist, no symlink, a regular file, no hidden segment, the size
+ * cap, ONE `O_NOFOLLOW` open, and magic bytes that match the extension — a
+ * credential renamed `.jpg` is refused) onto this tool's own wording.
  */
-async function vetImageUpload(path: string): Promise<Blob> {
-  const t = uploadTarget(path);
-  try {
-    const vetted = await vetUploadFile(t.abs, {
-      mimeByExt: IMAGE_MIME_BY_EXT,
-      maxBytes: MAX_UPLOAD_BYTES,
-      allowedRoots: [t.root],
-      denyHiddenSegments: true,
-      readAll: true,
-    });
-    return new Blob([vetted.bytes as Uint8Array<ArrayBuffer>], { type: vetted.mime });
-  } catch (err) {
-    if (!(err instanceof UploadRefusedError)) throw err;
-    switch (err.reason) {
-      case 'outside-roots':
-        throw t.outside();
-      case 'unreadable':
-        throw t.unreadable(err);
-      case 'hidden':
-        throw t.hidden();
-      case 'too-large':
-        throw t.tooLarge();
-      case 'not-file':
-        throw t.notFile();
-      case 'extension':
-      case 'signature':
-        throw new McpToolError(`Refusing to upload ${t.abs} as a photo: it is not an image file.`, {
-          hint: `Photo uploads accept ${Object.keys(IMAGE_MIME_BY_EXT).map((e) => `.${e}`).join(', ')} files whose contents really are that image type.`,
-        });
-      default:
-        // 'symlink' / 'changed': the shared wording already says why.
-        throw err;
-    }
+function mapImageRefusal(err: unknown, t: UploadTarget): unknown {
+  if (!(err instanceof UploadRefusedError)) return err;
+  switch (err.reason) {
+    case 'outside-roots':
+      return t.outside();
+    case 'unreadable':
+      return t.unreadable(err);
+    case 'hidden':
+      return t.hidden();
+    case 'too-large':
+      return t.tooLarge();
+    case 'not-file':
+      return t.notFile();
+    case 'extension':
+    case 'signature':
+      return new McpToolError(`Refusing to upload ${t.abs} as a photo: it is not an image file.`, {
+        hint: `Photo uploads accept ${Object.keys(IMAGE_MIME_BY_EXT).map((e) => `.${e}`).join(', ')} files whose contents really are that image type.`,
+      });
+    default:
+      // 'symlink' / 'changed': the shared wording already says why.
+      return err;
   }
 }
 
@@ -203,53 +247,140 @@ async function confinedFileBlob(path: string): Promise<Blob> {
   }
 }
 
-/** Turns a {@link FileRef} into an in-memory {@link UploadFile}. */
+/** Turns a {@link FileRef} into a validated in-memory {@link UploadFile}. */
 export type UploadResolver = (ref: FileRef) => Promise<UploadFile>;
 
 const DEFAULT_FILENAME = 'upload';
+const sha256Hex = (bytes: Uint8Array): string => createHash('sha256').update(bytes).digest('hex');
+const noRelease = async (): Promise<UploadRelease> => ({ deleted: null });
 
-/** Decode base64 (optionally a `data:` URL) into an {@link UploadFile}. */
-function blobFromBase64(data: string, filename: string | undefined): UploadFile {
-  // Strip a leading `data:<mime>;base64,` prefix if present.
-  const base64 = data.includes(',') && data.startsWith('data:') ? data.slice(data.indexOf(',') + 1) : data;
-  let binary: string;
-  try {
-    binary = atob(base64.trim());
-  } catch (err) {
-    throw new McpToolError('Could not decode inline file data — expected base64.', {
-      hint: 'Pass the file bytes as a base64 string in `fileData` (a `data:` URL prefix is allowed).',
-      cause: err,
-    });
-  }
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return { blob: new Blob([bytes]), filename: filename ?? DEFAULT_FILENAME };
+/**
+ * The name for inline bytes the caller did not name. A photo is named for
+ * what its first bytes say it is (`photo.png`), so the type check that follows
+ * judges the real type — an unnamed PNG is not refused for "not being a JPEG".
+ */
+function defaultInlineName(data: string, image: boolean): string {
+  if (!image) return DEFAULT_FILENAME;
+  const head = data.replace(/^data:[^,]*;base64,/i, '').replace(/\s+/g, '').slice(0, 32);
+  const sniffed = sniffMimeBytes(new Uint8Array(Buffer.from(head, 'base64')));
+  return `photo.${(sniffed && EXT_BY_IMAGE_MIME[sniffed]) ?? 'jpg'}`;
+}
+
+/** A non-image local file, read once into memory so the digest and the bytes sent are the same. */
+async function localFileUpload(ref: FileRef & { path: string }): Promise<UploadFile> {
+  const streamed = await confinedFileBlob(ref.path);
+  const bytes = new Uint8Array(await streamed.arrayBuffer());
+  return {
+    blob: new Blob([bytes], { type: streamed.type }),
+    filename: ref.filename !== undefined ? sanitizeUploadFilename(ref.filename) : basename(ref.path),
+    origin: 'path',
+    mimeType: streamed.type,
+    sizeBytes: bytes.length,
+    sha256: sha256Hex(bytes),
+    release: noRelease,
+  };
 }
 
 /**
- * stdio resolver: reads a local file path — confined to the upload directory
- * (see {@link getUploadDir}) — via `node:fs` `openAsBlob` (streamed, not
- * buffered), or decodes inline base64 if that's what the caller supplied.
+ * The resolver: exactly one of `path` / `data` / `blobKey` (see the module
+ * header). Reading never deletes a blob — the tool calls `release()` after
+ * Vibo accepts the upload.
  */
 export const nodeUploadResolver: UploadResolver = async (ref) => {
-  if (ref.path) {
-    const blob = ref.kind === 'image' ? await vetImageUpload(ref.path) : await confinedFileBlob(ref.path);
-    return { blob, filename: ref.filename ?? basename(ref.path) };
+  const image = ref.kind === 'image';
+  const hosted = isHostedEnv();
+  const onlyPath = ref.path !== undefined && ref.data === undefined && ref.blobKey === undefined;
+  if (onlyPath && !image && !hosted) return localFileUpload(ref as FileRef & { path: string });
+
+  // A photo-slot path is resolved against (and lexically confined to) the
+  // upload directory first, so the refusal names the right place.
+  const target = onlyPath && !hosted ? uploadTarget(ref.path!) : undefined;
+  let src: UploadSource;
+  try {
+    src = await resolveUploadSource(
+      {
+        path: target ? target.abs : ref.path,
+        inline:
+          ref.data !== undefined
+            ? { filename: ref.filename ?? defaultInlineName(ref.data, image), contentBase64: ref.data }
+            : undefined,
+        blobKey: ref.blobKey,
+      },
+      {
+        maxBytes: MAX_UPLOAD_BYTES,
+        hosted,
+        ...(image ? { allowedMimeTypes: IMAGE_MIME_TYPES } : {}),
+        path: {
+          mimeByExt: IMAGE_MIME_BY_EXT,
+          allowedRoots: [target?.root ?? resolve(getUploadDir())],
+          denyHiddenSegments: true,
+        },
+        names: { path: 'path', inline: 'fileData', blobKey: 'blobKey', ...ref.names, slotTool: UPLOAD_SLOT_TOOL },
+      },
+    );
+  } catch (err) {
+    throw target ? mapImageRefusal(err, target) : err;
   }
-  if (ref.data) return blobFromBase64(ref.data, ref.filename);
-  throw new McpToolError('No file provided for upload.', {
-    hint: 'Pass a local file `path` (or inline base64 `fileData`).',
-  });
+  const filename = ref.filename !== undefined && src.origin !== 'inline' ? sanitizeUploadFilename(ref.filename) : src.fileName;
+  return {
+    blob: new Blob([src.bytes as Uint8Array<ArrayBuffer>], { type: src.mimeType }),
+    filename,
+    origin: src.origin,
+    mimeType: src.mimeType,
+    sizeBytes: src.sizeBytes,
+    sha256: src.sha256,
+    ...(src.blobKey !== undefined ? { blobKey: src.blobKey } : {}),
+    release: () => src.release(),
+  };
 };
 
 /**
- * Hex sha256 of a resolved upload's bytes. A gated upload binds this into its
- * confirm token: a local `path` names a file, not its contents, so without it a
- * different file written at the same path between the preview and the
- * confirmed call would be sent to the DJ and every event member unseen
- * (fleet-audit #1139). Web Crypto, so it runs wherever the resolver does.
+ * Release every blob-store upload once Vibo has accepted the write, and report
+ * what happened. `undefined` when nothing came from the blob store — the
+ * tool's result is then unchanged. A failed delete is reported, never thrown:
+ * the upload already happened, and an error would invite a duplicate.
  */
-export async function uploadDigest(file: UploadFile): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', await file.blob.arrayBuffer());
-  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+export async function releaseUploads(files: readonly UploadFile[]): Promise<
+  { blobKey: string; deleted: boolean; error?: string; note?: string }[] | undefined
+> {
+  const out: { blobKey: string; deleted: boolean; error?: string; note?: string }[] = [];
+  for (const file of files) {
+    const r = await file.release();
+    if (r.deleted === null || file.blobKey === undefined) continue;
+    out.push(
+      r.deleted
+        ? { blobKey: file.blobKey, deleted: true }
+        : {
+            blobKey: file.blobKey,
+            deleted: false,
+            error: r.error,
+            note: 'The upload to Vibo succeeded; only the temporary copy in the blob store could not be deleted. It expires on its own — do not retry the upload.',
+          },
+    );
+  }
+  return out.length > 0 ? out : undefined;
+}
+
+/**
+ * What a confirmation preview shows for a resolved file: where it came from,
+ * its name, type, size, and the sha256 the token binds.
+ */
+export function describeUpload(file: UploadFile, path?: string): Record<string, unknown> {
+  return {
+    source: file.origin,
+    ...(file.origin === 'path' && path !== undefined ? { path } : {}),
+    ...(file.blobKey !== undefined ? { blobKey: file.blobKey } : {}),
+    filename: file.filename,
+    mimeType: file.mimeType,
+    sizeBytes: file.sizeBytes,
+    sha256: file.sha256,
+  };
+}
+
+/** Vibo's result, plus the blob-store cleanup report when a slot upload was used. */
+export function withBlobCleanup(result: unknown, cleanup: Awaited<ReturnType<typeof releaseUploads>>): unknown {
+  if (cleanup === undefined) return result;
+  return result !== null && typeof result === 'object' && !Array.isArray(result)
+    ? { ...result, blobCleanup: cleanup }
+    : { result, blobCleanup: cleanup };
 }

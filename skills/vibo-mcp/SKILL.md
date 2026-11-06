@@ -97,14 +97,15 @@ fresh preview and token to re-approve), and a reused one as `TOKEN_REUSED`.
 - `vibo_delete_section` — delete a section; the preview shows its name, song count and answered questions. `dontPlay`/`headline` sections need `force: true`.
 - `vibo_reorder_sections` — move sections to directly after `targetSectionId` (omit for the start).
 - `vibo_answer_question` — answer a planning question (text / option ids / link / image+file uploads).
-- `vibo_set_profile_photo` — set your profile photo from a local image in the upload directory (`VIBO_UPLOAD_DIR`, default `~/Downloads/vibo-mcp`).
+- `vibo_set_profile_photo` — set your profile photo from exactly one of: a local image `path` in the upload directory (`VIBO_UPLOAD_DIR`, default `~/Downloads/vibo-mcp`; local installs only), base64 `fileData`, or a `blobKey` from `vibo_upload_slots`.
+- `vibo_upload_slots` — on a hosted deployment, get signed PUT URLs for files (`curl` each one up), then pass the returned `blobKey`s to `vibo_set_profile_photo` / `vibo_answer_question` (`imageBlobKeys`/`fileBlobKeys`). Uploads cap at 25 MiB; the stored copy is deleted once Vibo accepts it.
 - `vibo_capture_session` — capture your login from a signed-in browser tab (SSO accounts).
 - `vibo_mark_notifications_read`.
 - `vibo_export_event_to_spotify` / `vibo_export_event_to_apple_music`.
 
 ## Response shape (`view`)
 
-**Eight of this server's 42 tools take `view: "compact" | "full"`**, and on every
+**Eight of this server's 43 tools take `view: "compact" | "full"`**, and on every
 one of them **`compact` is the DEFAULT**. You get the slim rung without asking.
 
 They are exactly the eight reads whose GraphQL document asks Vibo for media:
