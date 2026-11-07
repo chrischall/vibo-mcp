@@ -146,6 +146,10 @@ one (unless `MCP_CONFIRM_ELICITATION=off`); otherwise the first call makes no ne
 See [docs/VIBO-API.md](docs/VIBO-API.md) for the reverse-engineered API notes
 and [skills/vibo-mcp/SKILL.md](skills/vibo-mcp/SKILL.md) for the full tool list.
 
+## Upgrading
+
+**2.6.0 — upload previews.** In a confirmation preview, `willSend.photo` (`vibo_upload_photo`) and each `willSend.uploads[<key>]` (question answers) are now objects, not strings: `{source, path?, blobKey?, filename, mimeType, sizeBytes, sha256}`, where `source` is `path`, `inline` or `blob`. They used to be the path, or the string `"(inline bytes)"`. A caller that displayed the old string should show `filename` (and `path` when present). The `sha256` is what the confirm token is bound to.
+
 ## Development
 
 ```bash
