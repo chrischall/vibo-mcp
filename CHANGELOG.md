@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.6.0](https://github.com/chrischall/vibo-mcp/compare/v2.5.0...v2.6.0) (2026-11-07)
+
+
+### Features
+
+* **uploads:** decode inline files strictly, cap every route, and add hosted upload slots ([#209](https://github.com/chrischall/vibo-mcp/issues/209)) ([e634045](https://github.com/chrischall/vibo-mcp/commit/e63404594fe9106248b06f4154da9cdb7439fb05))
+
+
+### Bug Fixes
+
+* **deps:** upgrade @chrischall/mcp-utils to 3.7.2 so uploads carry only the file's bytes ([#214](https://github.com/chrischall/vibo-mcp/issues/214)) ([9f2718d](https://github.com/chrischall/vibo-mcp/commit/9f2718d4d15b72bdd3537dc695e8721bf54d4c7d))
+
+
+### Documentation
+
+* **readme:** name vibo_set_profile_photo in the 2.6.0 upgrading note ([#215](https://github.com/chrischall/vibo-mcp/issues/215)) ([a6f3383](https://github.com/chrischall/vibo-mcp/commit/a6f3383b467568dba4d1ded75a1bc18f94f141a1))
+* **uploads:** note the upload preview change for upgraders ([#212](https://github.com/chrischall/vibo-mcp/issues/212)) ([90cb688](https://github.com/chrischall/vibo-mcp/commit/90cb688d0fd5d37ff7d70202f206f2a7a2b0cc27))
+
 ## [2.5.0](https://github.com/chrischall/vibo-mcp/compare/v2.4.5...v2.5.0) (2026-11-04)
 
 
