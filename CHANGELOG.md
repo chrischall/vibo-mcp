@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.1](https://github.com/chrischall/vibo-mcp/compare/v2.6.0...v2.6.1) (2026-11-17)
+
+
+### Bug Fixes
+
+* **deps:** bump the production-dependencies group with 3 updates ([#217](https://github.com/chrischall/vibo-mcp/issues/217)) ([d490df8](https://github.com/chrischall/vibo-mcp/commit/d490df8fa59bb9718c104e9bd87ee49b1c0553f5))
+
 ## [2.6.0](https://github.com/chrischall/vibo-mcp/compare/v2.5.0...v2.6.0) (2026-11-07)
 
 
